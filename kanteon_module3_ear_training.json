@@ -1,0 +1,2519 @@
+{
+  "module": "ear_training",
+  "version": "3.0",
+  "description": "Web Audio API-generated samples. Students identify interval or chord quality from four choices. Inspired by TonedEar.com — RockEar adds rock context, kid-friendly UX, and XP/streak engagement.",
+  "sections": {
+    "intervals": {
+      "beginner": [
+        {
+          "id": "ET-I-B-01",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "beginner",
+          "label": "Unison",
+          "audioNote": "Two identical pitches (C4, C4)",
+          "answers": [
+            "Unison",
+            "Minor 2nd",
+            "Perfect 4th",
+            "Octave"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Same note played twice — zero distance between them."
+        },
+        {
+          "id": "ET-I-B-02",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "beginner",
+          "label": "Octave",
+          "audioNote": "C4 then C5 (12 semitones)",
+          "answers": [
+            "Octave",
+            "Perfect 5th",
+            "Major 6th",
+            "Minor 7th"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Double the frequency — same note, one register higher."
+        },
+        {
+          "id": "ET-I-B-03",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "beginner",
+          "label": "Perfect 5th",
+          "audioNote": "C4 then G4 (7 semitones)",
+          "answers": [
+            "Perfect 5th",
+            "Perfect 4th",
+            "Major 6th",
+            "Tritone"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "The power chord interval. Foundation of rock harmony."
+        },
+        {
+          "id": "ET-I-B-04",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "beginner",
+          "label": "Perfect 4th",
+          "audioNote": "C4 then F4 (5 semitones)",
+          "answers": [
+            "Perfect 4th",
+            "Perfect 5th",
+            "Major 3rd",
+            "Minor 3rd"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Inverts to a 5th. Sounds open and stable."
+        },
+        {
+          "id": "ET-I-B-05",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "beginner",
+          "label": "Major 2nd",
+          "audioNote": "C4 then D4 (2 semitones)",
+          "answers": [
+            "Major 2nd",
+            "Minor 2nd",
+            "Major 3rd",
+            "Perfect 4th"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "A whole step. Distance between most adjacent scale notes."
+        },
+        {
+          "id": "ET-I-B-06",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "beginner",
+          "label": "Minor 2nd",
+          "audioNote": "C4 then Db4 (1 semitone)",
+          "answers": [
+            "Minor 2nd",
+            "Major 2nd",
+            "Minor 3rd",
+            "Unison"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "The tightest interval — one half step. Very dissonant."
+        },
+        {
+          "id": "ET-I-B-07",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "beginner",
+          "label": "Major 3rd",
+          "audioNote": "C4 then E4 (4 semitones)",
+          "answers": [
+            "Major 3rd",
+            "Minor 3rd",
+            "Perfect 4th",
+            "Major 2nd"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "The interval that makes a chord sound major and bright."
+        },
+        {
+          "id": "ET-I-B-08",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "beginner",
+          "label": "Minor 3rd",
+          "audioNote": "C4 then Eb4 (3 semitones)",
+          "answers": [
+            "Minor 3rd",
+            "Major 3rd",
+            "Perfect 4th",
+            "Minor 2nd"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Lower the 3rd by a half step — chord goes dark."
+        },
+        {
+          "id": "ET-I-B-09",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "beginner",
+          "label": "Major 6th",
+          "audioNote": "C4 then A4 (9 semitones)",
+          "answers": [
+            "Major 6th",
+            "Minor 6th",
+            "Perfect 5th",
+            "Minor 7th"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Warm and bright. Common in vocal melodies and double-stops."
+        },
+        {
+          "id": "ET-I-B-10",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "beginner",
+          "label": "Unison vs Octave",
+          "audioNote": "C4-C4 vs C4-C5 — which is wider?",
+          "answers": [
+            "Octave is wider",
+            "Unison is wider",
+            "They're the same",
+            "Can't tell"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Octave spans 12 semitones; unison is zero. Train your ears to hear the gap."
+        },
+        {
+          "id": "ET-I-B-11",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "beginner",
+          "label": "P4 vs P5 — identify",
+          "audioNote": "C4 then either F4 or G4",
+          "answers": [
+            "Perfect 5th",
+            "Perfect 4th",
+            "Major 3rd",
+            "Major 6th"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "P5 is wider — 7 semitones vs 5. P5 sounds more open and hollow."
+        },
+        {
+          "id": "ET-I-B-12",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "beginner",
+          "label": "Major 2nd ascending",
+          "audioNote": "D4 then E4",
+          "answers": [
+            "Major 2nd",
+            "Minor 2nd",
+            "Major 3rd",
+            "Perfect 4th"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Whole step up. The distance between scale degrees 1 and 2."
+        },
+        {
+          "id": "ET-I-B-13",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "beginner",
+          "label": "Minor 3rd — different root",
+          "audioNote": "A4 then C5",
+          "answers": [
+            "Minor 3rd",
+            "Major 3rd",
+            "Perfect 4th",
+            "Major 2nd"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Same interval, different starting note. Train the ear, not memory."
+        },
+        {
+          "id": "ET-I-B-14",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "beginner",
+          "label": "Perfect 5th — different root",
+          "audioNote": "G4 then D5",
+          "answers": [
+            "Perfect 5th",
+            "Perfect 4th",
+            "Major 6th",
+            "Octave"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "G to D — same P5 sound regardless of root."
+        },
+        {
+          "id": "ET-I-B-15",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "beginner",
+          "label": "Major 3rd — different root",
+          "audioNote": "E4 then G#4",
+          "answers": [
+            "Major 3rd",
+            "Minor 3rd",
+            "Perfect 4th",
+            "Major 2nd"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "E to G# — bright and stable, like the top two strings of a major chord."
+        },
+        {
+          "id": "ET-I-B-16",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "beginner",
+          "label": "Octave — different root",
+          "audioNote": "G3 then G4",
+          "answers": [
+            "Octave",
+            "Perfect 5th",
+            "Major 6th",
+            "Minor 7th"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Same pitch name, one register apart — always 12 semitones."
+        },
+        {
+          "id": "ET-I-B-17",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "beginner",
+          "label": "Perfect 4th — different root",
+          "audioNote": "G4 then C5",
+          "answers": [
+            "Perfect 4th",
+            "Perfect 5th",
+            "Major 3rd",
+            "Octave"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "G to C — same open, stable P4 sound."
+        },
+        {
+          "id": "ET-I-B-18",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "beginner",
+          "label": "Major 2nd — different root",
+          "audioNote": "F4 then G4",
+          "answers": [
+            "Major 2nd",
+            "Minor 2nd",
+            "Perfect 4th",
+            "Major 3rd"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "F to G — one whole step, same as any adjacent scale notes."
+        },
+        {
+          "id": "ET-I-B-19",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "beginner",
+          "label": "Minor 3rd — low register",
+          "audioNote": "A2 then C3",
+          "answers": [
+            "Minor 3rd",
+            "Major 3rd",
+            "Perfect 5th",
+            "Minor 2nd"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Lower register — same interval, muddier sound. Train across octaves."
+        },
+        {
+          "id": "ET-I-B-20",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "beginner",
+          "label": "P5 — low register",
+          "audioNote": "E2 then B2",
+          "answers": [
+            "Perfect 5th",
+            "Perfect 4th",
+            "Octave",
+            "Major 6th"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Classic open-string guitar tuning interval. Low but recognizable."
+        },
+        {
+          "id": "ET-I-B-21",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "beginner",
+          "label": "Random: M2 or M3?",
+          "audioNote": "C4 then D4 OR C4 then E4",
+          "answers": [
+            "Identify correctly"
+          ],
+          "correct": 0,
+          "xp": 15,
+          "explanation": "Two most common ascending intervals. Focus on how wide the leap feels."
+        },
+        {
+          "id": "ET-I-B-22",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "beginner",
+          "label": "Random: P4 or P5?",
+          "audioNote": "Random root, either F4 or G4 above C4",
+          "answers": [
+            "Identify correctly"
+          ],
+          "correct": 0,
+          "xp": 15,
+          "explanation": "Distinguish 5 vs 7 semitones. P5 sounds noticeably more open."
+        },
+        {
+          "id": "ET-I-B-23",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "beginner",
+          "label": "M3 vs m3 — side by side",
+          "audioNote": "C4-E4 then C4-Eb4",
+          "answers": [
+            "Major 3rd first",
+            "Minor 3rd first",
+            "Same interval",
+            "Can't tell"
+          ],
+          "correct": 0,
+          "xp": 15,
+          "explanation": "Hear the brightness drop when that half step lowers."
+        },
+        {
+          "id": "ET-I-B-24",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "beginner",
+          "label": "Interval direction — ascending",
+          "audioNote": "C4 then G4",
+          "answers": [
+            "Ascending P5",
+            "Descending P5",
+            "Ascending P4",
+            "Descending P4"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Same pitches, direction matters. G is above C — ascending."
+        },
+        {
+          "id": "ET-I-B-25",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "beginner",
+          "label": "Interval direction — descending",
+          "audioNote": "G4 then C4",
+          "answers": [
+            "Descending P5",
+            "Ascending P5",
+            "Descending P4",
+            "Ascending P4"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "G down to C — same interval, opposite direction, different feel."
+        }
+      ],
+      "intermediate": [
+        {
+          "id": "ET-I-M-01",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Tritone",
+          "audioNote": "C4 then F#4 (6 semitones)",
+          "answers": [
+            "Tritone",
+            "Perfect 4th",
+            "Perfect 5th",
+            "Major 6th"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "Splits the octave exactly in half. Maximum tension, wants to resolve."
+        },
+        {
+          "id": "ET-I-M-02",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Minor 6th",
+          "audioNote": "C4 then Ab4 (8 semitones)",
+          "answers": [
+            "Minor 6th",
+            "Major 6th",
+            "Perfect 5th",
+            "Tritone"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "Darker than major 6th. One half step narrows it significantly."
+        },
+        {
+          "id": "ET-I-M-03",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Minor 7th",
+          "audioNote": "C4 then Bb4 (10 semitones)",
+          "answers": [
+            "Minor 7th",
+            "Major 7th",
+            "Major 6th",
+            "Octave"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "Dominant 7th chord interval — tension seeking resolution downward."
+        },
+        {
+          "id": "ET-I-M-04",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Major 7th",
+          "audioNote": "C4 then B4 (11 semitones)",
+          "answers": [
+            "Major 7th",
+            "Minor 7th",
+            "Octave",
+            "Tritone"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "One half step below octave — dreamy and unresolved."
+        },
+        {
+          "id": "ET-I-M-05",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Tritone — different root",
+          "audioNote": "F#4 then C5",
+          "answers": [
+            "Tritone",
+            "Perfect 4th",
+            "Perfect 5th",
+            "Minor 6th"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "F# to C — same unstable quality regardless of starting note."
+        },
+        {
+          "id": "ET-I-M-06",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Minor 7th — different root",
+          "audioNote": "G4 then F5",
+          "answers": [
+            "Minor 7th",
+            "Major 7th",
+            "Major 6th",
+            "Octave"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "G to F — classic dominant 7th sound."
+        },
+        {
+          "id": "ET-I-M-07",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Major 7th — different root",
+          "audioNote": "D4 then C#5",
+          "answers": [
+            "Major 7th",
+            "Minor 7th",
+            "Octave",
+            "Major 6th"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "D to C# — one half step from the octave, very tense."
+        },
+        {
+          "id": "ET-I-M-08",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "m6 vs M6 — side by side",
+          "audioNote": "C4-A4 then C4-Ab4",
+          "answers": [
+            "Major 6th first",
+            "Minor 6th first",
+            "Same interval",
+            "Can't tell"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "Hear the warmth drop when the 6th lowers by a half step."
+        },
+        {
+          "id": "ET-I-M-09",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "m7 vs M7 — side by side",
+          "audioNote": "C4-Bb4 then C4-B4",
+          "answers": [
+            "Minor 7th first",
+            "Major 7th first",
+            "Same interval",
+            "Can't tell"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "Minor 7th is wider but sounds more grounded; major 7th is tenser."
+        },
+        {
+          "id": "ET-I-M-10",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Tritone vs P4 — side by side",
+          "audioNote": "C4-F4 then C4-F#4",
+          "answers": [
+            "Perfect 4th first",
+            "Tritone first",
+            "Same interval",
+            "Can't tell"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "One half step turns stability into tension. Critical ear training distinction."
+        },
+        {
+          "id": "ET-I-M-11",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Tritone vs P5 — side by side",
+          "audioNote": "C4-F#4 then C4-G4",
+          "answers": [
+            "Tritone first",
+            "Perfect 5th first",
+            "Same interval",
+            "Can't tell"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "Tritone sounds unfinished; P5 resolves and settles."
+        },
+        {
+          "id": "ET-I-M-12",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Chromatic: identify from full set",
+          "audioNote": "Random from M2 through m7",
+          "answers": [
+            "Identify correctly"
+          ],
+          "correct": 0,
+          "xp": 25,
+          "explanation": "No hints. Any interval from the chromatic set. Listen carefully."
+        },
+        {
+          "id": "ET-I-M-13",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Descending m3",
+          "audioNote": "E4 then C#4",
+          "answers": [
+            "Descending Minor 3rd",
+            "Ascending Minor 3rd",
+            "Descending Major 3rd",
+            "Descending Perfect 4th"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "Same interval, going down. Slightly different emotional quality."
+        },
+        {
+          "id": "ET-I-M-14",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Descending P5",
+          "audioNote": "G4 then C4",
+          "answers": [
+            "Descending Perfect 5th",
+            "Ascending Perfect 5th",
+            "Descending Perfect 4th",
+            "Descending Major 6th"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "G down to C — power chord inverted downward."
+        },
+        {
+          "id": "ET-I-M-15",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Descending M6",
+          "audioNote": "A4 then C4",
+          "answers": [
+            "Descending Major 6th",
+            "Ascending Major 6th",
+            "Descending Minor 6th",
+            "Descending Perfect 5th"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "A down to C — wide, warm descent."
+        },
+        {
+          "id": "ET-I-M-16",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Compound: Major 9th",
+          "audioNote": "C4 then D5",
+          "answers": [
+            "Major 9th",
+            "Major 2nd",
+            "Minor 9th",
+            "Perfect 12th"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "M2 + octave. Extended interval — spacious and open-sounding."
+        },
+        {
+          "id": "ET-I-M-17",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Compound: Minor 9th",
+          "audioNote": "C4 then Db5",
+          "answers": [
+            "Minor 9th",
+            "Minor 2nd",
+            "Major 9th",
+            "Perfect 12th"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "m2 + octave. Very tense — dissonant even in a wide voicing."
+        },
+        {
+          "id": "ET-I-M-18",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Low register tritone",
+          "audioNote": "B1 then F2",
+          "answers": [
+            "Tritone",
+            "Perfect 4th",
+            "Perfect 5th",
+            "Minor 6th"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "Low register tritone — ominous and unstable. The lowest sounding tritones have maximum weight."
+        },
+        {
+          "id": "ET-I-M-19",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Interval in melody context",
+          "audioNote": "3-note ascending line ending on M3",
+          "answers": [
+            "Major 3rd on top",
+            "Minor 3rd on top",
+            "Perfect 4th on top",
+            "Major 2nd on top"
+          ],
+          "correct": 0,
+          "xp": 25,
+          "explanation": "Identify the final interval within a short melodic phrase."
+        },
+        {
+          "id": "ET-I-M-20",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Interval in melody context",
+          "audioNote": "3-note descending line ending on m7",
+          "answers": [
+            "Minor 7th on bottom",
+            "Major 7th on bottom",
+            "Perfect 5th on bottom",
+            "Minor 6th on bottom"
+          ],
+          "correct": 0,
+          "xp": 25,
+          "explanation": "Descending phrase — identify bottom interval."
+        },
+        {
+          "id": "ET-I-M-21",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Speed round: M3 or m3?",
+          "audioNote": "Random root, fast delivery",
+          "answers": [
+            "Identify correctly"
+          ],
+          "correct": 0,
+          "xp": 25,
+          "explanation": "3-second window. Major or minor 3rd — no other options."
+        },
+        {
+          "id": "ET-I-M-22",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Speed round: P4 or Tritone?",
+          "audioNote": "Random root, fast delivery",
+          "answers": [
+            "Identify correctly"
+          ],
+          "correct": 0,
+          "xp": 25,
+          "explanation": "One half step difference — the most important distinction in Western music."
+        },
+        {
+          "id": "ET-I-M-23",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Speed round: m7 or M7?",
+          "audioNote": "Random root, fast delivery",
+          "answers": [
+            "Identify correctly"
+          ],
+          "correct": 0,
+          "xp": 25,
+          "explanation": "One half step apart — focus on the tension level."
+        },
+        {
+          "id": "ET-I-M-24",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Harmonic interval (simultaneous)",
+          "audioNote": "C4 and G4 played together",
+          "answers": [
+            "Perfect 5th",
+            "Perfect 4th",
+            "Major 3rd",
+            "Major 6th"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "Both notes at once — identify the harmonic interval."
+        },
+        {
+          "id": "ET-I-M-25",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Harmonic interval (simultaneous)",
+          "audioNote": "C4 and F#4 played together",
+          "answers": [
+            "Tritone",
+            "Perfect 4th",
+            "Perfect 5th",
+            "Minor 6th"
+          ],
+          "correct": 0,
+          "xp": 25,
+          "explanation": "Harmonic tritone — maximum dissonance heard simultaneously."
+        }
+      ],
+      "advanced": [
+        {
+          "id": "ET-I-A-01",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Full set ID — ascending",
+          "audioNote": "Random from all 13 intervals",
+          "answers": [
+            "Identify correctly"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "No hints. Any interval, any root. Full chromatic set in play."
+        },
+        {
+          "id": "ET-I-A-02",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Full set ID — descending",
+          "audioNote": "Random descending interval",
+          "answers": [
+            "Identify correctly"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "Direction is descending. Adjust your ear — same interval sounds different going down."
+        },
+        {
+          "id": "ET-I-A-03",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Full set ID — harmonic",
+          "audioNote": "Both notes simultaneously",
+          "answers": [
+            "Identify correctly"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "No melodic clue — pure harmonic identification."
+        },
+        {
+          "id": "ET-I-A-04",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Compound: Major 9th vs Minor 9th",
+          "audioNote": "C4-D5 vs C4-Db5",
+          "answers": [
+            "Major 9th first",
+            "Minor 9th first",
+            "Same interval",
+            "Can't tell"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "Wide intervals — one half step difference across an octave."
+        },
+        {
+          "id": "ET-I-A-05",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Compound: Perfect 11th",
+          "audioNote": "C4 then F5",
+          "answers": [
+            "Perfect 11th",
+            "Perfect 4th",
+            "Major 9th",
+            "Perfect 12th"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "P4 + octave. Common in open jazz and extended rock voicings."
+        },
+        {
+          "id": "ET-I-A-06",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Compound: Perfect 12th",
+          "audioNote": "C4 then G5",
+          "answers": [
+            "Perfect 12th",
+            "Perfect 5th",
+            "Perfect 11th",
+            "Major 9th"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "P5 + octave. Natural harmonic relationship — very open and pure."
+        },
+        {
+          "id": "ET-I-A-07",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Interval in 4-note melody",
+          "audioNote": "Ascending melody — identify the largest leap",
+          "answers": [
+            "Major 6th",
+            "Perfect 5th",
+            "Minor 7th",
+            "Major 7th"
+          ],
+          "correct": 0,
+          "xp": 35,
+          "explanation": "Four notes — find the widest interval in the phrase."
+        },
+        {
+          "id": "ET-I-A-08",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Interval in chord voicing",
+          "audioNote": "Identify interval between bass and soprano",
+          "answers": [
+            "Minor 7th",
+            "Major 7th",
+            "Octave",
+            "Minor 6th"
+          ],
+          "correct": 0,
+          "xp": 35,
+          "explanation": "Real musical context — outer voices of a 4-part chord."
+        },
+        {
+          "id": "ET-I-A-09",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Enharmonic interval",
+          "audioNote": "C4 then A#4 (same pitch as Bb4)",
+          "answers": [
+            "Minor 7th",
+            "Augmented 6th",
+            "Major 6th",
+            "Tritone"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "A# and Bb sound identical — interval name depends on context."
+        },
+        {
+          "id": "ET-I-A-10",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Augmented 4th vs Diminished 5th",
+          "audioNote": "Both are tritones — identify by context",
+          "answers": [
+            "Tritone (aug 4th)",
+            "Tritone (dim 5th)",
+            "Perfect 4th",
+            "Perfect 5th"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "Both enharmonic tritones — the ear hears one thing, theory names two."
+        },
+        {
+          "id": "ET-I-A-11",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Speed round: any interval, 2 sec",
+          "audioNote": "Full set, fast delivery",
+          "answers": [
+            "Identify correctly"
+          ],
+          "correct": 0,
+          "xp": 40,
+          "explanation": "2-second window. No time to analyze — trust your ear."
+        },
+        {
+          "id": "ET-I-A-12",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Interval sequence: identify both",
+          "audioNote": "Two intervals in sequence, name each",
+          "answers": [
+            "Both correct",
+            "First wrong",
+            "Second wrong",
+            "Both wrong"
+          ],
+          "correct": 0,
+          "xp": 40,
+          "explanation": "Multi-step recall. Keep the first interval in memory while hearing the second."
+        },
+        {
+          "id": "ET-I-A-13",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Descending tritone",
+          "audioNote": "F#4 then C4",
+          "answers": [
+            "Descending Tritone",
+            "Ascending Tritone",
+            "Descending P4",
+            "Descending P5"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "Same unstable quality in either direction."
+        },
+        {
+          "id": "ET-I-A-14",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Descending M7",
+          "audioNote": "B4 then C4",
+          "answers": [
+            "Descending Major 7th",
+            "Ascending Major 7th",
+            "Descending Minor 7th",
+            "Descending Octave"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "One half step above the unison going down — very tight and tense."
+        },
+        {
+          "id": "ET-I-A-15",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Harmonic m9 — very dissonant",
+          "audioNote": "C4 and Db4 played together",
+          "answers": [
+            "Minor 9th",
+            "Minor 2nd",
+            "Tritone",
+            "Major 7th"
+          ],
+          "correct": 0,
+          "xp": 35,
+          "explanation": "Close-voiced minor 9th — maximum harmonic tension."
+        },
+        {
+          "id": "ET-I-A-16",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Guitar string intervals",
+          "audioNote": "E2-A2 (standard tuning)",
+          "answers": [
+            "Perfect 4th",
+            "Perfect 5th",
+            "Major 3rd",
+            "Minor 3rd"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "Standard guitar tuning is P4 between every adjacent string (except G-B)."
+        },
+        {
+          "id": "ET-I-A-17",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Guitar string intervals — exception",
+          "audioNote": "G3-B3 (standard tuning)",
+          "answers": [
+            "Major 3rd",
+            "Perfect 4th",
+            "Minor 3rd",
+            "Perfect 5th"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "The G-B exception — M3, not P4. Critical for guitarists to internalize."
+        },
+        {
+          "id": "ET-I-A-18",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Interval inversion: P5 becomes?",
+          "audioNote": "Invert a P5 — what do you hear?",
+          "answers": [
+            "Perfect 4th",
+            "Perfect 5th",
+            "Major 3rd",
+            "Minor 6th"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "Inversion rule: P5 inverts to P4 (9 - 5 = 4). Same notes, flipped."
+        },
+        {
+          "id": "ET-I-A-19",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Interval inversion: M3 becomes?",
+          "audioNote": "Invert a M3 — what do you hear?",
+          "answers": [
+            "Minor 6th",
+            "Major 6th",
+            "Minor 3rd",
+            "Major 3rd"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "M3 inverts to m6. Major inverts to minor; 3 + 6 = 9."
+        },
+        {
+          "id": "ET-I-A-20",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Interval in rock riff context",
+          "audioNote": "Riff uses repeated P5 then drops m3",
+          "answers": [
+            "Ends on Minor 3rd",
+            "Ends on Major 3rd",
+            "Ends on Perfect 4th",
+            "Ends on Major 2nd"
+          ],
+          "correct": 0,
+          "xp": 35,
+          "explanation": "Identify the final interval drop in a short rock riff phrase."
+        },
+        {
+          "id": "ET-I-A-21",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Microtonal awareness — in tune vs sharp",
+          "audioNote": "P5 vs slightly sharp P5",
+          "answers": [
+            "In tune",
+            "Sharp",
+            "Flat",
+            "Tritone"
+          ],
+          "correct": 0,
+          "xp": 35,
+          "explanation": "Advanced pitch discrimination — is the interval pure or tempered?"
+        },
+        {
+          "id": "ET-I-A-22",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Chord tone: identify interval above root",
+          "audioNote": "Major chord — identify M3 above root",
+          "answers": [
+            "Major 3rd",
+            "Minor 3rd",
+            "Perfect 5th",
+            "Major 2nd"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "Isolate one interval within a full chord — the defining tone."
+        },
+        {
+          "id": "ET-I-A-23",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Chord tone: identify P5 above root",
+          "audioNote": "Minor chord — identify P5 above root",
+          "answers": [
+            "Perfect 5th",
+            "Tritone",
+            "Major 6th",
+            "Minor 6th"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "The 5th is present in both major and minor chords — same interval."
+        },
+        {
+          "id": "ET-I-A-24",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Random full set — harmonic, fast",
+          "audioNote": "2 notes simultaneously, 2-sec window",
+          "answers": [
+            "Identify correctly"
+          ],
+          "correct": 0,
+          "xp": 40,
+          "explanation": "Full harmonic set, speed mode. Elite ear training."
+        },
+        {
+          "id": "ET-I-A-25",
+          "module": "ear_training",
+          "type": "interval",
+          "level": "intermediate",
+          "label": "Interval ear test: melodic context",
+          "audioNote": "Short melodic phrase — identify the opening interval.",
+          "answers": [
+            "Identify correctly"
+          ],
+          "correct": 0,
+          "xp": 40,
+          "explanation": "Apply interval knowledge to a melodic phrase. The ultimate test of ear training in context."
+        }
+      ]
+    },
+    "chords": {
+      "beginner": [
+        {
+          "id": "ET-C-B-01",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "beginner",
+          "label": "Major Chord",
+          "audioNote": "C major triad (C-E-G)",
+          "answers": [
+            "Major",
+            "Minor",
+            "Diminished",
+            "Suspended"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Bright and resolved. The most common chord in rock and pop."
+        },
+        {
+          "id": "ET-C-B-02",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "beginner",
+          "label": "Minor Chord",
+          "audioNote": "A minor triad (A-C-E)",
+          "answers": [
+            "Minor",
+            "Major",
+            "Diminished",
+            "Augmented"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Darker and more emotional. Lowered 3rd is the defining factor."
+        },
+        {
+          "id": "ET-C-B-03",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "beginner",
+          "label": "Power Chord",
+          "audioNote": "C5 (C-G only, no 3rd)",
+          "answers": [
+            "Power Chord",
+            "Major",
+            "Minor",
+            "Suspended"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Root and 5th only — no 3rd. Sounds massive through distortion."
+        },
+        {
+          "id": "ET-C-B-04",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "beginner",
+          "label": "Major — different root",
+          "audioNote": "G major (G-B-D)",
+          "answers": [
+            "Major",
+            "Minor",
+            "Power Chord",
+            "Suspended"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Same bright quality regardless of root. Train the color, not the note."
+        },
+        {
+          "id": "ET-C-B-05",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "beginner",
+          "label": "Minor — different root",
+          "audioNote": "E minor (E-G-B)",
+          "answers": [
+            "Minor",
+            "Major",
+            "Power Chord",
+            "Diminished"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Em — the most common minor chord in rock guitar."
+        },
+        {
+          "id": "ET-C-B-06",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "beginner",
+          "label": "Major vs Minor — side by side",
+          "audioNote": "C major then C minor",
+          "answers": [
+            "Major first",
+            "Minor first",
+            "Same chord",
+            "Can't tell"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Hear the 3rd shift from E to Eb — one half step, totally different feel."
+        },
+        {
+          "id": "ET-C-B-07",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "beginner",
+          "label": "Power chord vs Major",
+          "audioNote": "C5 then C major",
+          "answers": [
+            "Power Chord first",
+            "Major first",
+            "Same chord",
+            "Can't tell"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Power chord is hollow — no 3rd means no major or minor quality."
+        },
+        {
+          "id": "ET-C-B-08",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "beginner",
+          "label": "Major — high register",
+          "audioNote": "E major voiced high on guitar",
+          "answers": [
+            "Major",
+            "Minor",
+            "Power Chord",
+            "Suspended"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Same chord quality in a brighter register."
+        },
+        {
+          "id": "ET-C-B-09",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "beginner",
+          "label": "Minor — low register",
+          "audioNote": "D minor voiced low",
+          "answers": [
+            "Minor",
+            "Major",
+            "Power Chord",
+            "Diminished"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Low voicing — darker timbre, same minor quality."
+        },
+        {
+          "id": "ET-C-B-10",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "beginner",
+          "label": "Major with distortion",
+          "audioNote": "A major through overdrive",
+          "answers": [
+            "Major",
+            "Minor",
+            "Power Chord",
+            "Can't tell"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Distortion muddies 3rds — train your ear to hear quality through gain."
+        },
+        {
+          "id": "ET-C-B-11",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "beginner",
+          "label": "Minor with distortion",
+          "audioNote": "E minor through overdrive",
+          "answers": [
+            "Minor",
+            "Major",
+            "Power Chord",
+            "Can't tell"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Minor quality survives distortion — the 3rd still colors the sound."
+        },
+        {
+          "id": "ET-C-B-12",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "beginner",
+          "label": "Identify root + quality",
+          "audioNote": "G major — name both",
+          "answers": [
+            "G Major",
+            "G Minor",
+            "A Major",
+            "F Major"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Two-part ID: root note and chord quality together."
+        },
+        {
+          "id": "ET-C-B-13",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "beginner",
+          "label": "Identify root + quality",
+          "audioNote": "D minor — name both",
+          "answers": [
+            "D Minor",
+            "D Major",
+            "E Minor",
+            "C Minor"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Root ID plus quality — building toward full chord recognition."
+        },
+        {
+          "id": "ET-C-B-14",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "beginner",
+          "label": "Major chord — arpeggiated",
+          "audioNote": "C major played one note at a time",
+          "answers": [
+            "Major",
+            "Minor",
+            "Power Chord",
+            "Diminished"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Notes spread out — same chord, melodic delivery."
+        },
+        {
+          "id": "ET-C-B-15",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "beginner",
+          "label": "Minor chord — arpeggiated",
+          "audioNote": "A minor played one note at a time",
+          "answers": [
+            "Minor",
+            "Major",
+            "Power Chord",
+            "Diminished"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Arpeggiated minor — common in fingerpicked rock intros."
+        },
+        {
+          "id": "ET-C-B-16",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "beginner",
+          "label": "Speed: Major or Minor?",
+          "audioNote": "Random root, 3-second window",
+          "answers": [
+            "Identify correctly"
+          ],
+          "correct": 0,
+          "xp": 15,
+          "explanation": "Quick fire — just major or minor, no other options."
+        },
+        {
+          "id": "ET-C-B-17",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "beginner",
+          "label": "Major from 3 options",
+          "audioNote": "C major, G major, D major — which plays?",
+          "answers": [
+            "Identify correct root"
+          ],
+          "correct": 0,
+          "xp": 15,
+          "explanation": "Same quality, different roots — identify the root by ear."
+        },
+        {
+          "id": "ET-C-B-18",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "beginner",
+          "label": "Strummed vs picked — same chord",
+          "audioNote": "E major strummed vs E major picked",
+          "answers": [
+            "Same chord",
+            "Different chord",
+            "Different quality",
+            "Can't tell"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Articulation changes, chord quality doesn't."
+        },
+        {
+          "id": "ET-C-B-19",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "beginner",
+          "label": "Major in open position",
+          "audioNote": "D major (open guitar voicing)",
+          "answers": [
+            "Major",
+            "Minor",
+            "Suspended",
+            "Power Chord"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Open string voicings ring differently — same quality."
+        },
+        {
+          "id": "ET-C-B-20",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "beginner",
+          "label": "Minor in open position",
+          "audioNote": "E minor (open guitar voicing)",
+          "answers": [
+            "Minor",
+            "Major",
+            "Power Chord",
+            "Diminished"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Em open — two-finger chord, full minor quality."
+        },
+        {
+          "id": "ET-C-B-21",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "beginner",
+          "label": "Chord in piano timbre",
+          "audioNote": "C major on piano",
+          "answers": [
+            "Major",
+            "Minor",
+            "Power Chord",
+            "Diminished"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Timbre changes — piano vs guitar. Quality stays the same."
+        },
+        {
+          "id": "ET-C-B-22",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "beginner",
+          "label": "Chord in piano timbre",
+          "audioNote": "A minor on piano",
+          "answers": [
+            "Minor",
+            "Major",
+            "Diminished",
+            "Suspended"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Piano minor — rounder attack, same darker quality."
+        },
+        {
+          "id": "ET-C-B-23",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "beginner",
+          "label": "Major 3-chord recognition",
+          "audioNote": "I-IV-V in C major — all major?",
+          "answers": [
+            "Yes, all major",
+            "No, one is minor",
+            "No, one is diminished",
+            "Can't tell"
+          ],
+          "correct": 0,
+          "xp": 15,
+          "explanation": "Basic I-IV-V — all major chords, the foundation of rock progressions."
+        },
+        {
+          "id": "ET-C-B-24",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "beginner",
+          "label": "Mixed quality in progression",
+          "audioNote": "Am-F-C-G — how many minor chords?",
+          "answers": [
+            "One (Am)",
+            "Two",
+            "Three",
+            "None"
+          ],
+          "correct": 0,
+          "xp": 15,
+          "explanation": "Identify chord quality within a moving progression."
+        },
+        {
+          "id": "ET-C-B-25",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "beginner",
+          "label": "Final chord quality",
+          "audioNote": "Progression ends — is it major or minor?",
+          "answers": [
+            "Major",
+            "Minor",
+            "Power Chord",
+            "Suspended"
+          ],
+          "correct": 0,
+          "xp": 10,
+          "explanation": "Resolution detection — does the song feel finished and bright?"
+        }
+      ],
+      "intermediate": [
+        {
+          "id": "ET-C-M-01",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "intermediate",
+          "label": "Dominant 7th",
+          "audioNote": "G7 (G-B-D-F)",
+          "answers": [
+            "Dominant 7th",
+            "Major 7th",
+            "Minor 7th",
+            "Major"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "Tension wants to resolve to the tonic. Cornerstone of blues."
+        },
+        {
+          "id": "ET-C-M-02",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "intermediate",
+          "label": "Minor 7th",
+          "audioNote": "Am7 (A-C-E-G)",
+          "answers": [
+            "Minor 7th",
+            "Dominant 7th",
+            "Minor",
+            "Major 7th"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "Smoother than straight minor. Common in funk, soul, and indie rock."
+        },
+        {
+          "id": "ET-C-M-03",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "intermediate",
+          "label": "Major 7th",
+          "audioNote": "Cmaj7 (C-E-G-B)",
+          "answers": [
+            "Major 7th",
+            "Dominant 7th",
+            "Minor 7th",
+            "Major"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "Lush and dreamy. The B above the G is the defining tone."
+        },
+        {
+          "id": "ET-C-M-04",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "intermediate",
+          "label": "Suspended 4th",
+          "audioNote": "Csus4 (C-F-G)",
+          "answers": [
+            "Suspended 4th",
+            "Major",
+            "Minor",
+            "Power Chord"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "No 3rd — replaced by P4. Unresolved. Common in rock intros."
+        },
+        {
+          "id": "ET-C-M-05",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "intermediate",
+          "label": "Suspended 2nd",
+          "audioNote": "Dsus2 (D-E-A)",
+          "answers": [
+            "Suspended 2nd",
+            "Major",
+            "Suspended 4th",
+            "Minor"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "No 3rd — replaced by M2. Open and airy. Common in alternative rock."
+        },
+        {
+          "id": "ET-C-M-06",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "intermediate",
+          "label": "Dom7 vs Maj7 — side by side",
+          "audioNote": "G7 then Gmaj7",
+          "answers": [
+            "Dominant 7th first",
+            "Major 7th first",
+            "Same chord",
+            "Can't tell"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "Dom7 has a minor 7th interval (F); Maj7 has a major 7th (F#). Hear the difference."
+        },
+        {
+          "id": "ET-C-M-07",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "intermediate",
+          "label": "Min7 vs Dom7 — side by side",
+          "audioNote": "Am7 then A7",
+          "answers": [
+            "Minor 7th first",
+            "Dominant 7th first",
+            "Same chord",
+            "Can't tell"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "Both have a minor 7th — but dom7 has a major 3rd; min7 has a minor 3rd."
+        },
+        {
+          "id": "ET-C-M-08",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "intermediate",
+          "label": "Sus4 vs Major — side by side",
+          "audioNote": "Csus4 then C major",
+          "answers": [
+            "Suspended first",
+            "Major first",
+            "Same chord",
+            "Can't tell"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "Sus resolves to major when the 4th drops to the 3rd."
+        },
+        {
+          "id": "ET-C-M-09",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "intermediate",
+          "label": "Add9 chord",
+          "audioNote": "Cadd9 (C-E-G-D)",
+          "answers": [
+            "Add9",
+            "Major",
+            "Suspended 2nd",
+            "Major 7th"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "Major chord plus a 9th (D) — fuller than straight major, no 7th."
+        },
+        {
+          "id": "ET-C-M-10",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "intermediate",
+          "label": "Minor 7th — different root",
+          "audioNote": "Dm7 (D-F-A-C)",
+          "answers": [
+            "Minor 7th",
+            "Minor",
+            "Dominant 7th",
+            "Minor 9th"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "Same warm, extended minor quality — different root."
+        },
+        {
+          "id": "ET-C-M-11",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "intermediate",
+          "label": "Dominant 7th — different root",
+          "audioNote": "E7 (E-G#-B-D)",
+          "answers": [
+            "Dominant 7th",
+            "Major",
+            "Major 7th",
+            "Minor 7th"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "E7 — classic blues/rock dominant. Hear that minor 7th pull."
+        },
+        {
+          "id": "ET-C-M-12",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "intermediate",
+          "label": "Major 7th — different root",
+          "audioNote": "Fmaj7 (F-A-C-E)",
+          "answers": [
+            "Major 7th",
+            "Major",
+            "Dominant 7th",
+            "Minor 7th"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "Fmaj7 — lush and spacious. Common in indie and ambient rock."
+        },
+        {
+          "id": "ET-C-M-13",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "intermediate",
+          "label": "Chord in progression: identify 7th type",
+          "audioNote": "IV chord in blues — is it dom7 or maj7?",
+          "answers": [
+            "Dominant 7th",
+            "Major 7th",
+            "Minor 7th",
+            "Major"
+          ],
+          "correct": 0,
+          "xp": 25,
+          "explanation": "Blues uses dominant 7th on I, IV, and V — not major 7th."
+        },
+        {
+          "id": "ET-C-M-14",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "intermediate",
+          "label": "Sus2 vs Add9",
+          "audioNote": "Dsus2 vs Dadd9 — both have a 2nd/9th",
+          "answers": [
+            "Sus2 has no 3rd",
+            "Add9 has no 3rd",
+            "Same chord",
+            "Can't tell"
+          ],
+          "correct": 0,
+          "xp": 25,
+          "explanation": "Sus2 replaces the 3rd; Add9 keeps it. Hear the extra fullness in add9."
+        },
+        {
+          "id": "ET-C-M-15",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "intermediate",
+          "label": "Chord quality in distorted context",
+          "audioNote": "Dominant 7th through heavy gain",
+          "answers": [
+            "Dominant 7th",
+            "Major",
+            "Power Chord",
+            "Minor 7th"
+          ],
+          "correct": 0,
+          "xp": 25,
+          "explanation": "Extended chords through distortion — the 7th colors the sound even with gain."
+        },
+        {
+          "id": "ET-C-M-16",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "intermediate",
+          "label": "Minor 7th arpeggiated",
+          "audioNote": "Am7 played as arpeggio",
+          "answers": [
+            "Minor 7th",
+            "Minor",
+            "Major 7th",
+            "Dominant 7th"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "Spread voicing — same color, melodic delivery."
+        },
+        {
+          "id": "ET-C-M-17",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "intermediate",
+          "label": "Speed: 7th chord type?",
+          "audioNote": "Random dom7, min7, or maj7",
+          "answers": [
+            "Identify correctly"
+          ],
+          "correct": 0,
+          "xp": 25,
+          "explanation": "Three-way 7th chord ID. 3-second window."
+        },
+        {
+          "id": "ET-C-M-18",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "intermediate",
+          "label": "Dominant 7th resolving to I",
+          "audioNote": "G7 to C major — identify the resolution",
+          "answers": [
+            "Authentic cadence",
+            "Plagal cadence",
+            "Deceptive cadence",
+            "Half cadence"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "Hear V7 resolving to I — the most common cadence in tonal music."
+        },
+        {
+          "id": "ET-C-M-19",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "intermediate",
+          "label": "Chord quality: piano timbre",
+          "audioNote": "Cmaj7 on piano",
+          "answers": [
+            "Major 7th",
+            "Dominant 7th",
+            "Major",
+            "Minor 7th"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "Piano timbre — same lush maj7 quality."
+        },
+        {
+          "id": "ET-C-M-20",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "intermediate",
+          "label": "Major vs Sus — in context",
+          "audioNote": "Chord progression: does beat 3 resolve?",
+          "answers": [
+            "Yes — sus resolves to major",
+            "No — stays suspended",
+            "Chord is minor",
+            "Chord is dom7"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "Sus4 resolving to major within a progression — hear the release."
+        },
+        {
+          "id": "ET-C-M-21",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "intermediate",
+          "label": "Full quality ID from 5 options",
+          "audioNote": "Random chord from full intermediate set",
+          "answers": [
+            "Identify correctly"
+          ],
+          "correct": 0,
+          "xp": 25,
+          "explanation": "Major, minor, dom7, min7, maj7, sus4, sus2 all in play."
+        },
+        {
+          "id": "ET-C-M-22",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "intermediate",
+          "label": "Identify chord in bass register",
+          "audioNote": "Dm7 voiced low",
+          "answers": [
+            "Minor 7th",
+            "Minor",
+            "Dominant 7th",
+            "Major 7th"
+          ],
+          "correct": 0,
+          "xp": 20,
+          "explanation": "Low voicing adds mud — still identify the quality."
+        },
+        {
+          "id": "ET-C-M-23",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "intermediate",
+          "label": "Add9 vs maj9",
+          "audioNote": "Cadd9 vs Cmaj9 — what's different?",
+          "answers": [
+            "Maj9 has a 7th",
+            "Add9 has a 7th",
+            "Same chord",
+            "Can't tell"
+          ],
+          "correct": 0,
+          "xp": 25,
+          "explanation": "Maj9 = major 7th + 9th. Add9 = just the 9th added, no 7th."
+        },
+        {
+          "id": "ET-C-M-24",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "intermediate",
+          "label": "Chord in song context",
+          "audioNote": "Verse uses one chord type throughout — identify",
+          "answers": [
+            "Minor 7th",
+            "Minor",
+            "Major",
+            "Dominant 7th"
+          ],
+          "correct": 0,
+          "xp": 25,
+          "explanation": "Extended listening — maintain identification over several bars."
+        },
+        {
+          "id": "ET-C-M-25",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "intermediate",
+          "label": "Chord change detection",
+          "audioNote": "Progression changes quality mid-bar — when?",
+          "answers": [
+            "On beat 3",
+            "On beat 1",
+            "On beat 2",
+            "On beat 4"
+          ],
+          "correct": 0,
+          "xp": 25,
+          "explanation": "Rhythmic precision meets harmonic ID — locate the change."
+        }
+      ],
+      "advanced": [
+        {
+          "id": "ET-C-A-01",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "advanced",
+          "label": "Diminished Triad",
+          "audioNote": "Bdim (B-D-F)",
+          "answers": [
+            "Diminished",
+            "Minor",
+            "Dominant 7th",
+            "Augmented"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "Two stacked minor 3rds. Maximum tension. Common in metal."
+        },
+        {
+          "id": "ET-C-A-02",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "advanced",
+          "label": "Augmented Triad",
+          "audioNote": "Caug (C-E-G#)",
+          "answers": [
+            "Augmented",
+            "Major",
+            "Diminished",
+            "Suspended"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "Two stacked major 3rds. Unstable and dreamy — common in prog rock."
+        },
+        {
+          "id": "ET-C-A-03",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "advanced",
+          "label": "Half-Diminished (m7b5)",
+          "audioNote": "Bm7b5 (B-D-F-A)",
+          "answers": [
+            "Half-Diminished",
+            "Diminished",
+            "Minor 7th",
+            "Dominant 7th"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "Diminished triad with a minor 7th. The ii chord in minor keys."
+        },
+        {
+          "id": "ET-C-A-04",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "advanced",
+          "label": "Diminished 7th",
+          "audioNote": "Bdim7 (B-D-F-Ab)",
+          "answers": [
+            "Diminished 7th",
+            "Half-Diminished",
+            "Dominant 7th",
+            "Augmented"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "All minor 3rds stacked — symmetrical, maximum tension."
+        },
+        {
+          "id": "ET-C-A-05",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "advanced",
+          "label": "Minor Major 7th",
+          "audioNote": "CmMaj7 (C-Eb-G-B)",
+          "answers": [
+            "Minor Major 7th",
+            "Minor 7th",
+            "Major 7th",
+            "Half-Diminished"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "Minor chord with a major 7th — exotic, tense, cinematic."
+        },
+        {
+          "id": "ET-C-A-06",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "advanced",
+          "label": "Major 9th",
+          "audioNote": "Cmaj9 (C-E-G-B-D)",
+          "answers": [
+            "Major 9th",
+            "Add9",
+            "Major 7th",
+            "Minor 9th"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "Full major 7th + 9th. Lush and extended. Jazz and ambient rock."
+        },
+        {
+          "id": "ET-C-A-07",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "advanced",
+          "label": "Minor 9th",
+          "audioNote": "Am9 (A-C-E-G-B)",
+          "answers": [
+            "Minor 9th",
+            "Minor 7th",
+            "Major 9th",
+            "Half-Diminished"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "Minor 7th + 9th. Rich and moody. Neo-soul and jazz fusion."
+        },
+        {
+          "id": "ET-C-A-08",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "advanced",
+          "label": "Dominant 9th",
+          "audioNote": "G9 (G-B-D-F-A)",
+          "answers": [
+            "Dominant 9th",
+            "Dominant 7th",
+            "Major 9th",
+            "Minor 9th"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "Dom7 + 9th. Funky and full. Classic R&B and blues-rock."
+        },
+        {
+          "id": "ET-C-A-09",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "advanced",
+          "label": "Aug vs Dim — side by side",
+          "audioNote": "Caug then Cdim",
+          "answers": [
+            "Augmented first",
+            "Diminished first",
+            "Same quality",
+            "Can't tell"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "Aug = bright tension (raised 5th); Dim = dark tension (lowered 5th)."
+        },
+        {
+          "id": "ET-C-A-10",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "advanced",
+          "label": "Half-dim vs Dim7 — side by side",
+          "audioNote": "Bm7b5 then Bdim7",
+          "answers": [
+            "Half-Diminished first",
+            "Diminished 7th first",
+            "Same chord",
+            "Can't tell"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "Half-dim has a minor 7th; Dim7 has a diminished 7th (one lower)."
+        },
+        {
+          "id": "ET-C-A-11",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "advanced",
+          "label": "Chord with added color tone: dom7#9",
+          "audioNote": "C major with added b7 and #9",
+          "answers": [
+            "Dominant 7#9",
+            "Dominant 7th",
+            "Minor 7th",
+            "Augmented"
+          ],
+          "correct": 0,
+          "xp": 35,
+          "explanation": "The dominant 7#9 chord — a major 3rd and minor 3rd coexist, creating a tense, bluesy color."
+        },
+        {
+          "id": "ET-C-A-12",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "advanced",
+          "label": "Identify chord in jazz context — ii",
+          "audioNote": "ii-V-I in C — identify the ii chord",
+          "answers": [
+            "Dm7 (Minor 7th)",
+            "Dm (Minor)",
+            "D7 (Dominant 7th)",
+            "Dm9 (Minor 9th)"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "The ii chord in jazz ii-V-I is always minor 7th."
+        },
+        {
+          "id": "ET-C-A-13",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "advanced",
+          "label": "Identify chord in jazz context — V",
+          "audioNote": "ii-V-I in C — identify the V chord",
+          "answers": [
+            "G7 (Dominant 7th)",
+            "Gmaj7",
+            "Gm7",
+            "G9"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "The V chord is always dominant 7th — that's what creates the resolution pull."
+        },
+        {
+          "id": "ET-C-A-14",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "advanced",
+          "label": "Chord inversion: first inversion",
+          "audioNote": "C major/E (E in bass)",
+          "answers": [
+            "First Inversion",
+            "Root Position",
+            "Second Inversion",
+            "Third Inversion"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "The 3rd in the bass changes the color and weight of the chord."
+        },
+        {
+          "id": "ET-C-A-15",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "advanced",
+          "label": "Chord inversion: second inversion",
+          "audioNote": "C major/G (G in bass)",
+          "answers": [
+            "Second Inversion",
+            "Root Position",
+            "First Inversion",
+            "Third Inversion"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "The 5th in the bass — less stable, often used as a passing chord."
+        },
+        {
+          "id": "ET-C-A-16",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "advanced",
+          "label": "Chord quality in modal context",
+          "audioNote": "Dorian mode — what quality is the IV chord?",
+          "answers": [
+            "Major",
+            "Minor",
+            "Dominant 7th",
+            "Diminished"
+          ],
+          "correct": 0,
+          "xp": 35,
+          "explanation": "In Dorian, the IV chord is major (raised 6th) — distinguishes it from natural minor."
+        },
+        {
+          "id": "ET-C-A-17",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "advanced",
+          "label": "Full advanced set speed round",
+          "audioNote": "Random from full advanced chord set",
+          "answers": [
+            "Identify correctly"
+          ],
+          "correct": 0,
+          "xp": 40,
+          "explanation": "All chord types in play. 3-second window."
+        },
+        {
+          "id": "ET-C-A-18",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "advanced",
+          "label": "Chord in dense mix",
+          "audioNote": "Identify chord quality in a full band context",
+          "answers": [
+            "Minor 7th",
+            "Minor",
+            "Dominant 7th",
+            "Major 7th"
+          ],
+          "correct": 0,
+          "xp": 35,
+          "explanation": "Real-world skill — guitar, bass, drums, vocals all playing."
+        },
+        {
+          "id": "ET-C-A-19",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "advanced",
+          "label": "Borrowed chord identification",
+          "audioNote": "bVII in major key — what quality?",
+          "answers": [
+            "Major",
+            "Minor",
+            "Dominant 7th",
+            "Diminished"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "bVII borrowed from parallel minor is always a major chord."
+        },
+        {
+          "id": "ET-C-A-20",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "advanced",
+          "label": "Secondary dominant",
+          "audioNote": "V/V in C major — what chord?",
+          "answers": [
+            "D7 (Dominant 7th)",
+            "D Major",
+            "Dm7",
+            "Dmaj7"
+          ],
+          "correct": 0,
+          "xp": 30,
+          "explanation": "D7 is the V of V in C major — a secondary dominant creating extra pull."
+        },
+        {
+          "id": "ET-C-A-21",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "advanced",
+          "label": "Polychord identification",
+          "audioNote": "C major over D bass",
+          "answers": [
+            "Polychord / Slash chord",
+            "Add9",
+            "Major 7th",
+            "Suspended"
+          ],
+          "correct": 0,
+          "xp": 35,
+          "explanation": "Two separate harmonies layered — the slash chord sound."
+        },
+        {
+          "id": "ET-C-A-22",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "advanced",
+          "label": "Quartal voicing",
+          "audioNote": "Chord built in 4ths — identify quality",
+          "answers": [
+            "Quartal",
+            "Major",
+            "Suspended",
+            "Minor 7th"
+          ],
+          "correct": 0,
+          "xp": 35,
+          "explanation": "Stacked 4ths — no clear major/minor quality. Modal and open."
+        },
+        {
+          "id": "ET-C-A-23",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "advanced",
+          "label": "Cluster chord",
+          "audioNote": "Half-step cluster — identify",
+          "answers": [
+            "Cluster",
+            "Diminished",
+            "Minor 2nd interval",
+            "Augmented"
+          ],
+          "correct": 0,
+          "xp": 35,
+          "explanation": "Adjacent semitones voiced together — atonal, harsh, used in experimental rock."
+        },
+        {
+          "id": "ET-C-A-24",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "advanced",
+          "label": "Chord progression: identify all qualities",
+          "audioNote": "4-bar progression, 4 chords, all different",
+          "answers": [
+            "All correct",
+            "3 correct",
+            "2 correct",
+            "1 correct"
+          ],
+          "correct": 0,
+          "xp": 40,
+          "explanation": "Advanced progression analysis — sustained attention over multiple chords."
+        },
+        {
+          "id": "ET-C-A-25",
+          "module": "ear_training",
+          "type": "chord",
+          "level": "advanced",
+          "label": "Chord in musical context",
+          "audioNote": "Chord progression — identify the quality of the chord on beat 3.",
+          "answers": [
+            "Identify correctly"
+          ],
+          "correct": 0,
+          "xp": 40,
+          "explanation": "Apply chord knowledge within a progression in real time."
+        }
+      ]
+    }
+  }
+}
