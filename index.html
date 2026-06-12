@@ -3668,6 +3668,40 @@
   .kl-snd-label { font-family: 'Barlow', sans-serif; font-size: 11.5px; color: rgba(230,222,255,0.8); }
   .kl-snd-val { font-family: var(--font-mono, monospace); font-size: 11px; color: #8ef0c8; text-align: right; }
   .kl-snd-row input[type=range] { width: 100%; accent-color: #8ef0c8; }
+  /* ── DEV COMPOSE ── */
+  .kl-comp { width: min(560px, 96vw); }
+  .kl-comp-row { display: flex; gap: 2px; align-items: center; margin: 2px 0; }
+  .kl-comp-rowlabel {
+    width: 26px; flex: none; text-align: right; padding-right: 4px;
+    font-family: var(--font-mono, monospace); font-size: 10px; color: rgba(220,210,255,0.6);
+  }
+  .kl-comp-cell {
+    flex: 1; aspect-ratio: 1; min-width: 0; border-radius: 4px; cursor: pointer;
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1);
+  }
+  .kl-comp-cell:nth-child(4n+2) { border-left: 1px solid rgba(255,255,255,0.28); }
+  .kl-comp-cell.on { background: #8ef0c8; border-color: #8ef0c8; }
+  .kl-comp-colhead {
+    flex: 1; text-align: center; font-family: var(--font-mono, monospace);
+    font-size: 10px; color: rgba(220,210,255,0.55); border-radius: 4px;
+  }
+  .kl-comp-colhead.now { background: rgba(142,240,200,0.3); color: #fff; }
+  .kl-snd-tests select, .kl-snd-tests input {
+    background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 8px; padding: 4px 8px; font-family: 'Barlow', sans-serif; font-size: 12px;
+  }
+  /* ── DEV CUTSCENE EDITOR + pixel-art cutscene images ── */
+  .kl-cutedit-row { margin: 8px 0; font-family: 'Barlow', sans-serif; font-size: 12.5px; color: rgba(230,222,255,0.85); }
+  .kl-cutedit-row input[type=text], .kl-cutedit-row textarea {
+    background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.22);
+    border-radius: 8px; padding: 8px 10px; font-family: 'Barlow', sans-serif; font-size: 13px;
+  }
+  .kl-cut-img {
+    display: block; margin: 0 auto 6px;
+    max-width: min(320px, 72vw); max-height: 34vh;
+    image-rendering: pixelated; /* pixel art stays crisp at any scale */
+    border-radius: 10px;
+  }
   /* === ECONOMY CSS — END === */
   /* === KANTEON RENAME — END === */
 
@@ -9510,7 +9544,7 @@ function drumKitSVG() {
     '  <circle cx="300" cy="360" r="98" fill="#252050" stroke="#4a4490" stroke-width="1.5"/>',
     '  <circle cx="300" cy="360" r="78" fill="#1f1c4a" stroke="#3a3568" stroke-width="1"/>',
     // logo plate
-    '  <text x="300" y="368" font-family="Barlow Condensed, sans-serif" font-size="22" font-weight="900" fill="#7c6ff7" text-anchor="middle" letter-spacing="3">ROCKEAR</text>',
+    '  <text x="300" y="368" font-family="Barlow Condensed, sans-serif" font-size="22" font-weight="900" fill="#7c6ff7" text-anchor="middle" letter-spacing="3">VELION</text>',
 
     // ── Bass Drum Pedal (in front of kick) ──
     '  <rect x="282" y="460" width="36" height="8" fill="#3a3568" stroke="#1f1c50" stroke-width="1"/>',
@@ -9724,7 +9758,7 @@ function guitarAmpSVG() {
     // ── CONTROL PANEL (top section, black) ──
     '  <rect x="142" y="92" width="316" height="62" fill="#1a1410" stroke="#000" stroke-width="2" rx="3"/>',
     // Brand strip text
-    '  <text x="300" y="108" font-family="Barlow Condensed, sans-serif" font-size="11" font-weight="900" fill="#c8a060" text-anchor="middle" letter-spacing="3">ROCKEAR AMP</text>',
+    '  <text x="300" y="108" font-family="Barlow Condensed, sans-serif" font-size="11" font-weight="900" fill="#c8a060" text-anchor="middle" letter-spacing="3">VELION AMP</text>',
 
     // ── INPUT JACKS ──
     '  <circle cx="165" cy="135" r="8" fill="#0a0500" stroke="#c8a060" stroke-width="1.5"/>',
@@ -9808,7 +9842,7 @@ function bassAmpSVG() {
 
     // ── CONTROL PANEL ──
     '  <rect x="122" y="72" width="356" height="68" fill="#000a18" stroke="#000" stroke-width="2" rx="3"/>',
-    '  <text x="300" y="90" font-family="Barlow Condensed, sans-serif" font-size="11" font-weight="900" fill="#4a8acf" text-anchor="middle" letter-spacing="3">ROCKEAR BASS</text>',
+    '  <text x="300" y="90" font-family="Barlow Condensed, sans-serif" font-size="11" font-weight="900" fill="#4a8acf" text-anchor="middle" letter-spacing="3">VELION BASS</text>',
 
     // ── INPUT ──
     '  <circle cx="148" cy="118" r="9" fill="#000" stroke="#4a8acf" stroke-width="1.5"/>',
@@ -9888,7 +9922,7 @@ function pianoSVG() {
 
     // ── KEYBOARD BODY (frame around keys) ──
     '  <rect x="50" y="135" width="500" height="40" fill="#1a1410" stroke="#000" stroke-width="2"/>',
-    '  <text x="300" y="160" font-family="Barlow Condensed" font-size="14" font-weight="900" fill="#c8a060" text-anchor="middle" letter-spacing="3">ROCKEAR DIGITAL</text>',
+    '  <text x="300" y="160" font-family="Barlow Condensed" font-size="14" font-weight="900" fill="#c8a060" text-anchor="middle" letter-spacing="3">VELION DIGITAL</text>',
   ];
 
   // ── WHITE KEYS (14 keys: 2 octaves of C-D-E-F-G-A-B) ──
@@ -9938,7 +9972,7 @@ function synthSVG() {
 
     // ── CONTROL PANEL TOP SECTION (knob/slider area) ──
     '  <rect x="60" y="100" width="480" height="200" fill="#0a0805" stroke="#3a3030" stroke-width="1.5" rx="4"/>',
-    '  <text x="300" y="120" font-family="Barlow Condensed" font-size="11" font-weight="900" fill="#c8a060" text-anchor="middle" letter-spacing="3">ROCKEAR SYNTH</text>',
+    '  <text x="300" y="120" font-family="Barlow Condensed" font-size="11" font-weight="900" fill="#c8a060" text-anchor="middle" letter-spacing="3">VELION SYNTH</text>',
 
     // ── OSCILLATOR SECTION (left) ──
     '  <rect x="75" y="130" width="120" height="160" fill="#1f1c0a" stroke="#5a4818" stroke-width="1" rx="2"/>',
@@ -10057,7 +10091,7 @@ function organSVG() {
     // ── WOOD CABINET ──
     '  <rect x="45" y="50" width="510" height="400" fill="#3a200a" stroke="#1a0a00" stroke-width="3" rx="6"/>',
     '  <rect x="55" y="58" width="490" height="384" fill="none" stroke="#5a3a18" stroke-width="1.5" rx="4"/>',
-    '  <text x="300" y="78" font-family="Barlow Condensed" font-size="13" font-weight="900" fill="#c8a060" text-anchor="middle" letter-spacing="4">ROCKEAR ORGAN</text>',
+    '  <text x="300" y="78" font-family="Barlow Condensed" font-size="13" font-weight="900" fill="#c8a060" text-anchor="middle" letter-spacing="4">VELION ORGAN</text>',
 
     // ── DRAWBARS PANEL (top) ──
     '  <rect x="80" y="92" width="440" height="80" fill="#2a1408" stroke="#1a0a00" stroke-width="2" rx="2"/>',
@@ -10157,7 +10191,7 @@ function paSystemSVG() {
 
     // ── MIXER (center, control surface) ──
     '  <rect x="170" y="120" width="260" height="170" fill="#1a1410" stroke="#000" stroke-width="3" rx="4"/>',
-    '  <text x="300" y="138" font-family="Barlow Condensed" font-size="10" font-weight="900" fill="#c8a060" text-anchor="middle" letter-spacing="3">ROCKEAR MIXER</text>',
+    '  <text x="300" y="138" font-family="Barlow Condensed" font-size="10" font-weight="900" fill="#c8a060" text-anchor="middle" letter-spacing="3">VELION MIXER</text>',
     // Channel strips (8 channels)
   ];
   for (let i = 0; i < 8; i++) {
@@ -12076,7 +12110,7 @@ const KL_BANDMATE_LINES = [
 
 // === TITLE: KANTEON LOGO — START ===
 // The animated title splash shown every time the game opens, before player-select.
-const LOGO_THEME = 'teal'; // 'teal' (default) | 'purple' (RockEar universe)
+const LOGO_THEME = 'teal'; // 'teal' (default) | 'purple' (Velion universe)
 const KL_LOGO_THEMES = {
   teal:   { extrude: '#062a23', bloom: '#3fe6c0',
             grad: 'linear-gradient(176deg,#eafff8 0%,#9aefd6 26%,#3fcaa8 46%,#0c7a66 50%,#1ea487 53%,#62d8bd 72%,#d6fbef 100%)' },
@@ -12184,7 +12218,7 @@ function klRenderPlayerSelect() {
         '<div class="kl-panel-players">' + players.map(btn).join('') + addTile + '</div>' +
         '<button class="kl-tools-link" onclick="klOpenTools()">📖 Book of Knowledge</button>' +
         // === KANTEON RENAME — START ===
-        '<div class="kl-company-credit">a RockEar game</div>' +
+        '<div class="kl-company-credit">a Velion game</div>' +
         // === KANTEON RENAME — END ===
       '</div>' +
       (klIsDevAvailable() ? klDevBar() : '') +
@@ -12415,7 +12449,11 @@ window.klPlayCutscene = function(key, onContinue) {
   const cont = () => { wrap.onclick = null; onContinue && onContinue(); };
   wrap.innerHTML =
     '<div class="kl-cutscene">' +
-      '<div class="kl-cut-art">' + beat.art + '</div>' +
+      // === CUTSCENE IMAGES: a beat with an `img` field (PNG path or data-URL)
+      // shows the image (pixel-art crisp) instead of the emoji art slot.
+      (beat.img
+        ? '<img class="kl-cut-img" src="' + beat.img + '" alt="">'
+        : '<div class="kl-cut-art">' + beat.art + '</div>') +
       '<div class="kl-cut-title">' + beat.title + '</div>' +
       '<div class="kl-cut-line">' + beat.line + '</div>' +
       '<button class="kl-listen kl-cut-go" onclick="event.stopPropagation(); window.__klCutGo && window.__klCutGo();">▶</button>' +
@@ -13011,6 +13049,154 @@ window.klSndCopy = function() {
   catch (e) { console.log(json); klToast('Logged to console (clipboard blocked).'); }
 };
 // === DEV SOUND PANEL — END ===
+
+// === DEV COMPOSE — START ===
+// In-app piano-roll composer (voice-memo Tier 1). Compose on the same grid
+// system the puzzles use, audition with the same synths, COPY the JSON and
+// hand it to the build chat to become a track/puzzle. 10 scale rows × 16 steps.
+const klComp = { notes: {}, bpm: 100, timbre: 'klGuitar', gen: 0, raf: null };
+window.klToggleComposePanel = function() {
+  const old = document.getElementById('kl-comp'); if (old) { klCompStop(); old.remove(); return; }
+  const el = document.createElement('div');
+  el.id = 'kl-comp'; el.className = 'kl-sndpanel kl-comp';
+  let head = '<div class="kl-comp-row kl-comp-head"><span class="kl-comp-rowlabel"></span>';
+  for (let s = 0; s < 16; s++) head += '<span class="kl-comp-colhead" id="kl-comp-col-' + s + '">' + (s % 4 === 0 ? (s / 4 + 1) : '·') + '</span>';
+  head += '</div>';
+  let grid = '';
+  for (let p = KL_SCALE.length - 1; p >= 0; p--) {
+    grid += '<div class="kl-comp-row"><span class="kl-comp-rowlabel">' + ['C','D','E','F','G','A','B','C2','D2','E2'][p] + '</span>';
+    for (let s = 0; s < 16; s++) {
+      grid += '<button class="kl-comp-cell" id="kl-comp-' + p + '-' + s + '" onclick="klCompTap(' + p + ',' + s + ')"></button>';
+    }
+    grid += '</div>';
+  }
+  el.innerHTML =
+    '<div class="kl-snd-head">🎼 COMPOSE' +
+      '<button class="kt-int-sub" onclick="klCompPlay()">▶</button>' +
+      '<button class="kt-int-sub" onclick="klCompStop()">■</button>' +
+      '<button class="kt-int-sub" onclick="klCompClear()">CLEAR</button>' +
+      '<button class="kt-int-sub" onclick="klCompCopy()">COPY</button>' +
+      '<button class="kt-int-sub" onclick="klToggleComposePanel()">✕</button>' +
+    '</div>' +
+    '<div class="kl-snd-tests">' +
+      'BPM <input type="number" id="kl-comp-bpm" value="' + klComp.bpm + '" min="50" max="200" style="width:54px" onchange="klComp.bpm=parseInt(this.value)||100">' +
+      '<select id="kl-comp-timbre" onchange="klComp.timbre=this.value">' +
+        '<option value="klGuitar">guitar</option><option value="klKeys">keys</option>' +
+        '<option value="klVocals">vocals</option><option value="piano">piano</option>' +
+      '</select>' +
+    '</div>' + head + grid;
+  document.getElementById('kidlab').appendChild(el);
+  // restore any existing notes into the grid
+  Object.keys(klComp.notes).forEach(k => {
+    const c = document.getElementById('kl-comp-' + k.replace('@', '-'));
+    if (c) c.classList.add('on');
+  });
+};
+window.klCompTap = function(p, s) {
+  const k = p + '@' + s;
+  const cell = document.getElementById('kl-comp-' + p + '-' + s);
+  if (klComp.notes[k]) { delete klComp.notes[k]; cell.classList.remove('on'); }
+  else {
+    klComp.notes[k] = true; cell.classList.add('on');
+    const ctx = getAudio();
+    playTone(midiFreq(klPitchMidi(p)), ctx.currentTime, 0.3, ctx, 0.25, klComp.timbre);
+  }
+};
+window.klCompPlay = function() {
+  klCompStop();
+  const ctx = getAudio();
+  const gen = ++klComp.gen;
+  const beat = 60 / klComp.bpm / 2; // 16 steps = 8th notes
+  const t0 = ctx.currentTime + 0.1;
+  Object.keys(klComp.notes).forEach(k => {
+    const [p, s] = k.split('@').map(Number);
+    playTone(midiFreq(klPitchMidi(p)), t0 + s * beat, beat * 0.9, ctx, 0.25, klComp.timbre);
+  });
+  const endT = t0 + 16 * beat;
+  const tick = () => {
+    if (gen !== klComp.gen) return;
+    const now = ctx.currentTime;
+    if (now >= endT) { klCompColumn(-1); return; }
+    klCompColumn(Math.floor((now - t0 + 0.0083) / beat));
+    klComp.raf = requestAnimationFrame(tick);
+  };
+  klComp.raf = requestAnimationFrame(tick);
+};
+function klCompColumn(cur) {
+  for (let s = 0; s < 16; s++) {
+    const h = document.getElementById('kl-comp-col-' + s);
+    if (h) h.classList.toggle('now', s === cur);
+  }
+}
+window.klCompStop = function() { klComp.gen++; if (klComp.raf) cancelAnimationFrame(klComp.raf); klCompColumn(-1); };
+window.klCompClear = function() {
+  klComp.notes = {};
+  document.querySelectorAll('.kl-comp-cell.on').forEach(c => c.classList.remove('on'));
+};
+window.klCompCopy = function() {
+  const notes = Object.keys(klComp.notes).map(k => {
+    const [p, s] = k.split('@').map(Number);
+    return { pitch: p, start: s / 2, dur: 0.5 }; // in beats (16 steps = 8ths)
+  }).sort((a, b) => a.start - b.start || a.pitch - b.pitch);
+  const json = JSON.stringify({ bpm: klComp.bpm, timbre: klComp.timbre, notes }, null, 2);
+  try { navigator.clipboard.writeText(json); klToast('📋 Composition copied — paste it to the build chat.'); }
+  catch (e) { console.log(json); klToast('Logged to console (clipboard blocked).'); }
+};
+// === DEV COMPOSE — END ===
+
+// === DEV CUTSCENE EDITOR — START ===
+// The streamlined story pipeline (voice memo): pick an image you drew, type the
+// title + line, PREVIEW it in the real cutscene renderer, COPY the beat JSON.
+window.klToggleCutEditor = function() {
+  const old = document.getElementById('kl-cutedit'); if (old) { old.remove(); return; }
+  const el = document.createElement('div');
+  el.id = 'kl-cutedit'; el.className = 'kl-sndpanel';
+  el.innerHTML =
+    '<div class="kl-snd-head">🎬 CUTSCENE' +
+      '<button class="kt-int-sub" onclick="klCutEditPreview()">PREVIEW</button>' +
+      '<button class="kt-int-sub" onclick="klCutEditCopy()">COPY</button>' +
+      '<button class="kt-int-sub" onclick="klToggleCutEditor()">✕</button>' +
+    '</div>' +
+    '<div class="kl-cutedit-row">Image (your pixel art): <input type="file" id="kl-cutedit-img" accept="image/*" onchange="klCutEditImg(this)"></div>' +
+    '<div class="kl-cutedit-row"><input type="text" id="kl-cutedit-title" placeholder="Title" style="width:100%"></div>' +
+    '<div class="kl-cutedit-row"><textarea id="kl-cutedit-line" placeholder="Story line" rows="3" style="width:100%"></textarea></div>' +
+    '<div class="kl-cutedit-row" id="kl-cutedit-imgname" style="opacity:0.6;font-size:11px;"></div>';
+  document.getElementById('kidlab').appendChild(el);
+};
+let __klCutEditData = { img: null, imgName: '' };
+window.klCutEditImg = function(input) {
+  const f = input.files && input.files[0]; if (!f) return;
+  __klCutEditData.imgName = f.name;
+  const r = new FileReader();
+  r.onload = () => {
+    __klCutEditData.img = r.result;
+    const n = document.getElementById('kl-cutedit-imgname');
+    if (n) n.textContent = '✓ ' + f.name + ' loaded';
+  };
+  r.readAsDataURL(f);
+};
+window.klCutEditPreview = function() {
+  KL_STORY.__preview = {
+    art: '🎬',
+    img: __klCutEditData.img || null,
+    title: (document.getElementById('kl-cutedit-title') || {}).value || 'Untitled',
+    line: (document.getElementById('kl-cutedit-line') || {}).value || '…',
+  };
+  klPlayCutscene('__preview', () => klRenderTown());
+};
+window.klCutEditCopy = function() {
+  const beat = {
+    img: __klCutEditData.imgName ? __klCutEditData.imgName : '(no image — emoji art slot)',
+    title: (document.getElementById('kl-cutedit-title') || {}).value || '',
+    line: (document.getElementById('kl-cutedit-line') || {}).value || '',
+  };
+  const json = '// Cutscene beat — send this AND the image file (' + (__klCutEditData.imgName || 'none') + ') to the build chat:\n' +
+    JSON.stringify(beat, null, 2);
+  try { navigator.clipboard.writeText(json); klToast('📋 Beat copied — send it + the image file to the build chat.'); }
+  catch (e) { console.log(json); klToast('Logged to console.'); }
+};
+// === DEV CUTSCENE EDITOR — END ===
+
 function klDevBar() {
   if (!klIsDevAvailable()) return '';
   // Single source of truth for play order (see klStorySequence). 🎬 = cutscene.
@@ -13034,7 +13220,9 @@ function klDevBar() {
     '</span>' +
     '<span class="kl-dev-tag" style="margin-left:8px;">DRUMMER</span>' +
     '<button class="kl-dev-btn" id="kl-drummer-toggle" onclick="klToggleDrummerAnim()" title="toggle drummer animation (sync test)">' + (klDrummerAnim ? 'ON' : 'OFF') + '</button>' +
-    '<button class="kl-dev-btn" style="margin-left:8px;" onclick="klToggleSoundPanel()" title="live soundbank tuner">🎛 SOUND</button>';
+    '<button class="kl-dev-btn" style="margin-left:8px;" onclick="klToggleSoundPanel()" title="live soundbank tuner">🎛 SOUND</button>' +
+    '<button class="kl-dev-btn" onclick="klToggleComposePanel()" title="piano-roll composer">🎼 COMPOSE</button>' +
+    '<button class="kl-dev-btn" onclick="klToggleCutEditor()" title="cutscene editor">🎬 CUT</button>';
   return '<div class="kl-devbar' + (klState.devOpen ? ' open' : '') + '" id="kl-devbar">' +
     '<button class="kl-dev-toggle" onclick="klToggleDevBar()" title="DEV: jump to level">' +
       '<span class="kl-dev-tag">DEV</span><span class="kl-dev-arrow">▴</span>' +
@@ -13450,7 +13638,7 @@ let klDrumFirstPlay = true;  // extra audio lead on the first drum play (ctx war
 // 0 = wired / built-in speakers. Tunable live from the DEV menu.
 let klAudioOffsetMs = 0;
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-5'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-7'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
