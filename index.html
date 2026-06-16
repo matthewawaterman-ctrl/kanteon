@@ -6223,6 +6223,9 @@ function stopAllAudio() {
 
 function playTone(freq, startTime, duration, ctx, gain = 0.3, timbre = 'guitar', dest) {
   const out = dest || ctx.destination;
+  // Per-instrument melody volume — only the Kid-Lab melody voices, so legacy
+  // (piano/guitar) callers elsewhere in the app are unaffected.
+  if (timbre === 'klVocals' || timbre === 'klKeys' || timbre === 'klGuitar') gain *= KL_SND.volMel;
   const env = ctx.createGain();
   env.connect(out);
   env.gain.setValueAtTime(0, startTime);
@@ -6238,8 +6241,8 @@ function playTone(freq, startTime, duration, ctx, gain = 0.3, timbre = 'guitar',
   // callers keep the original app behavior (piano=sine, everything else=triangle).
   if (timbre === 'klVocals') {
     osc.type = 'sine'; // smooth + gentle vibrato = unmistakably voice-like
-    const lfo = ctx.createOscillator(); lfo.frequency.value = 5.2;
-    const lfoGain = ctx.createGain(); lfoGain.gain.value = freq * 0.012; // ~1.2% pitch wobble
+    const lfo = ctx.createOscillator(); lfo.frequency.value = KL_SND.melVocalRate;
+    const lfoGain = ctx.createGain(); lfoGain.gain.value = freq * KL_SND.melVocalVib; // pitch wobble
     lfo.connect(lfoGain); lfoGain.connect(osc.frequency);
     lfo.start(startTime); lfo.stop(startTime + duration + 0.05);
   } else if (timbre === 'klKeys') {
@@ -6247,7 +6250,7 @@ function playTone(freq, startTime, duration, ctx, gain = 0.3, timbre = 'guitar',
     const o2 = ctx.createOscillator(); o2.type = 'sine'; o2.frequency.value = freq * 2;
     const g2 = ctx.createGain();
     g2.gain.setValueAtTime(0, startTime);
-    g2.gain.linearRampToValueAtTime(gain * 0.3, startTime + (KL_SND.melAttack / 1000));
+    g2.gain.linearRampToValueAtTime(gain * KL_SND.melKeysShimmer, startTime + (KL_SND.melAttack / 1000));
     g2.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
     o2.connect(g2); g2.connect(out);
     o2.start(startTime); o2.stop(startTime + duration + 0.05);
@@ -11661,7 +11664,8 @@ function klRenderTown() {
       '<div class="kl-scene">' + KL_TOWN_SVG + '</div>' +
       '<div class="kt-hud">' +
         '<span class="kt-hud-item">💵 $' + klState.money + '</span>' +
-        '<span class="kt-hud-item">📅 Day ' + klState.day + '</span>' +
+        '<span class="kt-hud-item">⭐ Lv.' + klLevel() + ' · ' + klXpIntoLevel() + '/' + klXpForLevel() + '</span>' +
+        '<span class="kt-hud-item">📅 Day ' + klState.day + ' · ' + klDayName() + (klIsWeekend() ? ' 🎉' : '') + '</span>' +
         (klState.van ? '<span class="kt-hud-item">🚐</span>' : '') +
         (showHint ? '<span class="kt-hud-item kt-hud-show">' + showHint + '</span>' : '') +
       '</div>' +
@@ -11712,8 +11716,11 @@ window.klEnterSet = function(setId) {
 // Set finished → back to town with a beat.
 function klSetComplete(setId) {
   klState.activeSet = null;
+  // Beating Waddy's house is now a real milestone: it grants XP (which amplifies
+  // all future earnings) rather than only opening the next area.
+  if (setId === 'waddy') klState.xp = (klState.xp || 0) + 60;
   klSaveProgress();
-  klToast(setId === 'waddy' ? '🧙 "That\u2019s everything I\u2019ve got, kid. Hit the Garage."' : '🎸 Garage cleared! Book a show at the Venue!');
+  klToast(setId === 'waddy' ? '🧙 "That\u2019s everything I\u2019ve got, kid." (+60 XP — you earn more now!) Hit the Garage.' : '🎸 Garage cleared! Book a show at the Venue!');
   klRenderTown();
 }
 
@@ -11811,7 +11818,7 @@ function klRenderInterior(id) {
       '<div class="kt-int-card">' +
         '<div class="kt-int-art">' + art + '</div>' +
         '<div class="kt-int-title">' + title + '</div>' +
-        '<div class="kt-hud kt-hud-inline"><span class="kt-hud-item">💵 $' + klState.money + '</span><span class="kt-hud-item">📅 Day ' + klState.day + '</span></div>' +
+        '<div class="kt-hud kt-hud-inline"><span class="kt-hud-item">💵 $' + klState.money + '</span><span class="kt-hud-item">📅 Day ' + klState.day + ' · ' + klDayName() + (klIsWeekend() ? ' 🎉' : '') + '</span></div>' +
         body +
         '<button class="kt-int-leave" onclick="klRenderTown()">← Back outside</button>' +
       '</div>' +
@@ -11905,17 +11912,18 @@ function klShowSongClear() {
   clearInterval(klShow.timerId);
   klShow.i++;
   if (klShow.i < 3) { klShowNextSong(); return; }
-  // SHOW COMPLETE — payout scales with promotion.
+  // SHOW COMPLETE — payout scales with promotion AND the player's level (XP).
   klShowCleanup();
   const p = klState.promo;
   const mult = 1 + p.flyers * 0.10 + p.ads * 0.25 + p.radio * 0.50;
-  const pay = Math.round(30 * mult);
+  const pay = Math.round(30 * mult * klEarnMult());
   klState.money += pay;
   klState.bookedDay = null;
   klState.promo = { flyers: 0, ads: 0, radio: 0 };
   klState.day++;
+  klState.xp = (klState.xp || 0) + 40; // a clean show is worth real XP
   klSaveProgress();
-  klToast('🎉 GREAT SHOW! You made $' + pay + '!');
+  klToast('🎉 GREAT SHOW! You made $' + pay + '! (+40 XP)');
   klRenderTown();
 }
 
@@ -12074,7 +12082,7 @@ function klSaveProgress() {
     localStorage.setItem(klSaveKey(klState.kid.id), JSON.stringify({
       v: 2, puzzleIdx: klState.puzzleIdx, score: klState.score, solved, savedAt: Date.now(),
       // === ECONOMY — START ===
-      money: klState.money, day: klState.day, bookedDay: klState.bookedDay,
+      money: klState.money, xp: klState.xp, day: klState.day, bookedDay: klState.bookedDay,
       promo: klState.promo, gear: klState.gear, van: klState.van, setPos: klState.setPos,
       // === ECONOMY — END ===
     }));
@@ -12133,7 +12141,8 @@ const klState = {
   solved: [],            // SAVE/LOAD: puzzle indexes solved this session (merged into the per-kid save)
   // === ECONOMY — START ===
   money: 20,             // starting cash
-  day: 1,                // the calendar — advances when shows happen
+  xp: 0,                 // experience — amplifies earnings (flat multiplier per level)
+  day: 1,                // the calendar — advances when shows/jobs happen; drives day-of-week
   bookedDay: null,       // day a show is booked for (null = nothing booked)
   promo: { flyers: 0, ads: 0, radio: 0 }, // promotion bought for the NEXT show (resets after)
   gear: [],              // instruments owned (shop flavor; future mechanics)
@@ -12143,6 +12152,30 @@ const klState = {
   // === ECONOMY — END ===
   devOpen: true,         // DEV tray unfolded by default on load (dev convenience)
 };
+
+// === ECONOMY HELPERS — START ===
+// XP → level: every 100 XP is a level. Level 1 is the floor.
+function klLevel() { return Math.floor((klState.xp || 0) / 100) + 1; }
+// XP into the current level, and the span needed for the next (always 100 here).
+function klXpIntoLevel() { return (klState.xp || 0) % 100; }
+function klXpForLevel() { return 100; }
+// Earnings amplifier: each level above 1 adds +15% to all money earned.
+function klEarnMult() { return 1 + (klLevel() - 1) * 0.15; }
+// Grant XP, persist, and nudge the player. levelUp toast when a threshold is crossed.
+function klAddXp(amount) {
+  if (!amount) return;
+  const before = klLevel();
+  klState.xp = (klState.xp || 0) + amount;
+  klSaveProgress();
+  const after = klLevel();
+  if (after > before) klToast('⭐ LEVEL UP! Lv.' + after + ' — you earn ' + Math.round((klEarnMult() - 1) * 100) + '% more now.');
+  else klToast('✨ +' + amount + ' XP');
+}
+// Day-of-week from the calendar. Day 1 = Monday. Weekends pay more for busking.
+const KL_DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+function klDayName(day) { return KL_DOW[((day || klState.day) - 1) % 7]; }
+function klIsWeekend(day) { const n = ((day || klState.day) - 1) % 7; return n === 5 || n === 6; }
+// === ECONOMY HELPERS — END ===
 
 const KL_BANDMATE_LINES = [
   'Nice — listen again and add more!',
@@ -12324,6 +12357,7 @@ window.klPickKid = function(kidId) {
     klState.solved = Array.isArray(save.solved) ? save.solved.slice() : [];
     // === ECONOMY — START === (defaults cover v1 saves)
     klState.money = (save.money !== undefined) ? save.money : 20;
+    klState.xp = save.xp || 0;
     klState.day = save.day || 1;
     klState.bookedDay = (save.bookedDay !== undefined) ? save.bookedDay : null;
     klState.promo = save.promo || { flyers: 0, ads: 0, radio: 0 };
@@ -13046,6 +13080,14 @@ const KL_SND_CONTROLS = [
   ['bassH3', 'Bass 12th partial (3×)', 0, 1, 0.01],
   ['bassH4', 'Bass 4th partial (4×)', 0, 0.5, 0.01],
   ['melAttack', 'Melody attack (ms)', 1, 60, 1],
+  ['melVocalVib', 'Vocals vibrato depth', 0, 0.04, 0.002],
+  ['melVocalRate', 'Vocals vibrato rate (Hz)', 3, 8, 0.1],
+  ['melKeysShimmer', 'Keys octave shimmer', 0, 0.6, 0.02],
+  ['volKick', 'Vol · Kick', 0, 2, 0.05],
+  ['volSnare', 'Vol · Snare', 0, 2, 0.05],
+  ['volHat', 'Vol · Hat', 0, 2, 0.05],
+  ['volBass', 'Vol · Bass', 0, 2, 0.05],
+  ['volMel', 'Vol · Melody', 0, 2, 0.05],
 ];
 window.klToggleSoundPanel = function() {
   const old = document.getElementById('kl-sndpanel');
@@ -13497,6 +13539,22 @@ window.klSelectBlock = function(dur, btn) {
   btn.classList.add('selected');
 };
 
+// Voice-aware note audition. Bass puzzles must sound like their BAKED voice
+// (klBass: triangle + phantom-fundamental harmonics), not the melody synth.
+// klPitchMidi() already applies the bass -24 octave shift, so the pitch matches
+// the backing exactly — only the timbre needed routing.
+function klAuditionNote(pitch, dur) {
+  const ctx = getAudio();
+  const p = KL_PUZZLES[klState.puzzleIdx];
+  const midi = klPitchMidi(pitch);
+  const d = 0.45 * (dur || 1);
+  if (p && p.type === 'bass') {
+    klBass(ctx.currentTime + 0.01, ctx.destination, ctx, midi, d, 0.22);
+  } else {
+    playTone(midiFreq(midi), ctx.currentTime, d, ctx, 0.3, klCurMelTimbre());
+  }
+}
+
 window.klCellTap = function(pitch, beat) {
   const p = KL_PUZZLES[klState.puzzleIdx];
   const phase = p.phase || 3;
@@ -13517,7 +13575,7 @@ window.klCellTap = function(pitch, beat) {
 
   if (phase === 1) {
     const ghostBeats = p.notes.map(n => n.start);
-    playTone(midiFreq(klPitchMidi(pitch)), ctx.currentTime, 0.45, ctx, 0.3, klCurMelTimbre());
+    klAuditionNote(pitch, 1);
     if (!ghostBeats.includes(beat)) return; // non-rhythm columns: just sing
     const existing = klState.placed.find(n => !n.locked && n.start === beat);
     if (existing && existing.pitch === pitch) {
@@ -13567,7 +13625,7 @@ window.klCellTap = function(pitch, beat) {
   klRedrawPlaced();
 
   // INSTANT AUDITION
-  playTone(midiFreq(klPitchMidi(pitch)), ctx.currentTime, 0.45 * dur, ctx, 0.3, klCurMelTimbre());
+  klAuditionNote(pitch, dur);
 };
 
 function klNoteCovers(note, pitch, beat) {
@@ -13682,7 +13740,7 @@ let klDrumFirstPlay = true;  // extra audio lead on the first drum play (ctx war
 // 0 = wired / built-in speakers. Tunable live from the DEV menu.
 let klAudioOffsetMs = 0;
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-13'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-15'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
@@ -13741,9 +13799,16 @@ const KL_SND = {
   hatFreq: 7000, hatDecay: 0.012,
   bassH2: 0.55, bassH3: 0.22, bassH4: 0.08,
   melAttack: 15, // ms — melody/playTone attack ramp
+  // Per-instrument volume mixer (1 = unchanged). Applied inside each voice fn.
+  volKick: 1, volSnare: 1, volHat: 1, volBass: 1, volMel: 1,
+  // Melody-voice character (live-tunable, parity with bass partials)
+  melVocalVib: 0.012,   // vocals pitch-wobble depth (fraction of freq)
+  melVocalRate: 5.2,    // vocals vibrato LFO rate (Hz)
+  melKeysShimmer: 0.3,  // keys octave-up sine shimmer level
 };
 // === DEV SOUND PANEL — END ===
 function klKick(t, dest, ctx, gain) {
+  gain *= KL_SND.volKick;
   const osc = ctx.createOscillator();
   const g = ctx.createGain();
   osc.frequency.setValueAtTime(KL_SND.kickPitchHi, t);
@@ -13771,6 +13836,7 @@ function klEnsureNoiseBufs(ctx) {
   for (let i = 0; i < hd.length; i++) hd[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * KL_SND.hatDecay));
 }
 function klSnare(t, dest, ctx, gain) {
+  gain *= KL_SND.volSnare;
   klEnsureNoiseBufs(ctx);
   const src = ctx.createBufferSource(); src.buffer = _klSnareBuf;
   const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = KL_SND.snareFreq;
@@ -13779,6 +13845,7 @@ function klSnare(t, dest, ctx, gain) {
   src.start(t);
 }
 function klHat(t, dest, ctx, gain) {
+  gain *= KL_SND.volHat;
   klEnsureNoiseBufs(ctx);
   const src = ctx.createBufferSource(); src.buffer = _klHatBuf;
   const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = KL_SND.hatFreq;
@@ -13787,6 +13854,7 @@ function klHat(t, dest, ctx, gain) {
   src.start(t);
 }
 function klBass(t, dest, ctx, midi, dur, gain) {
+  gain *= KL_SND.volBass;
   const f = midiFreq(midi);
   // Fundamental (triangle) — the body of the note.
   const osc = ctx.createOscillator(); osc.type = 'triangle';
