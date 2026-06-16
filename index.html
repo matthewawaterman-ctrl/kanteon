@@ -3539,10 +3539,38 @@
     text-shadow: 0 2px 0 rgba(0,0,0,0.3), 0 0 20px rgba(0,0,0,0.4);
     margin-bottom: 16px;
   }
+  /* HOMETOWN title now sits up in the sky, centered at the top, behind the HUD
+     (z-index below .kt-hud's 5) so the corner stats always win if they meet. */
+  /* Passive-income hustle bar, bottom-center of the town. */
+  .kt-hustle {
+    position: absolute; left: 0; right: 0; bottom: calc(14px + env(safe-area-inset-bottom));
+    z-index: 4; display: flex; gap: 12px; justify-content: center;
+  }
+  .kt-hustle-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 1px;
+    min-width: 92px; padding: 8px 14px; cursor: pointer;
+    border-radius: 14px; border: 1px solid rgba(255,255,255,0.22);
+    background: rgba(20,12,30,0.62); backdrop-filter: blur(3px);
+    color: #fff; font-family: 'Barlow Condensed', sans-serif;
+    transition: transform 0.08s ease, filter 0.12s ease;
+  }
+  .kt-hustle-btn:active { transform: scale(0.96); }
+  .kt-hustle-btn:hover { filter: brightness(1.12); }
+  .kt-hustle-btn.busk { border-color: rgba(125,211,252,0.5); }
+  .kt-hustle-btn.job  { border-color: rgba(122,217,138,0.5); }
+  .kt-hustle-emoji { font-size: 22px; line-height: 1; }
+  .kt-hustle-lbl { font-weight: 900; font-size: 15px; letter-spacing: 1px; }
+  .kt-hustle-sub { font-size: 11px; opacity: 0.72; }
+  .kt-town-title-top {
+    position: absolute; top: 12px; left: 0; right: 0; z-index: 2;
+    text-align: center; pointer-events: none;
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 900;
+    font-size: 22px; letter-spacing: 5px; color: rgba(255,255,255,0.82);
+    text-shadow: 0 2px 10px rgba(0,0,0,0.55);
+  }
   .kt-townbar {
     position: absolute; left: 0; right: 0; bottom: 0;
     padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
-    background: linear-gradient(to top, rgba(20,12,30,0.82), rgba(20,12,30,0));
     display: flex; flex-direction: column; align-items: center;
   }
   .kt-buildings {
@@ -6223,9 +6251,11 @@ function stopAllAudio() {
 
 function playTone(freq, startTime, duration, ctx, gain = 0.3, timbre = 'guitar', dest) {
   const out = dest || ctx.destination;
-  // Per-instrument melody volume — only the Kid-Lab melody voices, so legacy
-  // (piano/guitar) callers elsewhere in the app are unaffected.
-  if (timbre === 'klVocals' || timbre === 'klKeys' || timbre === 'klGuitar') gain *= KL_SND.volMel;
+  // Melody volume: master (volMel) × per-voice. Only the Kid-Lab melody voices,
+  // so legacy (piano/guitar) callers elsewhere in the app are unaffected.
+  if (timbre === 'klVocals') gain *= KL_SND.volMel * KL_SND.volVocals;
+  else if (timbre === 'klKeys') gain *= KL_SND.volMel * KL_SND.volKeys;
+  else if (timbre === 'klGuitar') gain *= KL_SND.volMel * KL_SND.volGuitar;
   const env = ctx.createGain();
   env.connect(out);
   env.gain.setValueAtTime(0, startTime);
@@ -11669,7 +11699,19 @@ function klRenderTown() {
         (klState.van ? '<span class="kt-hud-item">🚐</span>' : '') +
         (showHint ? '<span class="kt-hud-item kt-hud-show">' + showHint + '</span>' : '') +
       '</div>' +
-      '<div class="kt-townbar"><div class="kt-town-name">HOMETOWN</div></div>' +
+      '<div class="kt-town-title-top">HOMETOWN</div>' +
+      '<div class="kt-hustle">' +
+        '<button class="kt-hustle-btn busk" onclick="klBusk()">' +
+          '<span class="kt-hustle-emoji">🎸</span>' +
+          '<span class="kt-hustle-lbl">Busk</span>' +
+          '<span class="kt-hustle-sub">' + (klIsWeekend() ? 'weekend $$$' : 'tips · 1 day') + '</span>' +
+        '</button>' +
+        '<button class="kt-hustle-btn job" onclick="klDayJob()">' +
+          '<span class="kt-hustle-emoji">💼</span>' +
+          '<span class="kt-hustle-lbl">Day Job</span>' +
+          '<span class="kt-hustle-sub">steady · 1 day</span>' +
+        '</button>' +
+      '</div>' +
       '<button class="kl-back kt-town-back" onclick="klLeaveTown()" title="Leave">←</button>' +
       (klIsDevAvailable() ? klDevBar() : '') +
     '</div>';
@@ -11713,16 +11755,60 @@ window.klEnterSet = function(setId) {
   }
 };
 
+// One-time Waddy's milestone. Idempotent + dev-skip-safe: awards +60 XP exactly
+// once, whether reached by playing through OR by jumping past it with the dev
+// tool. Returns true if it actually awarded (so callers can tailor their toast).
+function klGrantWaddyMilestone() {
+  if (klState.waddyDone) return false;
+  klState.waddyDone = true;
+  klState.xp = (klState.xp || 0) + 60;
+  klSaveProgress();
+  return true;
+}
+
 // Set finished → back to town with a beat.
 function klSetComplete(setId) {
   klState.activeSet = null;
-  // Beating Waddy's house is now a real milestone: it grants XP (which amplifies
-  // all future earnings) rather than only opening the next area.
-  if (setId === 'waddy') klState.xp = (klState.xp || 0) + 60;
+  // Beating Waddy's house is a real milestone: it grants XP (amplifies all future
+  // earnings) — but only the first time, so dev shortcuts can't double-dip.
+  const awarded = (setId === 'waddy') ? klGrantWaddyMilestone() : false;
   klSaveProgress();
-  klToast(setId === 'waddy' ? '🧙 "That\u2019s everything I\u2019ve got, kid." (+60 XP — you earn more now!) Hit the Garage.' : '🎸 Garage cleared! Book a show at the Venue!');
+  if (setId === 'waddy') {
+    klToast(awarded
+      ? '🧙 "That\u2019s everything I\u2019ve got, kid." (+60 XP — you earn more now!) Hit the Garage.'
+      : '🧙 "Back already? Hit the Garage."');
+  } else {
+    klToast('🎸 Garage cleared! Book a show at the Venue!');
+  }
   klRenderTown();
 }
+
+// === PASSIVE INCOME — START ===
+// Two ways to make money between shows, both PASSIVE (no puzzle), both cost one
+// day. Busking is variable and pays much more on weekends (the upside play); the
+// day job is a steady guaranteed wage with a lower ceiling (the safe play).
+// Both scale with the player's level via klEarnMult() — XP amplifies all earning.
+window.klBusk = function() {
+  const weekend = klIsWeekend();
+  const lo = weekend ? 16 : 8;
+  const hi = weekend ? 28 : 14;
+  const base = lo + Math.floor(Math.random() * (hi - lo + 1));
+  const pay = Math.max(1, Math.round(base * klEarnMult()));
+  klState.day++;
+  klState.money += pay;
+  klSaveProgress();
+  klToast('🎸 ' + (weekend ? 'Busked the weekend crowd' : 'Busked downtown') + ' — earned $' + pay + (weekend ? ' 🎉' : '') + '  ·  Day ' + klState.day + ' (' + klDayName() + ')');
+  klRenderTown();
+};
+window.klDayJob = function() {
+  const pay = Math.max(1, Math.round(11 * klEarnMult())); // flat, reliable, lower ceiling than busking
+  klState.day++;
+  klState.money += pay;
+  klSaveProgress();
+  klToast('💼 Clocked a shift — steady $' + pay + '  ·  Day ' + klState.day + ' (' + klDayName() + ')');
+  klRenderTown();
+};
+// === PASSIVE INCOME — END ===
 
 // Lightweight toast over the town.
 function klToast(msg) {
@@ -11915,16 +12001,55 @@ function klShowSongClear() {
   // SHOW COMPLETE — payout scales with promotion AND the player's level (XP).
   klShowCleanup();
   const p = klState.promo;
-  const mult = 1 + p.flyers * 0.10 + p.ads * 0.25 + p.radio * 0.50;
-  const pay = Math.round(30 * mult * klEarnMult());
+  const promoMult = 1 + p.flyers * 0.10 + p.ads * 0.25 + p.radio * 0.50;
+  const lvlMult = klEarnMult();
+  const base = 30;
+  const pay = Math.round(base * promoMult * lvlMult);
+  const xpGain = 40;
+  const detail = { base, promoMult, lvlMult, level: klLevel(), pay, xp: xpGain,
+                   flyers: p.flyers, ads: p.ads, radio: p.radio };
   klState.money += pay;
   klState.bookedDay = null;
   klState.promo = { flyers: 0, ads: 0, radio: 0 };
   klState.day++;
-  klState.xp = (klState.xp || 0) + 40; // a clean show is worth real XP
+  klState.xp = (klState.xp || 0) + xpGain; // a clean show is worth real XP
   klSaveProgress();
-  klToast('🎉 GREAT SHOW! You made $' + pay + '! (+40 XP)');
-  klRenderTown();
+  klRenderShowPayout(detail);
+}
+
+// Show-night payout screen: an explicit money-math breakdown so the player can
+// SEE how promotion and their level multiplier built the take. COLLECT → town.
+function klRenderShowPayout(d) {
+  document.getElementById('kidlab').classList.remove('kl-playing');
+  klConfetti();
+  const wrap = document.getElementById('kl-wrap');
+  const promoBits = [];
+  if (d.flyers) promoBits.push(d.flyers + '× flyers');
+  if (d.ads) promoBits.push(d.ads + '× ads');
+  if (d.radio) promoBits.push(d.radio + '× radio');
+  const promoText = promoBits.length ? promoBits.join(' · ') : 'no promotion';
+  const row = (label, val) =>
+    '<div style="display:flex;justify-content:space-between;gap:14px;padding:5px 0;">' +
+      '<span style="opacity:0.82;">' + label + '</span><span style="font-weight:800;">' + val + '</span></div>';
+  wrap.innerHTML =
+    '<div class="kl-win-star" style="font-size:84px;">🎉</div>' +
+    '<div class="kl-title" style="font-size:38px;">GREAT SHOW!</div>' +
+    '<div style="width:min(340px,86vw);margin:14px 0 6px;font-family:\'Barlow Condensed\',sans-serif;' +
+      'font-size:17px;color:#fff;background:rgba(20,12,30,0.55);border:1px solid rgba(255,255,255,0.18);' +
+      'border-radius:14px;padding:14px 18px;">' +
+      row('Base fee', '$' + d.base) +
+      row('Promotion ×' + d.promoMult.toFixed(2), promoText) +
+      row('⭐ Level ' + d.level + ' bonus', '×' + d.lvlMult.toFixed(2)) +
+      '<div style="height:1px;background:rgba(255,255,255,0.18);margin:8px 0;"></div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:22px;font-weight:900;color:#7ee787;">' +
+        '<span>You earned</span><span>$' + d.pay + '</span></div>' +
+      '<div style="text-align:center;margin-top:8px;color:#ffd97a;font-weight:800;">+' + d.xp + ' XP</div>' +
+    '</div>' +
+    '<button class="kl-listen" onclick="klRenderTown()">COLLECT ▶</button>';
+  const ctx = getAudio();
+  const t0 = ctx.currentTime + 0.05;
+  [0, 2, 4].forEach((idx, i) => playTone(midiFreq(KL_SCALE[idx] + 12), t0 + i * 0.1, 0.5, ctx, 0.26, 'piano'));
+  playTone(midiFreq(KL_SCALE[0] + 24), t0 + 0.3, 0.7, ctx, 0.28, 'piano');
 }
 
 // ── SHOP ──
@@ -12083,7 +12208,7 @@ function klSaveProgress() {
       v: 2, puzzleIdx: klState.puzzleIdx, score: klState.score, solved, savedAt: Date.now(),
       // === ECONOMY — START ===
       money: klState.money, xp: klState.xp, day: klState.day, bookedDay: klState.bookedDay,
-      promo: klState.promo, gear: klState.gear, van: klState.van, setPos: klState.setPos,
+      promo: klState.promo, gear: klState.gear, van: klState.van, waddyDone: klState.waddyDone, setPos: klState.setPos,
       // === ECONOMY — END ===
     }));
   } catch (e) { /* storage full/blocked — play on without saving */ }
@@ -12147,6 +12272,7 @@ const klState = {
   promo: { flyers: 0, ads: 0, radio: 0 }, // promotion bought for the NEXT show (resets after)
   gear: [],              // instruments owned (shop flavor; future mechanics)
   van: false,            // THE END GOAL of the beta
+  waddyDone: false,      // one-time milestone: Waddy's house cleared (gates the +XP)
   activeSet: null,       // 'waddy' | 'garage' | null — which puzzle set is in play
   setPos: { waddy: 0, garage: 13 }, // resume position per set (absolute puzzle indexes)
   // === ECONOMY — END ===
@@ -12363,6 +12489,7 @@ window.klPickKid = function(kidId) {
     klState.promo = save.promo || { flyers: 0, ads: 0, radio: 0 };
     klState.gear = save.gear || [];
     klState.van = !!save.van;
+    klState.waddyDone = !!save.waddyDone;
     klState.setPos = save.setPos || { waddy: 0, garage: 13 };
     klState.activeSet = null;
     // === ECONOMY — END ===
@@ -13087,7 +13214,10 @@ const KL_SND_CONTROLS = [
   ['volSnare', 'Vol · Snare', 0, 2, 0.05],
   ['volHat', 'Vol · Hat', 0, 2, 0.05],
   ['volBass', 'Vol · Bass', 0, 2, 0.05],
-  ['volMel', 'Vol · Melody', 0, 2, 0.05],
+  ['volMel', 'Vol · Melody (master)', 0, 2, 0.05],
+  ['volGuitar', 'Vol · Guitar', 0, 2, 0.05],
+  ['volKeys', 'Vol · Keys', 0, 2, 0.05],
+  ['volVocals', 'Vol · Vocals', 0, 2, 0.05],
 ];
 window.klToggleSoundPanel = function() {
   const old = document.getElementById('kl-sndpanel');
@@ -13308,7 +13438,8 @@ function klDevBar() {
     '<button class="kl-dev-btn" id="kl-drummer-toggle" onclick="klToggleDrummerAnim()" title="toggle drummer animation (sync test)">' + (klDrummerAnim ? 'ON' : 'OFF') + '</button>' +
     '<button class="kl-dev-btn" style="margin-left:8px;" onclick="klToggleSoundPanel()" title="live soundbank tuner">🎛 SOUND</button>' +
     '<button class="kl-dev-btn" onclick="klToggleComposePanel()" title="piano-roll composer">🎼 COMPOSE</button>' +
-    '<button class="kl-dev-btn" onclick="klToggleCutEditor()" title="cutscene editor">🎬 CUT</button>';
+    '<button class="kl-dev-btn" onclick="klToggleCutEditor()" title="cutscene editor">🎬 CUT</button>' +
+    '<button class="kl-dev-btn" style="margin-left:8px;color:#fca5a5;border-color:#7f1d1d;" onclick="klDevReset()" title="wipe this player\'s save + reset economy to a fresh start">♻ CLEAN</button>';
   return '<div class="kl-devbar' + (klState.devOpen ? ' open' : '') + '" id="kl-devbar">' +
     '<button class="kl-dev-toggle" onclick="klToggleDevBar()" title="DEV: jump to level">' +
       '<span class="kl-dev-tag">DEV</span><span class="kl-dev-arrow">▴</span>' +
@@ -13318,17 +13449,36 @@ function klDevBar() {
 }
 window.klDevJump = function(idx) {
   if (!klIsDevAvailable()) return;
+  // DEV "start clean" lives right here as a sibling — see klDevReset below.
   // Jumping from the player-select menu (no kid selected yet): become Matt first.
   if (!klIsDev()) {
     const matt = klLoadPlayers().find(k => k.id === 'matt');
     if (matt) { klState.kid = matt; } else { return; }
   }
   klState.puzzleIdx = idx;
+  // Dev-skipping PAST Waddy's set still grants its milestone XP once, so testing
+  // from a jump behaves like a real playthrough.
+  if (idx > klSetRanges().waddy[1]) klGrantWaddyMilestone();
   klState.failCount = 0; klState.hintShown = false; klState.hintNotes = null;
   // jumping mid-dot: activate that dot's earlier layers so the groove sounds
   // right (otherwise later puzzles would play over silence)
   klRebuildLayersFor(idx);
   klRenderPuzzle();
+};
+
+// DEV: wipe the current player's save and reset all economy/progress to a clean
+// slate, then drop back into a fresh town. The "start clean every time" switch.
+window.klDevReset = function() {
+  if (!klIsDevAvailable()) return;
+  if (klState.kid) { try { localStorage.removeItem(klSaveKey(klState.kid.id)); } catch (e) {} }
+  klState.puzzleIdx = 0; klState.score = 0; klState.solved = [];
+  klState.money = 20; klState.xp = 0; klState.day = 1; klState.bookedDay = null;
+  klState.promo = { flyers: 0, ads: 0, radio: 0 };
+  klState.gear = []; klState.van = false; klState.waddyDone = false;
+  klState.activeSet = null; klState.setPos = { waddy: 0, garage: 13 };
+  klRebuildLayersFor(0);
+  klToast('♻ Clean slate — fresh save.');
+  klRenderTown();
 };
 
 // === SAVE/LOAD — START ===
@@ -13740,7 +13890,7 @@ let klDrumFirstPlay = true;  // extra audio lead on the first drum play (ctx war
 // 0 = wired / built-in speakers. Tunable live from the DEV menu.
 let klAudioOffsetMs = 0;
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-15'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-17'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
@@ -13801,6 +13951,8 @@ const KL_SND = {
   melAttack: 15, // ms — melody/playTone attack ramp
   // Per-instrument volume mixer (1 = unchanged). Applied inside each voice fn.
   volKick: 1, volSnare: 1, volHat: 1, volBass: 1, volMel: 1,
+  // Per-voice melody volumes (stack on top of volMel master): guitar/keys/vocals.
+  volGuitar: 1, volKeys: 1, volVocals: 1,
   // Melody-voice character (live-tunable, parity with bass partials)
   melVocalVib: 0.012,   // vocals pitch-wobble depth (fraction of freq)
   melVocalRate: 5.2,    // vocals vibrato LFO rate (Hz)
