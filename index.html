@@ -4303,6 +4303,19 @@
   }
   .kl-dev-btn:hover { background: rgba(255,255,255,0.18); }
   .kl-dev-btn.cur { background: #facc15; color: #2a1a4a; border-color: #fff; }
+  /* b31-33 dev overhaul: section colors, inline sub-labels, done/danger states */
+  .kl-dev-grouplbl.nav   { color: #7dd3fc; }
+  .kl-dev-grouplbl.cut   { color: #fde68a; }
+  .kl-dev-grouplbl.show  { color: #f9a8d4; }
+  .kl-dev-grouplbl.tools { color: #a7f3d0; }
+  .kl-dev-sublbl {
+    align-self: center; font-family: 'VT323', monospace; font-size: 12px;
+    color: #9aa0b5; letter-spacing: 0.5px; margin: 0 2px 0 8px; opacity: 0.85;
+  }
+  .kl-dev-btn.done { background: rgba(74,222,128,0.16); border-color: rgba(74,222,128,0.5); color: #bbf7d0; }
+  .kl-dev-btn.danger { color: #fca5a5; border-color: #7f1d1d; }
+  .kl-dev-btn.danger:hover { background: rgba(127,29,29,0.4); }
+  #kl-devbar-host { display: contents; }
   /* ── END DEV JUMPER ── */
   /* ── DRUM PUZZLE ── */
   .kl-drumtitle {
@@ -4787,6 +4800,9 @@
   <div class="kl-wrap" id="kl-wrap">
     <!-- Content injected by JS depending on sub-state -->
   </div>
+  <!-- DEV panel mounts here: a sibling of .kl-wrap so the .kl-room-bg ~ * scope
+       rule can't drop its fixed positioning into document flow (b31-33). -->
+  <div id="kl-devbar-host"></div>
 </div>
 <!-- === KIDLAB — END === -->
 
@@ -11929,10 +11945,10 @@ window.klEnterSet = function(setId) {
 
 // Enter a module from its station — non-linear. Plays only that module's puzzle
 // list (in order); finishing the last one returns to the building's station select.
-window.klEnterModule = function(moduleId) {
+window.klEnterModule = function(moduleId, force) {
   const mod = klModuleDef(moduleId);
   if (!mod) return;
-  if (!klModuleUnlocked(mod)) { klToast('🔒 Clear that type\u2019s basics at Sweet Waddy\u2019s first.'); return; }
+  if (!force && !klModuleUnlocked(mod)) { klToast('🔒 Clear that type\u2019s basics at Sweet Waddy\u2019s first.'); return; }
   klState.activeSet = mod.building;
   klState.activeModule = moduleId;
   klState.puzzleIdx = mod.indices[0];
@@ -14003,47 +14019,84 @@ window.klCutEditCopy = function() {
 };
 // === DEV CUTSCENE EDITOR — END ===
 
+// ── DEV PANEL (b31-33 overhaul) ───────────────────────────────────────────
+// Mounted as a FIXED overlay in #kl-devbar-host (a sibling of .kl-wrap, so the
+// `.kl-wrap > .kl-room-bg ~ *` scoping rule can never drop it into document
+// flow). klDevBar() is now a side-effecting MOUNT that returns '' — every
+// legacy call site (inlined into the various wrap.innerHTML strings) keeps
+// working untouched: it refreshes the overlay and adds nothing to the wrap.
+// The panel is NAVIGATIONAL: buttons drop you on real screens (town / building
+// station-select / module play / show night), never isolated puzzle indices.
 function klDevBar() {
-  if (!klIsDevAvailable()) return '';
-  // Single source of truth for play order (see klStorySequence). 🎬 = cutscene.
-  const cutBtn = key => '<button class="kl-dev-btn kl-dev-cut" onclick="klDevCutscene(\'' + key + '\')" title="cutscene: ' + key + '">🎬' + key + '</button>';
-  let btns = '<span class="kl-dev-tag" style="flex-basis:100%;color:#4ade80;">BUILD ' + KL_BUILD_TAG + ' · play sequence (🎬 = cutscene)</span>';
-  let labeledWaddy = false, labeledGarage = false;
-  const _waddyEnd = klSetRanges().waddy[1], _garageStart = klSetRanges().garage[0];
-  klStorySequence().forEach(it => {
-    if (it.cut) { btns += cutBtn(it.cut); return; }
-    const p = KL_PUZZLES[it.level];
-    // Group dividers so it's clear which puzzles belong to which building.
-    if (!labeledWaddy && it.level <= _waddyEnd) {
-      btns += '<span class="kl-dev-grouplbl waddy">🧙 SWEET WADDY\u2019S</span>'; labeledWaddy = true;
-    }
-    if (!labeledGarage && it.level >= _garageStart) {
-      btns += '<span class="kl-dev-grouplbl garage">🎸 THE GARAGE</span>'; labeledGarage = true;
-    }
-    const label = p.type === 'drums' ? '🥁' : p.type === 'bass' ? '🎸' : (it.level + 1);
-    const cur = it.level === klState.puzzleIdx ? ' cur' : '';
-    btns += '<button class="kl-dev-btn' + cur + '" onclick="klDevJump(' + it.level + ')" title="puzzle ' + (it.level+1) + (p.type ? ' (' + p.type + ')' : '') + '">' + label + '</button>';
+  const host = document.getElementById('kl-devbar-host');
+  if (host) host.innerHTML = klIsDevAvailable() ? klDevBarMarkup() : '';
+  return '';
+}
+function klDevBarMarkup() {
+  const btn = (onclick, txt, title, cls, id) =>
+    '<button class="kl-dev-btn' + (cls ? ' ' + cls : '') + '"' + (id ? ' id="' + id + '"' : '') +
+    ' onclick="' + onclick + '" title="' + (title || '') + '">' + txt + '</button>';
+  const lbl = (cls, txt) => '<span class="kl-dev-grouplbl ' + cls + '">' + txt + '</span>';
+  const sub = txt => '<span class="kl-dev-sublbl">' + txt + '</span>';
+  const cut = key => '<button class="kl-dev-btn kl-dev-cut" onclick="klDevPlayCut(\'' + key + '\')" title="play cutscene: ' + key + '">🎬' + key + '</button>';
+
+  let s = '<span class="kl-dev-tag" style="flex-basis:100%;color:#4ade80;">BUILD ' + KL_BUILD_TAG + ' · dev menu</span>';
+
+  // ── GO TO — real screens / station-select menus ──
+  s += lbl('nav', '📍 GO TO');
+  s += btn("klDevGo('town')", '🏠 Town', 'town map');
+  s += btn("klDevGo('master')", '🧙 Waddy\u2019s', 'Sweet Waddy\u2019s — station select');
+  s += btn("klDevGo('garage')", '🎸 Garage', 'The Garage — station select');
+  s += btn("klDevGo('venue')", '🎤 Venue', 'The Venue');
+  s += btn("klDevGo('shop')", '🏪 Shop', 'Music Shop');
+  s += btn("klDevGo('hater')", '🏚 Neighbor', 'the music-hater neighbor');
+
+  // ── STATIONS — enter the REAL module (lock bypassed for dev) ──
+  s += lbl('waddy', '🧙 SWEET WADDY\u2019S — basics');
+  klBuildingModules('waddy').forEach(m => {
+    const done = klModuleIsDone(m.id);
+    s += btn("klDevModule('" + m.id + "')", m.obj + ' ' + m.name + (done ? ' ✓' : ''), m.desc, done ? 'done' : '');
   });
-  const csBtns = '';
-  const syncCtl =
-    '<span class="kl-dev-sync">' +
-      '<span class="kl-dev-tag" style="margin-left:8px;">SYNC (off)</span>' +
-      '<button class="kl-dev-btn" onclick="klAdjustAudioOffset(-20)" title="parked: not wired to timing (zero-compensation playheads)">−20</button>' +
-      '<span class="kl-dev-btn" id="kl-sync-val" style="cursor:default;min-width:64px;color:#facc15;">' + klAudioOffsetMs + 'ms (off)</span>' +
-      '<button class="kl-dev-btn" onclick="klAdjustAudioOffset(20)" title="parked: not wired to timing">+20</button>' +
-      '<button class="kl-dev-btn" onclick="klResetAudioOffset()" title="reset to 0 (wired/built-in)">0</button>' +
-    '</span>' +
-    '<span class="kl-dev-tag" style="margin-left:8px;">DRUMMER</span>' +
-    '<button class="kl-dev-btn" id="kl-drummer-toggle" onclick="klToggleDrummerAnim()" title="toggle drummer animation (sync test)">' + (klDrummerAnim ? 'ON' : 'OFF') + '</button>' +
-    '<button class="kl-dev-btn" style="margin-left:8px;" onclick="klToggleSoundPanel()" title="live soundbank tuner">🎛 SOUND</button>' +
-    '<button class="kl-dev-btn" onclick="klToggleComposePanel()" title="piano-roll composer">🎼 COMPOSE</button>' +
-    '<button class="kl-dev-btn" onclick="klToggleCutEditor()" title="cutscene editor">🎬 CUT</button>' +
-    '<button class="kl-dev-btn" style="margin-left:8px;color:#fca5a5;border-color:#7f1d1d;" onclick="klDevReset()" title="wipe this player\'s save + reset economy to a fresh start">♻ CLEAN</button>';
+  s += lbl('garage', '🎸 THE GARAGE — advanced');
+  klBuildingModules('garage').forEach(m => {
+    const done = klModuleIsDone(m.id);
+    s += btn("klDevModule('" + m.id + "')", m.obj + ' ' + m.name + (done ? ' ✓' : ''), m.desc, done ? 'done' : '');
+  });
+
+  // ── CUTSCENES — grouped by where they fire (find_drums now under Waddy's) ──
+  s += lbl('cut', '🎬 CUTSCENES');
+  s += cut('intro');
+  s += sub('Waddy\u2019s:'); ['find_drums', 'find_hat', 'find_bass', 'dot0'].forEach(k => s += cut(k));
+  s += sub('Journey:'); ['dot1', 'dot2', 'dot3', 'finale'].forEach(k => s += cut(k));
+  s += sub('Town:'); ['hater', 'garage_soon', 'venue_soon', 'shop_soon', 'van_won'].forEach(k => s += cut(k));
+
+  // ── SHOW NIGHT — full flow + isolated show-song auditions ──
+  s += lbl('show', '🎤 SHOW NIGHT');
+  s += btn("klDevShow()", '▶ Start full show', '3 random songs · timer · HUD · payout');
+  for (let i = KL_SHOW_START; i <= KL_SHOW_END; i++) {
+    const sp = KL_PUZZLES[i];
+    const t = sp.type === 'drums' ? '🥁' : sp.type === 'bass' ? '🎸' : '🎹';
+    s += btn("klDevShowSong(" + i + ")", t + (i - KL_SHOW_START + 1), 'show song ' + (i - KL_SHOW_START + 1) + ' (' + (sp.type || 'melody') + ') — isolated, unscored');
+  }
+
+  // ── TOOLS ──
+  s += lbl('tools', '🛠 TOOLS');
+  s += btn("klToggleDrummerAnim()", 'DRUMMER ' + (klDrummerAnim ? 'ON' : 'OFF'), 'toggle drummer animation (sync test)', '', 'kl-drummer-toggle');
+  s += btn("klToggleSoundPanel()", '🎛 Sound', 'live soundbank tuner');
+  s += btn("klToggleComposePanel()", '🎼 Compose', 'piano-roll composer');
+  s += btn("klToggleCutEditor()", '🎬 Cut editor', 'cutscene editor');
+  s += btn("klDevReset()", '♻ Clean', 'wipe this player\u2019s save + reset economy to a fresh start', 'danger');
+  s += sub('Sync (parked):');
+  s += btn("klAdjustAudioOffset(-20)", '−20', 'parked: not wired to timing (zero-compensation playheads)');
+  s += '<span class="kl-dev-btn" id="kl-sync-val" style="cursor:default;min-width:58px;color:#facc15;">' + klAudioOffsetMs + 'ms</span>';
+  s += btn("klAdjustAudioOffset(20)", '+20', 'parked: not wired to timing');
+  s += btn("klResetAudioOffset()", '0', 'reset offset to 0');
+
   return '<div class="kl-devbar' + (klState.devOpen ? ' open' : '') + '" id="kl-devbar">' +
-    '<button class="kl-dev-toggle" onclick="klToggleDevBar()" title="DEV: jump to level">' +
+    '<button class="kl-dev-toggle" onclick="klToggleDevBar()" title="DEV menu (hotkey: ` )">' +
       '<span class="kl-dev-tag">DEV</span><span class="kl-dev-arrow">▴</span>' +
     '</button>' +
-    '<div class="kl-dev-tray">' + btns + csBtns + syncCtl + '</div>' +
+    '<div class="kl-dev-tray">' + s + '</div>' +
   '</div>';
 }
 window.klDevJump = function(idx) {
@@ -14098,6 +14151,44 @@ function klRebuildLayersFor(idx) {
   });
 }
 // === SAVE/LOAD — END ===
+// ── DEV NAVIGATION HELPERS (b31-33) ───────────────────────────────────────
+// Every dev entry lands on a REAL screen so testing matches play. Triggering
+// one from the player-select menu (no kid chosen yet) silently becomes Matt.
+function klDevBecomeMatt() {
+  if (klIsDev()) return true;
+  const matt = klLoadPlayers().find(k => k.id === 'matt');
+  if (matt) { klState.kid = matt; return true; }
+  return false;
+}
+window.klDevGo = function(where) {
+  if (!klIsDevAvailable() || !klDevBecomeMatt()) return;
+  if (where === 'town') { klRenderTown(); return; }
+  klEnterBuilding(where); // master/garage/venue/shop/hater → real interior + station-select
+};
+window.klDevModule = function(id) {
+  if (!klIsDevAvailable() || !klDevBecomeMatt()) return;
+  klEnterModule(id, true); // force = bypass the basics-first lock so any station is testable
+};
+window.klDevPlayCut = function(key) {
+  if (!klIsDevAvailable() || !klDevBecomeMatt()) return;
+  klPlayCutscene(key, () => klRenderTown()); // play the beat, land back in town
+};
+window.klDevShow = function() {
+  if (!klIsDevAvailable() || !klDevBecomeMatt()) return;
+  klStartShow(); // full show flow: 3 random songs, timer, HUD, payout
+};
+window.klDevShowSong = function(idx) {
+  if (!klIsDevAvailable() || !klDevBecomeMatt()) return;
+  // Isolated audition of a single show-night song — NOT a scored show. Clear any
+  // live show state so the timer/HUD from a real show can't leak into the test.
+  klShow.active = false;
+  if (klShow.timerId) { clearInterval(klShow.timerId); klShow.timerId = null; }
+  const hud = document.getElementById('kt-show-hud'); if (hud) hud.remove();
+  klState.puzzleIdx = idx;
+  klState.failCount = 0; klState.hintShown = false; klState.hintNotes = null;
+  klRebuildLayersFor(idx);
+  klRenderPuzzle();
+};
 window.klToggleDevBar = function() {
   klState.devOpen = !klState.devOpen;
   const bar = document.getElementById('kl-devbar');
@@ -14520,7 +14611,7 @@ let klDrumFirstPlay = true;  // extra audio lead on the first drum play (ctx war
 // 0 = wired / built-in speakers. Tunable live from the DEV menu.
 let klAudioOffsetMs = 0;
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-32'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-33'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
