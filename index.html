@@ -3642,7 +3642,17 @@
   }
   .kt-hud-show { color: #ffd97a; }
   .kt-hud-inline { position: static; justify-content: center; margin: 4px 0 10px; }
-  .kt-interior { display: flex; align-items: center; justify-content: center; }
+  .kt-interior { display: flex; align-items: center; justify-content: center; position: relative; }
+  /* Ground every interior as a real ROOM: a back wall up top and a floor band at
+     the bottom (with a horizon seam), so the card sits inside a space instead of
+     floating in front of the starfield. Sits behind the card (z-index 0). */
+  .kt-interior::after {
+    content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      linear-gradient(180deg, transparent 0 60%, rgba(0,0,0,0.28) 72%, rgba(0,0,0,0.45) 100%),
+      linear-gradient(180deg, rgba(255,255,255,0.04) 0 1px, transparent 1px) 0 62% / 100% 100% no-repeat;
+  }
+  .kt-interior > * { position: relative; z-index: 1; }
   .kt-int-card {
     width: min(440px, 92vw); text-align: center;
     background: rgba(26,18,44,0.92); border: 1.5px solid rgba(255,255,255,0.18);
@@ -4385,10 +4395,57 @@
   #kidlab.kl-jamming .kl-band-member:nth-child(2) { animation-delay: -0.31s; }
   #kidlab.kl-jamming .kl-band-member:nth-child(3) { animation-delay: -0.18s; }
   /* ── PIECE 1: PERSISTENT BOTTOM BAND STAGE ── */
+  /* Module banner — flags a Book-of-Knowledge exercise now living as a native
+     puzzle. Cyan/teal to match the game's futuristic theme. */
+  /* Module stations — selectable objects in the Garage (non-linear). Cyan theme. */
+  .kl-station-grid { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 4px; }
+  .kl-station {
+    display: flex; align-items: center; gap: 14px; text-align: left; cursor: pointer;
+    padding: 12px 14px; border-radius: 14px;
+    background: rgba(45,212,191,0.07); border: 1px solid rgba(45,212,191,0.32);
+    transition: transform 0.08s ease, background 0.15s ease, box-shadow 0.15s ease;
+  }
+  .kl-station:hover { background: rgba(45,212,191,0.14); box-shadow: 0 0 18px rgba(45,212,191,0.25); }
+  .kl-station:active { transform: scale(0.98); }
+  .kl-station-obj { font-size: 34px; line-height: 1; filter: drop-shadow(0 0 8px rgba(45,212,191,0.4)); }
+  .kl-station-txt { display: flex; flex-direction: column; gap: 2px; }
+  .kl-station-name {
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 18px;
+    letter-spacing: 1px; color: #5eead4;
+  }
+  .kl-station-desc { font-family: 'Barlow', sans-serif; font-size: 12.5px; color: rgba(220,255,250,0.7); }
+  .kl-modbanner {
+    display: flex; flex-direction: column; align-items: center; gap: 1px;
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 900;
+    font-size: 18px; letter-spacing: 2px; color: #2dd4bf;
+    text-shadow: 0 0 14px rgba(45,212,191,0.5);
+    padding: 4px 16px; border-radius: 12px;
+    background: rgba(45,212,191,0.08); border: 1px solid rgba(45,212,191,0.35);
+  }
+  .kl-modbanner span {
+    font-weight: 600; font-size: 11px; letter-spacing: 0.5px;
+    color: rgba(220,255,250,0.75); text-shadow: none; font-family: 'Barlow', sans-serif;
+  }
   .kl-bandstage {
     display: flex; align-items: flex-end; justify-content: center; gap: 12px;
     width: 100%; padding: 4px 16px 2px; margin-top: 0;
     border-top: 1px solid rgba(170,150,255,0.18);
+    position: relative;
+  }
+  /* A stage FLOOR the band stands on — a grounded platform with a lit front edge
+     and a soft cast shadow, so the band reads as playing in a room together
+     instead of floating. Cyan-tinted to match the game's theme. */
+  .kl-bandstage::before {
+    content: ''; position: absolute; left: 8%; right: 8%; bottom: -2px; height: 22px;
+    z-index: -1; border-radius: 50%;
+    background: radial-gradient(ellipse at 50% 50%, rgba(45,212,191,0.18) 0%, rgba(0,0,0,0.35) 55%, transparent 75%);
+  }
+  /* Ground shadow under the spotlighted soloist so they're planted on the floor. */
+  .kl-drummer, .kl-bassist, .kl-melodist { position: relative; }
+  .kl-drummer::after, .kl-bassist::after, .kl-melodist::after {
+    content: ''; position: absolute; left: 50%; bottom: -2px; transform: translateX(-50%);
+    width: 64%; height: 14px; border-radius: 50%; z-index: -1;
+    background: radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.4) 0%, transparent 72%);
   }
   /* === NO-SCROLL: fit the puzzle on short viewports ===
      Both puzzle renderers (drum + melodic) share these classes, so one set of
@@ -11800,6 +11857,37 @@ window.klLeaveTown = function() {
 // call time (accessing it here at load time was a TDZ boot crash).
 function klSetRanges() { return { waddy: [0, 12], garage: [13, KL_STORY_END] }; }
 
+// ── MODULES ────────────────────────────────────────────────────────────────
+// The Garage's content is presented NON-LINEARLY: selectable "stations" (objects)
+// each representing a module (a contiguous block of puzzles). Derived from the
+// puzzle data so adding a tagged block automatically becomes a new station.
+// 'jam' = the untagged advanced puzzles; tagged blocks (e.g. module:'eartrain')
+// each become their own station.
+function klGarageModules() {
+  const gs = klSetRanges().garage[0], ge = klSetRanges().garage[1];
+  const tagged = {}; // moduleTag -> [start,end]
+  for (let i = gs; i <= ge; i++) {
+    const m = KL_PUZZLES[i] && KL_PUZZLES[i].module;
+    if (m) { if (!tagged[m]) tagged[m] = [i, i]; else tagged[m][1] = i; }
+  }
+  // 'jam' spans from the garage start up to the first tagged block (or the end).
+  const firstTagStart = Object.values(tagged).reduce((a, r) => Math.min(a, r[0]), ge + 1);
+  const jamEnd = (firstTagStart <= ge) ? firstTagStart - 1 : ge;
+  const META = {
+    eartrain: { obj: '🎧', name: 'EAR TRAINING', desc: 'Listen, then play it back by ear.' },
+  };
+  const mods = [{ id: 'jam', obj: '🎸', name: 'JAM SESSION', desc: 'Advanced grooves, basslines & melodies.', range: [gs, jamEnd] }];
+  Object.keys(tagged).forEach(tag => {
+    const meta = META[tag] || { obj: '⭐', name: tag.toUpperCase(), desc: '' };
+    mods.push({ id: tag, obj: meta.obj, name: meta.name, desc: meta.desc, range: tagged[tag] });
+  });
+  return mods;
+}
+function klActiveModuleDef() {
+  if (!klState.activeModule) return null;
+  return klGarageModules().find(m => m.id === klState.activeModule) || null;
+}
+
 window.klEnterBuilding = function(id) {
   getAudio();
   if (id === 'master') klRenderInterior('waddy');
@@ -11813,6 +11901,7 @@ window.klEnterBuilding = function(id) {
 window.klEnterSet = function(setId) {
   const range = klSetRanges()[setId];
   klState.activeSet = setId;
+  klState.activeModule = null; // linear set play (Waddy's) is not a module
   let pos = klState.setPos[setId];
   if (pos < range[0] || pos > range[1]) pos = range[0];
   klState.puzzleIdx = pos;
@@ -11823,6 +11912,18 @@ window.klEnterSet = function(setId) {
   } else {
     klRenderPuzzle();
   }
+};
+
+// Enter a Garage module from its station — non-linear. Plays only that module's
+// puzzles; finishing the last one returns you to the Garage's station select.
+window.klEnterModule = function(building, moduleId) {
+  const mod = (building === 'garage' ? klGarageModules() : []).find(m => m.id === moduleId);
+  if (!mod) return;
+  klState.activeSet = building;
+  klState.activeModule = moduleId;
+  klState.puzzleIdx = mod.range[0];
+  klRebuildLayersFor(mod.range[0]);
+  klRenderPuzzle();
 };
 
 // One-time Waddy's milestone. Idempotent + dev-skip-safe: awards +60 XP exactly
@@ -11934,10 +12035,16 @@ function klRenderInterior(id) {
       '<button class="kt-int-sub" onclick="klTalkTo(\'waddy\')">💬 Talk to Waddy</button>';
   } else if (id === 'garage') {
     title = 'THE GARAGE'; art = '🎸';
+    const stations = klGarageModules().map(m =>
+      '<button class="kl-station" onclick="klEnterModule(\'garage\',\'' + m.id + '\')">' +
+        '<span class="kl-station-obj">' + m.obj + '</span>' +
+        '<span class="kl-station-txt"><span class="kl-station-name">' + m.name + '</span>' +
+        '<span class="kl-station-desc">' + m.desc + '</span></span>' +
+      '</button>').join('');
     body =
-      '<p class="kt-int-line">Your turf. Cables everywhere. This is where the real stuff gets worked out.</p>' +
-      '<button class="kl-listen kt-int-btn" onclick="klEnterSet(\'garage\')">🔥 ADVANCED PUZZLES</button>' +
-      '<p class="kt-int-note">(more puzzle types coming to the Garage soon)</p>';
+      '<p class="kt-int-line">Your turf. Cables everywhere. Pick a station — work on whatever you want, in any order.</p>' +
+      '<div class="kl-station-grid">' + stations + '</div>' +
+      '<p class="kt-int-note">(more stations unlock as you grow)</p>';
   } else if (id === 'venue') {
     title = 'THE VENUE'; art = '🎤';
     if (!(klState.waddyDone && klState.garageDone)) {
@@ -12365,6 +12472,17 @@ const KL_PUZZLES = [
     notes: [ {pitch:7, start:0, dur:1}, {pitch:5, start:1, dur:1}, {pitch:4, start:2, dur:1}, {pitch:7, start:3, dur:1} ] },
   { id: 28, bpm: 90, beats: 4, phase: 3, dot: 4, degrees: [0, 2, 4, 7],
     notes: [ {pitch:7, start:0, dur:1}, {pitch:4, start:1, dur:1}, {pitch:2, start:2, dur:1}, {pitch:0, start:3, dur:1} ] },
+
+  // ════ EAR TRAINING — Book of Knowledge module, rebuilt as native Garage puzzles.
+  // Pure dictation: listen, then play it back BY EAR (phase 3, no ghost hints).
+  // `module:'eartrain'` flags the cyan banner + framing. Appended at the end so
+  // existing puzzle indices (and saves) never shift.
+  { id: 201, bpm: 96, beats: 4, phase: 3, dot: 40, module: 'eartrain', degrees: [0, 2, 4],
+    notes: [ {pitch:0, start:0, dur:1}, {pitch:4, start:1, dur:1}, {pitch:2, start:2, dur:1}, {pitch:0, start:3, dur:1} ] },
+  { id: 202, bpm: 96, beats: 4, phase: 3, dot: 40, module: 'eartrain', degrees: [0, 2, 4, 5, 7],
+    notes: [ {pitch:7, start:0, dur:1}, {pitch:4, start:1, dur:1}, {pitch:5, start:2, dur:1}, {pitch:2, start:3, dur:1} ] },
+  { id: 203, bpm: 100, beats: 4, phase: 3, dot: 40, module: 'eartrain', degrees: [0, 2, 4, 5, 7],
+    notes: [ {pitch:0, start:0, dur:1}, {pitch:7, start:1, dur:1}, {pitch:5, start:2, dur:1}, {pitch:4, start:3, dur:1} ] },
 ];
 
 // Last STORY puzzle index — frozen BEFORE the show songs are appended so set
@@ -12403,7 +12521,7 @@ const KL_SHOW_END = KL_PUZZLES.length - 1;      // last show-puzzle index
 
 // How many dots total + which puzzle index starts each dot. Derived from the
 // STORY `dot` fields only (show songs use throwaway high dots, ignored here).
-const KL_DOT_COUNT = Math.max(...KL_PUZZLES.filter(p => !p.show).map(p => p.dot)) + 1;
+const KL_DOT_COUNT = Math.max(...KL_PUZZLES.filter(p => !p.show && !p.module).map(p => p.dot)) + 1;
 function klDotOf(idx) { return KL_PUZZLES[idx] ? KL_PUZZLES[idx].dot : KL_DOT_COUNT; }
 // Melody puzzles carry no type/layer field; identify them as "has notes, no type".
 function klIsMelodyPuzzle(p) { return !!(p && p.notes && !p.type); }
@@ -12528,6 +12646,7 @@ const klState = {
   waddyDone: false,      // one-time milestone: Waddy's house cleared (gates the +XP)
   garageDone: false,     // one-time milestone: the Garage cleared (gates the +XP)
   activeSet: null,       // 'waddy' | 'garage' | null — which puzzle set is in play
+  activeModule: null,    // which Garage module/station is being played (null = none)
   setPos: { waddy: 0, garage: 13 }, // resume position per set (absolute puzzle indexes)
   // === ECONOMY — END ===
   devOpen: true,         // DEV tray unfolded by default on load (dev convenience)
@@ -13264,7 +13383,7 @@ function klRenderDrumPuzzle(p) {
   // forever over silence (the steady main-thread comb seen in profiling).
   // Show-night songs run it too (even with no backing) so their playhead syncs to
   // the clock and flashes columns as smoothly as the in-dot puzzles do.
-  if (Object.keys(klActiveLayers.drumVoices).length > 0 || klActiveLayers.bass || p.show) {
+  if (Object.keys(klActiveLayers.drumVoices).length > 0 || klActiveLayers.bass || p.show || p.module) {
     klStartClock(p.bpm); klStartBeatBar();
   } else {
     klStopClock(); klStopBeatBar();
@@ -13789,7 +13908,7 @@ window.klDevReset = function() {
   klState.money = 50; klState.xp = 0; klState.day = 1; klState.showsPlayed = 0; klState.bookedDay = null; klState.bookedDaysOut = 0;
   klState.promo = { flyers: 0, ads: 0, radio: 0 };
   klState.gear = []; klState.gearCondition = 100; klState.van = false; klState.vanLoan = false; klState.waddyDone = false; klState.garageDone = false;
-  klState.activeSet = null; klState.setPos = { waddy: 0, garage: 13 };
+  klState.activeSet = null; klState.activeModule = null; klState.setPos = { waddy: 0, garage: 13 };
   klRebuildLayersFor(0);
   klToast('♻ Clean slate — fresh save.');
   klRenderTown();
@@ -13837,8 +13956,23 @@ window.klDevCutscene = function(key) {
   const cuts = [];
   while (i < seq.length && seq[i].cut) { cuts.push(seq[i].cut); i++; }
   const after = () => {
-    if (i < seq.length && seq[i].level != null) klDevJump(seq[i].level);
-    else klRenderAllDone();
+    if (i < seq.length && seq[i].level != null) {
+      const lvl = seq[i].level;
+      // The dot1 cutscene is the Sweet Waddy's → Garage hand-off. Landing past it
+      // means "you finished Waddy's" → go OUT to town (with the milestone), the
+      // same as real completion — NOT straight into the Garage. Other cutscenes
+      // jump to their level as normal for testing.
+      if (lvl === klSetRanges().garage[0]) {
+        klGrantWaddyMilestone();
+        klState.activeSet = null;
+        klSaveProgress();
+        klRenderTown();
+      } else {
+        klDevJump(lvl);
+      }
+    } else {
+      klRenderAllDone();
+    }
   };
   klPlayCutsceneSeq(cuts, after);
 };
@@ -13866,7 +14000,7 @@ window.klToggleDrummerAnim = function() {
 
 function klRenderPuzzle() {
   // === ECONOMY: SET BOUNDARY — finishing a set returns to town, not the next set
-  if (klState.activeSet && !klShow.active) {
+  if (klState.activeSet && !klState.activeModule && !klShow.active) {
     const r = klSetRanges()[klState.activeSet];
     if (klState.puzzleIdx > r[1]) { klSetComplete(klState.activeSet); return; }
   }
@@ -13978,6 +14112,9 @@ function klRenderPuzzle() {
         (klClock.muted ? '🔇' : '🔊') +
       '</button>' +
     '</div>' +
+    (p.module === 'eartrain'
+      ? '<div class="kl-modbanner">🎧 EAR TRAINING<span>Listen — then play it back by ear.</span></div>'
+      : '') +
     klDevBar() +
     '<div class="kl-listen-row">' +
       '<button class="kl-listen" id="kl-listen-btn" onclick="klPlayTarget()">🔊 LISTEN<kbd class="kl-kbd">space</kbd></button>' +
@@ -13999,7 +14136,7 @@ function klRenderPuzzle() {
   // Start the backing loop only when a layer is locked to groove under this
   // puzzle; otherwise don't spin the idle 25ms scheduler + per-frame sweep rAF.
   // Show-night songs run it too so their playhead stays clock-synced + smooth.
-  if (Object.keys(klActiveLayers.drumVoices).length > 0 || klActiveLayers.bass || p.show) {
+  if (Object.keys(klActiveLayers.drumVoices).length > 0 || klActiveLayers.bass || p.show || p.module) {
     klStartClock(p.bpm); klStartBeatBar();
   } else {
     klStopClock(); klStopBeatBar();
@@ -14216,7 +14353,7 @@ let klDrumFirstPlay = true;  // extra audio lead on the first drum play (ctx war
 // 0 = wired / built-in speakers. Tunable live from the DEV menu.
 let klAudioOffsetMs = 0;
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-22'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-25'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
@@ -14830,6 +14967,24 @@ function klWin() {
   const nextIdx = klState.puzzleIdx + 1;
   const allDone = nextIdx > KL_STORY_END;
   const dotEnd = !allDone && (klDotOf(nextIdx) !== klDotOf(klState.puzzleIdx));
+
+  // MODULE BOUNDARY (Garage, non-linear): finishing the active module's last
+  // puzzle returns you to the Garage's station select — not into the next block.
+  // Clearing the main JAM module is what grants the Garage milestone.
+  if (klState.activeModule) {
+    const mod = klActiveModuleDef();
+    if (mod && klState.puzzleIdx >= mod.range[1]) {
+      const building = klState.activeSet;
+      if (mod.id === 'jam') klGrantGarageMilestone();
+      setTimeout(() => {
+        klState.activeModule = null;
+        klSaveProgress();
+        klToast('✅ ' + mod.name + ' complete!');
+        klRenderInterior(building);
+      }, stingMs + 200);
+      return;
+    }
+  }
 
   // SET BOUNDARY: clearing the LAST Sweet Waddy's puzzle sends you back OUT to
   // town (with the milestone), never straight into the Garage. This fires no
