@@ -3672,6 +3672,7 @@
   }
   .kl-toast {
     position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 999;
+    pointer-events: none;
     font-family: 'Barlow', sans-serif; font-weight: 600; font-size: 14.5px;
     color: #fff; background: rgba(30,20,52,0.95); border: 1px solid rgba(255,255,255,0.25);
     border-radius: 14px; padding: 12px 20px; max-width: min(420px, 88vw); text-align: center;
@@ -11731,6 +11732,7 @@ function klRenderTown() {
         '<span class="kt-hud-item">💵 $' + klState.money + '</span>' +
         '<span class="kt-hud-item">⭐ Lv.' + klLevel() + ' · ' + klXpIntoLevel() + '/' + klXpForLevel() + '</span>' +
         '<span class="kt-hud-item">📅 Day ' + klState.day + ' · ' + klDayName() + (klIsWeekend() ? ' 🎉' : '') + '</span>' +
+        (klState.bookedDay ? '<span class="kt-hud-item kt-hud-show">🎤 Day ' + klState.bookedDay + ' · ' + klDayName(klState.bookedDay) + (klHypeMult() > 1 ? ' · 🔥×' + klHypeMult().toFixed(2) : '') + '</span>' : '') +
         (klState.van ? '<span class="kt-hud-item">🚐</span>' : '') +
         (showHint ? '<span class="kt-hud-item kt-hud-show">' + showHint + '</span>' : '') +
       '</div>' +
@@ -11739,7 +11741,7 @@ function klRenderTown() {
         '<button class="kt-hustle-btn busk" onclick="klBusk()">' +
           '<span class="kt-hustle-emoji">🎸</span>' +
           '<span class="kt-hustle-lbl">Busk</span>' +
-          '<span class="kt-hustle-sub">' + (klIsWeekend() ? 'weekend $$$' : 'tips · 1 day') + '</span>' +
+          '<span class="kt-hustle-sub">' + (klBuskDayMult() >= 1.3 ? 'big crowd today!' : klBuskDayMult() < 0.8 ? 'slow day · 1 day' : 'tips · 1 day') + '</span>' +
         '</button>' +
         '<button class="kt-hustle-btn job" onclick="klDayJob()">' +
           '<span class="kt-hustle-emoji">💼</span>' +
@@ -11834,27 +11836,29 @@ function klSetComplete(setId) {
 
 // === PASSIVE INCOME — START ===
 // Two ways to make money between shows, both PASSIVE (no puzzle), both cost one
-// day. Busking is variable and pays much more on weekends (the upside play); the
-// day job is a steady guaranteed wage with a lower ceiling (the safe play).
-// Both scale with the player's level via klEarnMult() — XP amplifies all earning.
+// day. The DAY JOB is the reliable early floor: a flat unskilled wage that your
+// music level doesn't change. BUSKING starts WELL BELOW the day job for a no-name
+// with no gear, but scales hard with day-of-week (Fri/Sat peak), gear, and level
+// — so it becomes the upside play once you've built yourself up. Grounded in real
+// busker economics (beginners ~$10–30, pros on prime days $100s).
 window.klBusk = function() {
-  const weekend = klIsWeekend();
-  const lo = weekend ? 16 : 8;
-  const hi = weekend ? 28 : 14;
-  const base = lo + Math.floor(Math.random() * (hi - lo + 1));
-  const pay = Math.max(1, Math.round(base * klEarnMult()));
+  const base = 10 + Math.floor(Math.random() * 17);   // $10–26 raw
+  const dayMult = klBuskDayMult();                      // Fri/Sat peak, Mon floor
+  const pay = Math.max(1, Math.round(base * dayMult * klGearBuskFactor() * klEarnMult()));
   klState.day++;
+  klSaveProgress(); // advance + persist before condition/day read in toast
+  const hot = dayMult >= 1.3;
   klState.money += pay;
   klSaveProgress();
-  klToast('🎸 ' + (weekend ? 'Busked the weekend crowd' : 'Busked downtown') + ' — earned $' + pay + (weekend ? ' 🎉' : '') + '  ·  Day ' + klState.day + ' (' + klDayName() + ')');
+  klToast('🎸 Busked ' + klDayName(klState.day - 1) + (hot ? ' (big crowd!)' : '') + ' — earned $' + pay + '  ·  now Day ' + klState.day + ' (' + klDayName() + ')');
   klRenderTown();
 };
 window.klDayJob = function() {
-  const pay = Math.max(1, Math.round(11 * klEarnMult())); // flat, reliable, lower ceiling than busking
+  const pay = 80 + Math.floor(Math.random() * 16); // flat $80–95, no level scaling — it's a crap job
   klState.day++;
   klState.money += pay;
   klSaveProgress();
-  klToast('💼 Clocked a shift — steady $' + pay + '  ·  Day ' + klState.day + ' (' + klDayName() + ')');
+  klToast('💼 Clocked a shift — steady $' + pay + '  ·  now Day ' + klState.day + ' (' + klDayName() + ')');
   klRenderTown();
 };
 // === PASSIVE INCOME — END ===
@@ -11903,17 +11907,38 @@ function klRenderInterior(id) {
       '<p class="kt-int-note">(more puzzle types coming to the Garage soon)</p>';
   } else if (id === 'venue') {
     title = 'THE VENUE'; art = '🎤';
-    if (!klState.bookedDay) {
+    if (!(klState.waddyDone && klState.garageDone)) {
+      // LOCKED: the venue won't book a no-name. Must clear both sets first.
+      const need = [];
+      if (!klState.waddyDone) need.push('Sweet Waddy\u2019s');
+      if (!klState.garageDone) need.push('the Garage');
       body =
-        '<p class="kt-int-line">The booker looks you up and down. "Five bucks holds a date. The further out you book, the more time to build hype."</p>' +
-        '<p class="kt-int-note">Booking costs $5 · pick a night:</p>' +
+        '<p class="kt-int-line">The booker doesn\u2019t even look up. "Come back when you can actually play. Clear ' + need.join(' AND ') + ' first."</p>' +
+        '<p class="kt-int-note">🔒 The Venue is locked.</p>';
+    } else if (klState.bookedDay && klState.day > klState.bookedDay) {
+      // MISSED SHOW: you blew past the date. Promoter's furious — pay a fine to book again.
+      const fine = 50;
+      body =
+        '<p class="kt-int-line">The booker is fuming. "You no-showed Day ' + klState.bookedDay + '! You think dates grow on trees? Pay the $' + fine + ' kill fee or get out."</p>' +
+        '<button class="kl-listen kt-int-btn" ' + (klState.money < fine ? 'disabled' : '') + ' onclick="klPayFine(' + fine + ')">💸 Pay $' + fine + ' fine</button>' +
+        (klState.money < fine ? '<p class="kt-int-note">Not enough cash — go earn it.</p>' : '');
+    } else if (!klState.bookedDay) {
+      body =
+        '<p class="kt-int-line">"Twenty-five holds a date. Book it on a Friday or Saturday if you want a crowd."</p>' +
+        '<p class="kt-int-note">Booking costs $25 · pick a night:</p>' +
         '<div class="kt-int-row">' +
-          [2, 4, 7].map(d => '<button class="kt-int-sub" onclick="klBookShow(' + d + ')">Day ' + (klState.day + d) + '<br><span style="font-size:11px;opacity:0.7;">+' + Math.round(d * 5) + '% hype</span></button>').join('') +
+          [2, 4, 7].map(d => {
+            const dn = klDayName(klState.day + d);
+            const hot = klShowDayMult(klState.day + d) >= 1.3;
+            return '<button class="kt-int-sub" onclick="klBookShow(' + d + ')">Day ' + (klState.day + d) + '<br><span style="font-size:11px;opacity:0.75;">' + dn + (hot ? ' 🔥' : '') + '</span></button>';
+          }).join('') +
         '</div>';
     } else if (klState.day < klState.bookedDay) {
       const fill = Math.round(klHypeFill() * 100);
+      const dn = klDayName(klState.bookedDay);
+      const hot = klShowDayMult(klState.bookedDay) >= 1.3;
       body =
-        '<p class="kt-int-line">Booked for <b>Day ' + klState.bookedDay + '</b>. Promote it at the Shop to pump the hype before showtime.</p>' +
+        '<p class="kt-int-line">Booked for <b>Day ' + klState.bookedDay + ' (' + dn + ')</b>' + (hot ? ' — great night for it!' : '') + '. Promote it at the Shop to pump the hype.</p>' +
         '<div style="width:min(300px,80%);margin:6px auto 12px;">' +
           '<div style="display:flex;justify-content:space-between;font-weight:800;font-size:14px;margin-bottom:4px;">' +
             '<span>🔥 HYPE</span><span>×' + klHypeMult().toFixed(2) + '</span></div>' +
@@ -11923,8 +11948,9 @@ function klRenderInterior(id) {
         '</div>' +
         '<button class="kl-listen kt-int-btn" onclick="klSkipToShow()">⏭ SKIP TO SHOW NIGHT</button>';
     } else {
+      const dn = klDayName(klState.bookedDay);
       body =
-        '<p class="kt-int-line">It\u2019s show night. Your hype is <b>×' + klHypeMult().toFixed(2) + '</b>. Two mistakes and you\u2019re booed off.</p>' +
+        '<p class="kt-int-line">It\u2019s show night (' + dn + '). Hype <b>×' + klHypeMult().toFixed(2) + '</b>. Two mistakes and you\u2019re booed off.</p>' +
         '<button class="kl-listen kt-int-btn" onclick="klStartShow()">🎤 START THE SHOW</button>';
     }
   } else if (id === 'shop') {
@@ -11958,16 +11984,27 @@ function klRenderInterior(id) {
       '<p class="kt-int-line">Strings, amps, and the only van for sale in fifty miles.</p>' +
       '<div class="kt-shop-grid">' +
         '<div class="kt-shop-divider">GEAR (each piece = +8% every show)</div>' +
-        item('guitar', '🎸 Guitar <i>+8%</i>', 30, klState.gear.includes('guitar')) +
-        item('keys', '🎹 Keys <i>+8%</i>', 40, klState.gear.includes('keys')) +
-        item('mic', '🎤 Microphone <i>+8%</i>', 25, klState.gear.includes('mic')) +
+        item('guitar', '🎸 Guitar <i>+8%</i>', 400, klState.gear.includes('guitar')) +
+        item('keys', '🎹 Keys <i>+8%</i>', 600, klState.gear.includes('keys')) +
+        item('mic', '🎤 Microphone <i>+8%</i>', 150, klState.gear.includes('mic')) +
         gearStatus +
         '<div class="kt-shop-divider">PROMOTION (builds hype for your next show)</div>' +
-        item('flyers', '📄 Flyers <i>+10%</i>', 10, false, klState.promo.flyers ? '×' + klState.promo.flyers : '') +
-        item('ads', '📰 Newspaper ad <i>+25%</i>', 25, klState.promo.ads >= 1) +
-        item('radio', '📻 Radio spot <i>+50%</i>', 40, klState.promo.radio >= 1) +
+        item('flyers', '📄 Flyers <i>+10%</i>', 20, false, klState.promo.flyers ? '×' + klState.promo.flyers : '') +
+        item('ads', '📰 Newspaper ad <i>+25%</i>', 80, klState.promo.ads >= 1) +
+        item('radio', '📻 Radio spot <i>+50%</i>', 250, klState.promo.radio >= 1) +
         '<div class="kt-shop-divider">THE BIG ONE</div>' +
-        item('van', '🚐 TOURING VAN', 500, klState.van, 'the way out of this town') +
+        (klState.van
+          ? '<div class="kt-shop-item owned"><span class="kt-shop-label">🚐 TOURING VAN</span><span class="kt-shop-own">OWNED</span></div>'
+          : klState.showsPlayed < 1
+            ? '<div class="kt-shop-item"><span class="kt-shop-label">🚐 TOURING VAN</span><span class="kt-shop-extra">🔒 play your first show to unlock</span></div>'
+            : '<div class="kt-shop-item" style="flex-direction:column;align-items:stretch;gap:6px;">' +
+                '<span class="kt-shop-label">🚐 TOURING VAN <i>— the way out of this town</i></span>' +
+                '<div style="display:flex;gap:8px;">' +
+                  '<button class="kt-int-sub" style="flex:1;" ' + (klState.money < 4500 ? 'disabled' : '') + ' onclick="klBuyVan(\'cash\')">Buy $4,500</button>' +
+                  '<button class="kt-int-sub" style="flex:1;" ' + (klState.money < 1500 ? 'disabled' : '') + ' onclick="klBuyVan(\'loan\')">Loan · $1,500 down</button>' +
+                '</div>' +
+                (klState.money < 1500 ? '<span class="kt-shop-extra">Save up at least the $1,500 down payment.</span>' : '') +
+              '</div>') +
       '</div>';
   } else if (id === 'hater') {
     title = 'THE NEIGHBOR'; art = '🏚';
@@ -11998,11 +12035,21 @@ window.klTalkTo = function(who) {
 
 // ── VENUE / CALENDAR ──
 window.klBookShow = function(daysOut) {
-  if (klState.money < 5) { klToast('💸 Not enough cash to book. ($5)'); return; }
-  klState.money -= 5;
+  if (klState.money < 25) { klToast('💸 Not enough cash to book. ($25)'); return; }
+  klState.money -= 25;
   klState.bookedDay = klState.day + daysOut;
-  klState.bookedDaysOut = daysOut; // feeds the Hype head-start
+  klState.bookedDaysOut = daysOut;
   klSaveProgress();
+  klRenderInterior('venue');
+};
+window.klPayFine = function(fine) {
+  if (klState.money < fine) { klToast('💸 Can\u2019t afford the $' + fine + ' fine yet.'); return; }
+  klState.money -= fine;
+  klState.bookedDay = null;
+  klState.bookedDaysOut = 0;
+  klState.promo = { flyers: 0, ads: 0, radio: 0 };
+  klSaveProgress();
+  klToast('💸 Paid the $' + fine + ' kill fee. "Don\u2019t do it again."');
   klRenderInterior('venue');
 };
 window.klSkipToShow = function() {
@@ -12063,9 +12110,9 @@ window.klShowStrike = function(msg) {
     klState.bookedDay = null;
     klState.promo = { flyers: 0, ads: 0, radio: 0 };
     klState.day++;
-    klState.money += 5; // pity pay
+    klState.money += 40; // pity pay
     klSaveProgress();
-    klToast('😬 Booed off. $5 pity pay. Practice and book another.');
+    klToast('😬 Booed off. $40 pity pay. Practice and book another.');
     klRenderTown();
   } else {
     klShowHUD();
@@ -12075,19 +12122,21 @@ function klShowSongClear() {
   clearInterval(klShow.timerId);
   klShow.i++;
   if (klShow.i < 3) { klShowNextSong(); return; }
-  // SHOW COMPLETE — payout = base × Hype × Gear × Level.
+  // SHOW COMPLETE — payout = base × Hype × Gear × Level × Day-of-week.
   klShowCleanup();
-  const hypeMult = klHypeMult();   // booking distance + promotion
+  const hypeMult = klHypeMult();   // promotion only
   const gearMult = klGearBoost();  // owned gear, scaled by condition
   const lvlMult = klEarnMult();    // XP level
-  const base = 30;
-  const pay = Math.round(base * hypeMult * gearMult * lvlMult);
+  const dayMult = klShowDayMult(); // Fri/Sat pay far more than a Monday
+  const base = 200;
+  const pay = Math.round(base * hypeMult * gearMult * lvlMult * dayMult);
   const xpGain = 40;
   const p = klState.promo;
-  const detail = { base, hypeMult, gearMult, lvlMult, level: klLevel(), pay, xp: xpGain,
-                   daysOut: klState.bookedDaysOut, flyers: p.flyers, ads: p.ads, radio: p.radio,
+  const detail = { base, hypeMult, gearMult, lvlMult, dayMult, dayName: klDayName(), level: klLevel(), pay, xp: xpGain,
+                   flyers: p.flyers, ads: p.ads, radio: p.radio,
                    gearCount: klGearCount(), gearCondition: klState.gearCondition };
   klState.money += pay;
+  klState.showsPlayed = (klState.showsPlayed || 0) + 1;
   // Gear wears down each show you play (only if you own any). Worn gear pays less.
   if (klGearCount() > 0) klState.gearCondition = Math.max(0, klState.gearCondition - 15);
   klState.bookedDay = null;
@@ -12106,11 +12155,10 @@ function klRenderShowPayout(d) {
   klConfetti();
   const wrap = document.getElementById('kl-wrap');
   const hypeBits = [];
-  if (d.daysOut) hypeBits.push('booked ' + d.daysOut + 'd out');
   if (d.flyers) hypeBits.push(d.flyers + '× flyers');
   if (d.ads) hypeBits.push('ad');
   if (d.radio) hypeBits.push('radio');
-  const hypeText = hypeBits.length ? hypeBits.join(' · ') : 'no hype';
+  const hypeText = hypeBits.length ? hypeBits.join(' · ') : 'no promo';
   const row = (label, val) =>
     '<div style="display:flex;justify-content:space-between;gap:14px;padding:5px 0;">' +
       '<span style="opacity:0.82;">' + label + '</span><span style="font-weight:800;">' + val + '</span></div>';
@@ -12126,6 +12174,7 @@ function klRenderShowPayout(d) {
       row('Base fee', '$' + d.base) +
       row('🔥 Hype ×' + d.hypeMult.toFixed(2), hypeText) +
       gearRow +
+      row('📅 ' + d.dayName + ' crowd ×' + d.dayMult.toFixed(2), d.dayMult >= 1.3 ? 'packed!' : d.dayMult < 0.8 ? 'quiet night' : 'decent') +
       row('⭐ Level ' + d.level + ' bonus', '×' + d.lvlMult.toFixed(2)) +
       '<div style="height:1px;background:rgba(255,255,255,0.18);margin:8px 0;"></div>' +
       '<div style="display:flex;justify-content:space-between;font-size:22px;font-weight:900;color:#7ee787;">' +
@@ -12140,6 +12189,46 @@ function klRenderShowPayout(d) {
 }
 
 // ── SHOP ──
+// Buying the van ends the beta. Two ways: pay $4,500 cash, or take a loan with a
+// $1,500 down payment (you leave town owing the rest — the road has its costs).
+window.klBuyVan = function(mode) {
+  if (klState.van || klState.showsPlayed < 1) return;
+  if (mode === 'loan') {
+    if (klState.money < 1500) { klToast('💸 Need $1,500 for the down payment.'); return; }
+    klState.money -= 1500;
+    klState.van = true; klState.vanLoan = true;
+    klSaveProgress();
+    klRenderBetaEnd(true);
+  } else {
+    if (klState.money < 4500) { klToast('💸 Need $4,500 to buy it outright.'); return; }
+    klState.money -= 4500;
+    klState.van = true; klState.vanLoan = false;
+    klSaveProgress();
+    klRenderBetaEnd(false);
+  }
+};
+
+// THE END OF THE BETA. Buying the van is the win condition.
+function klRenderBetaEnd(onLoan) {
+  document.getElementById('kidlab').classList.remove('kl-playing');
+  klConfetti();
+  const wrap = document.getElementById('kl-wrap');
+  const sub = onLoan
+    ? 'You signed for the loan. The van\u2019s yours — payments and all. The open road doesn\u2019t care, and neither do you.'
+    : 'Paid in full. No debt, no leash. Just you, the band, and a tank of gas.';
+  wrap.innerHTML =
+    '<div class="kl-win-star" style="font-size:96px;">🚐</div>' +
+    '<div class="kl-title" style="font-size:44px;">YOU MADE IT OUT</div>' +
+    '<div class="kl-subtitle" style="max-width:min(420px,86vw);">' + sub + '</div>' +
+    '<div style="margin:14px 0 6px;font-family:\'Barlow Condensed\',sans-serif;font-size:18px;color:#ffd97a;font-weight:800;">' +
+      '— END OF BETA —</div>' +
+    '<div class="kl-subtitle" style="font-size:16px;opacity:0.8;max-width:min(420px,86vw);">' +
+      'Days on the grind: ' + klState.day + ' · Shows played: ' + klState.showsPlayed + ' · Level ' + klLevel() + '</div>' +
+    '<button class="kl-tools-link" style="margin-top:18px;" onclick="klRenderTown()">← Back to town</button>';
+  const ctx = getAudio(); const t0 = ctx.currentTime + 0.05;
+  [0, 2, 4, 6].forEach((idx, i) => playTone(midiFreq(KL_SCALE[idx % KL_SCALE.length] + 12), t0 + i * 0.12, 0.6, ctx, 0.26, 'piano'));
+}
+
 window.klRepairGear = function() {
   if (klGearCount() === 0 || klState.gearCondition >= 100) return;
   const cost = klRepairCost();
@@ -12155,12 +12244,7 @@ window.klBuy = function(key, price) {
   if (key === 'flyers') { if (klState.promo.flyers >= 3) { klToast('Town\u2019s plastered already.'); return; } klState.promo.flyers++; }
   else if (key === 'ads') { if (klState.promo.ads >= 1) { klToast('Already running.'); return; } klState.promo.ads = 1; }
   else if (key === 'radio') { if (klState.promo.radio >= 1) { klToast('Already on air.'); return; } klState.promo.radio = 1; }
-  else if (key === 'van') {
-    if (klState.van) return;
-    klState.van = true; klState.money -= price; klSaveProgress();
-    klPlayCutscene('van_won', () => klRenderTown());
-    return;
-  }
+  else if (key === 'van') { return; } // van handled by klBuyVan (cash/loan)
   else { if (klState.gear.includes(key)) return; klState.gear.push(key); }
   klState.money -= price;
   klSaveProgress();
@@ -12304,8 +12388,8 @@ function klSaveProgress() {
     localStorage.setItem(klSaveKey(klState.kid.id), JSON.stringify({
       v: 2, puzzleIdx: klState.puzzleIdx, score: klState.score, solved, savedAt: Date.now(),
       // === ECONOMY — START ===
-      money: klState.money, xp: klState.xp, day: klState.day, bookedDay: klState.bookedDay,
-      promo: klState.promo, gear: klState.gear, gearCondition: klState.gearCondition, van: klState.van, bookedDaysOut: klState.bookedDaysOut, waddyDone: klState.waddyDone, garageDone: klState.garageDone, setPos: klState.setPos,
+      money: klState.money, xp: klState.xp, day: klState.day, showsPlayed: klState.showsPlayed, bookedDay: klState.bookedDay,
+      promo: klState.promo, gear: klState.gear, gearCondition: klState.gearCondition, van: klState.van, vanLoan: klState.vanLoan, bookedDaysOut: klState.bookedDaysOut, waddyDone: klState.waddyDone, garageDone: klState.garageDone, setPos: klState.setPos,
       // === ECONOMY — END ===
     }));
   } catch (e) { /* storage full/blocked — play on without saving */ }
@@ -12362,7 +12446,8 @@ const klState = {
   band: [],              // PIECE 1: instruments unlocked this dot, docked on the bottom stage (e.g. ['drums','bass'])
   solved: [],            // SAVE/LOAD: puzzle indexes solved this session (merged into the per-kid save)
   // === ECONOMY — START ===
-  money: 20,             // starting cash
+  money: 50,             // starting cash
+  showsPlayed: 0,        // shows completed — gates the van in the shop
   xp: 0,                 // experience — amplifies earnings (flat multiplier per level)
   day: 1,                // the calendar — advances when shows/jobs happen; drives day-of-week
   bookedDay: null,       // day a show is booked for (null = nothing booked)
@@ -12371,6 +12456,7 @@ const klState = {
   gear: [],              // band equipment owned — each piece boosts show payout
   gearCondition: 100,    // 0–100; wears down each show, repair at the Shop (Oregon-Trail style)
   van: false,            // THE END GOAL of the beta
+  vanLoan: false,        // bought the van on a loan (down payment) vs cash
   waddyDone: false,      // one-time milestone: Waddy's house cleared (gates the +XP)
   garageDone: false,     // one-time milestone: the Garage cleared (gates the +XP)
   activeSet: null,       // 'waddy' | 'garage' | null — which puzzle set is in play
@@ -12403,23 +12489,34 @@ function klDayName(day) { return KL_DOW[((day || klState.day) - 1) % 7]; }
 function klIsWeekend(day) { const n = ((day || klState.day) - 1) % 7; return n === 5 || n === 6; }
 
 // === HYPE + GEAR (show-payout drivers) ===
-// HYPE: booking distance + promotion feed one meter that multiplies show pay.
-// Booking further out = more days to promote = a higher hype head-start.
-function klBookingHype() { return (klState.bookedDaysOut || 0) * 0.05; } // 2d→0.10, 4d→0.20, 7d→0.35
+// Day-of-week multipliers, grounded in how live audiences + foot traffic really
+// move: Fri/Sat peak (people go out, evenings before the weekend earn most),
+// Thu is a decent secondary night, Mon is the floor. Index 0=Mon … 6=Sun.
+const KL_SHOW_DAYMULT = [0.60, 0.65, 0.75, 0.90, 1.30, 1.40, 0.80];
+const KL_BUSK_DAYMULT = [0.60, 0.70, 0.75, 0.85, 1.30, 1.40, 1.00];
+function klDowIndex(day) { return ((day || klState.day) - 1) % 7; }
+function klShowDayMult(day) { return KL_SHOW_DAYMULT[klDowIndex(day)]; }
+function klBuskDayMult(day) { return KL_BUSK_DAYMULT[klDowIndex(day)]; }
+
+// HYPE comes ONLY from promotion now. Booking further out doesn't grant hype —
+// it just gives you more days to earn money and promote, and lets you land the
+// show on a high-traffic night (which the day-of-week multiplier rewards).
 function klPromoHype() {
   const p = klState.promo;
   return p.flyers * 0.10 + p.ads * 0.25 + p.radio * 0.50; // up to +1.05
 }
-function klHypeMult() { return 1 + klBookingHype() + klPromoHype(); }
-// Bar fill 0–1 against a sensible max hype (book 7 + all promo = +1.40 over base).
-function klHypeFill() { return Math.max(0, Math.min(1, (klHypeMult() - 1) / 1.40)); }
+function klHypeMult() { return 1 + klPromoHype(); }
+// Bar fill 0–1 against max promo hype (+1.05 over base).
+function klHypeFill() { return Math.max(0, Math.min(1, (klHypeMult() - 1) / 1.05)); }
 
-// GEAR: each owned piece adds a permanent show-payout boost, SCALED by condition.
+// GEAR: each owned piece adds a permanent payout boost, SCALED by condition.
 // Worn gear pays less (never penalizes below base); repair at the Shop to restore.
 function klGearCount() { return (klState.gear || []).length; }
 function klGearBoost() { return 1 + klGearCount() * 0.08 * (klState.gearCondition / 100); }
-// Repair price scales with how worn it is. Cheap top-ups, pricier full rebuilds.
-function klRepairCost() { return Math.ceil((100 - klState.gearCondition) * 0.6); }
+// Gear also helps busking (smaller effect than shows), also scaled by condition.
+function klGearBuskFactor() { return 1 + klGearCount() * 0.12 * (klState.gearCondition / 100); }
+// Repair price scales with how worn it is (~$1.20 per condition point).
+function klRepairCost() { return Math.ceil((100 - klState.gearCondition) * 1.2); }
 // === ECONOMY HELPERS — END ===
 
 const KL_BANDMATE_LINES = [
@@ -12601,8 +12698,9 @@ window.klPickKid = function(kidId) {
     klState.score = save.score || 0;
     klState.solved = Array.isArray(save.solved) ? save.solved.slice() : [];
     // === ECONOMY — START === (defaults cover v1 saves)
-    klState.money = (save.money !== undefined) ? save.money : 20;
+    klState.money = (save.money !== undefined) ? save.money : 50;
     klState.xp = save.xp || 0;
+    klState.showsPlayed = save.showsPlayed || 0;
     klState.day = save.day || 1;
     klState.bookedDay = (save.bookedDay !== undefined) ? save.bookedDay : null;
     klState.promo = save.promo || { flyers: 0, ads: 0, radio: 0 };
@@ -12610,6 +12708,7 @@ window.klPickKid = function(kidId) {
     klState.gearCondition = (save.gearCondition !== undefined) ? save.gearCondition : 100;
     klState.bookedDaysOut = save.bookedDaysOut || 0;
     klState.van = !!save.van;
+    klState.vanLoan = !!save.vanLoan;
     klState.waddyDone = !!save.waddyDone;
     klState.garageDone = !!save.garageDone;
     klState.setPos = save.setPos || { waddy: 0, garage: 13 };
@@ -13604,9 +13703,9 @@ window.klDevReset = function() {
   if (!klIsDevAvailable()) return;
   if (klState.kid) { try { localStorage.removeItem(klSaveKey(klState.kid.id)); } catch (e) {} }
   klState.puzzleIdx = 0; klState.score = 0; klState.solved = [];
-  klState.money = 20; klState.xp = 0; klState.day = 1; klState.bookedDay = null; klState.bookedDaysOut = 0;
+  klState.money = 50; klState.xp = 0; klState.day = 1; klState.showsPlayed = 0; klState.bookedDay = null; klState.bookedDaysOut = 0;
   klState.promo = { flyers: 0, ads: 0, radio: 0 };
-  klState.gear = []; klState.gearCondition = 100; klState.van = false; klState.waddyDone = false; klState.garageDone = false;
+  klState.gear = []; klState.gearCondition = 100; klState.van = false; klState.vanLoan = false; klState.waddyDone = false; klState.garageDone = false;
   klState.activeSet = null; klState.setPos = { waddy: 0, garage: 13 };
   klRebuildLayersFor(0);
   klToast('♻ Clean slate — fresh save.');
@@ -14033,7 +14132,7 @@ let klDrumFirstPlay = true;  // extra audio lead on the first drum play (ctx war
 // 0 = wired / built-in speakers. Tunable live from the DEV menu.
 let klAudioOffsetMs = 0;
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-19'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-20'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
