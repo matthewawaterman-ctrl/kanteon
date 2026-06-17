@@ -13593,15 +13593,32 @@ function klDrumPlaySet(setObj, opts) {
   const steps = klDrumStepCount(p);
   // While BUILDING the drums there's no backing groove to line up with, so don't
   // quantize to a downbeat — that's just waiting on silence. Fire immediately.
-  // (If a layer is already active, we DO sync so it locks to the groove.)
   const anyDrumLive = Object.keys(klActiveLayers.drumVoices).length > 0;
-  const syncToGroove = !opts.immediate && klClock.active && (anyDrumLive || klActiveLayers.bass);
+  const grooveLive = klClock.active && (anyDrumLive || klActiveLayers.bass);
   // Small lead before an immediate (non-synced) play. A touch more headroom on
   // the very first play so a still-warming AudioContext doesn't let the audio
   // and the setTimeout-driven playhead drift apart.
   const lead = klDrumFirstPlay ? 0.16 : 0.08;
   klDrumFirstPlay = false;
-  const t0 = syncToGroove ? klNextDownbeat() : (ctx.currentTime + lead);
+  let t0, syncToGroove;
+  if (opts.immediate && grooveLive) {
+    // Teaching audition OVER a looping groove (e.g. the hi-hat basics on top of
+    // the kick+snare loop). Waiting for the next downbeat felt broken; firing at
+    // an arbitrary currentTime drifts out of phase with the loop. So RE-ANCHOR:
+    // restart the groove clock so a fresh downbeat begins right now (klStopClock
+    // disconnects the old gain bus, silencing already-scheduled bars — no flam),
+    // then start the target on that same downbeat. Immediate AND locked.
+    klStopClock();
+    klStartClock(p.bpm);
+    klStartBeatBar();
+    t0 = klClock.startTs;
+    syncToGroove = false; // already sitting on the downbeat — no count-in wait
+  } else {
+    // Non-immediate (a live SHOW) locks to the running groove's next downbeat;
+    // with no groove at all, fire immediately.
+    syncToGroove = !opts.immediate && grooveLive;
+    t0 = syncToGroove ? klNextDownbeat() : (ctx.currentTime + lead);
+  }
   const startDelayMs = Math.max(0, (t0 - ctx.currentTime) * 1000);
   klPlaybackBusyUntil = performance.now() + startDelayMs + steps * (stepDur * 1000);
 
@@ -13687,7 +13704,7 @@ window.klDrumPlayMine = function() {
     return;
   }
   const all = Object.assign({}, klState.drumLocked, klState.drumPlaced);
-  klDrumPlaySet(all, { armBtnId: 'kl-mine-btn' });
+  klDrumPlaySet(all, { armBtnId: 'kl-mine-btn', immediate: !(typeof klShow !== 'undefined' && klShow.active) });
 };
 
 window.klDrumCheck = function() {
@@ -13702,6 +13719,7 @@ window.klDrumCheck = function() {
   const all = Object.assign({}, klState.drumLocked, klState.drumPlaced);
   const sched = klDrumPlaySet(all, {
     armBtnId: 'kl-check-btn',
+    immediate: !(typeof klShow !== 'undefined' && klShow.active),
     onStep: (s) => {
       correct.forEach(k => {
         const parts = k.split('@');
@@ -14500,7 +14518,7 @@ let klDrumFirstPlay = true;  // extra audio lead on the first drum play (ctx war
 // 0 = wired / built-in speakers. Tunable live from the DEV menu.
 let klAudioOffsetMs = 0;
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-30'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-31'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
