@@ -89,8 +89,8 @@
   }
   .home-logo {
     display: flex; align-items: baseline; gap: 0;
-    font-family: var(--font-display); font-size: 56px; font-weight: 900;
-    line-height: 0.85; letter-spacing: -3px;
+    font-family: var(--font-display); font-size: 30px; font-weight: 900;
+    line-height: 0.85; letter-spacing: -1px;
   }
   .home-logo .rock {
     color: var(--text); transform: skew(-6deg); display: inline-block;
@@ -4588,7 +4588,7 @@
 
   <div class="home-logo-wrap">
     <div class="home-logo">
-      <span class="rock">ROCK</span><span class="ear">EAR</span>
+      <span class="rock">📖 BOOK OF&nbsp;</span><span class="ear">KNOWLEDGE</span>
     </div>
   </div>
 
@@ -11765,7 +11765,7 @@ window.klLeaveTown = function() {
 // Puzzle sets: simple → Sweet Waddy's, advanced → the Garage.
 // Lazy: KL_PUZZLES is declared later in the module, so ranges are computed at
 // call time (accessing it here at load time was a TDZ boot crash).
-function klSetRanges() { return { waddy: [0, 12], garage: [13, KL_PUZZLES.length - 1] }; }
+function klSetRanges() { return { waddy: [0, 12], garage: [13, KL_STORY_END] }; }
 
 window.klEnterBuilding = function(id) {
   getAudio();
@@ -12062,14 +12062,15 @@ window.klSkipToShow = function() {
 const klShow = { active: false, songs: [], i: 0, strikes: 0, timerId: null, deadline: 0 };
 
 window.klStartShow = function() {
-  // Set list = 3 random puzzles from what the kid has SOLVED (their repertoire).
-  const pool = (klState.solved && klState.solved.length ? klState.solved.slice() : [0, 1, 2])
-    .filter(i => KL_PUZZLES[i]);
+  // Set list = 3 fresh SHOW-NIGHT songs (never the practice puzzles). Picked at
+  // random from the dedicated setlist so each show feels different.
+  const pool = [];
+  for (let i = KL_SHOW_START; i <= KL_SHOW_END; i++) pool.push(i);
   const songs = [];
   while (songs.length < 3 && pool.length) {
     songs.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
   }
-  while (songs.length < 3) songs.push(songs[songs.length - 1] || 0);
+  while (songs.length < 3) songs.push(songs[songs.length - 1] || KL_SHOW_START);
   klShow.active = true; klShow.songs = songs; klShow.i = 0; klShow.strikes = 0;
   klShowNextSong();
 };
@@ -12333,9 +12334,43 @@ const KL_PUZZLES = [
     notes: [ {pitch:7, start:0, dur:1}, {pitch:4, start:1, dur:1}, {pitch:2, start:2, dur:1}, {pitch:0, start:3, dur:1} ] },
 ];
 
+// Last STORY puzzle index — frozen BEFORE the show songs are appended so set
+// ranges, the dev sequence, and the all-done check stay tied to the story only.
+const KL_STORY_END = KL_PUZZLES.length - 1;
+
+// ════ SHOW-NIGHT SETLIST — fresh songs played ONLY during a booked show ════
+// Never appear in the story, the dev jump list, or the all-done count. Each gets
+// a UNIQUE high `dot` so klRebuildLayersFor finds no same-dot backing — they play
+// as clean solo performances. A touch faster + busier than practice = stage energy.
+const KL_SHOW_DEFS = [
+  // a punchy kick/snare/hat groove
+  { id: 101, bpm: 104, beats: 4, phase: 3, dot: 50, show: true, type: 'drums', layer: 'drums',
+    voices: ['kick','snare','hat'],
+    drums: { kick: [0, 1.5, 2], snare: [1, 3], hat: [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5] } },
+  // a walking bass hook
+  { id: 102, bpm: 104, beats: 4, phase: 3, dot: 51, show: true, type: 'bass', layer: 'bass', degrees: [0, 2, 4, 5],
+    notes: [ {pitch:0, start:0, dur:1}, {pitch:2, start:1, dur:1}, {pitch:4, start:2, dur:1}, {pitch:5, start:3, dur:1} ] },
+  // a bright lead riff
+  { id: 103, bpm: 108, beats: 4, phase: 3, dot: 52, show: true, degrees: [0, 2, 4, 5, 7],
+    notes: [ {pitch:7, start:0, dur:1}, {pitch:5, start:1, dur:1}, {pitch:7, start:2, dur:1}, {pitch:4, start:3, dur:1} ] },
+  // syncopated drums
+  { id: 104, bpm: 108, beats: 4, phase: 3, dot: 53, show: true, type: 'drums', layer: 'drums',
+    voices: ['kick','snare','hat'],
+    drums: { kick: [0, 0.5, 2], snare: [1, 3], hat: [0, 1, 1.5, 2, 3, 3.5] } },
+  // a driving bass line with a hold
+  { id: 105, bpm: 110, beats: 4, phase: 3, dot: 54, show: true, type: 'bass', layer: 'bass', degrees: [0, 3, 4, 7],
+    notes: [ {pitch:0, start:0, dur:1}, {pitch:3, start:1, dur:1}, {pitch:4, start:2, dur:2} ] },
+  // a soaring closer melody
+  { id: 106, bpm: 110, beats: 4, phase: 3, dot: 55, show: true, degrees: [0, 2, 4, 5, 7],
+    notes: [ {pitch:4, start:0, dur:1}, {pitch:5, start:1, dur:1}, {pitch:7, start:2, dur:2} ] },
+];
+KL_SHOW_DEFS.forEach(p => KL_PUZZLES.push(p));
+const KL_SHOW_START = KL_STORY_END + 1;        // first show-puzzle index
+const KL_SHOW_END = KL_PUZZLES.length - 1;      // last show-puzzle index
+
 // How many dots total + which puzzle index starts each dot. Derived from the
-// `dot` field so adding puzzles/dots above is the only edit needed.
-const KL_DOT_COUNT = Math.max(...KL_PUZZLES.map(p => p.dot)) + 1;
+// STORY `dot` fields only (show songs use throwaway high dots, ignored here).
+const KL_DOT_COUNT = Math.max(...KL_PUZZLES.filter(p => !p.show).map(p => p.dot)) + 1;
 function klDotOf(idx) { return KL_PUZZLES[idx] ? KL_PUZZLES[idx].dot : KL_DOT_COUNT; }
 // Melody puzzles carry no type/layer field; identify them as "has notes, no type".
 function klIsMelodyPuzzle(p) { return !!(p && p.notes && !p.type); }
@@ -12745,6 +12780,7 @@ function klStorySequence() {
   const cutAfter  = { 8: ['dot0'], 13: ['dot1'], 18: ['dot2'], 23: ['dot3'], 28: ['finale'] };
   const seq = [];
   KL_PUZZLES.forEach((p, i) => {
+    if (p.show) return; // show-night songs are never part of the story sequence
     if (cutBefore[p.id]) cutBefore[p.id].forEach(k => seq.push({ cut: k }));
     seq.push({ level: i });
     if (cutAfter[p.id]) cutAfter[p.id].forEach(k => seq.push({ cut: k }));
@@ -14132,7 +14168,7 @@ let klDrumFirstPlay = true;  // extra audio lead on the first drum play (ctx war
 // 0 = wired / built-in speakers. Tunable live from the DEV menu.
 let klAudioOffsetMs = 0;
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-20'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-21'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
@@ -14744,7 +14780,7 @@ function klWin() {
   // Did we just finish a DOT (cluster/song)? Celebrate at the dot boundary.
   // Within a dot, puzzles flow rapid-fire (Zoombinis model).
   const nextIdx = klState.puzzleIdx + 1;
-  const allDone = nextIdx >= KL_PUZZLES.length;
+  const allDone = nextIdx > KL_STORY_END;
   const dotEnd = !allDone && (klDotOf(nextIdx) !== klDotOf(klState.puzzleIdx));
 
   if (allDone) {
