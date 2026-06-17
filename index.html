@@ -4416,6 +4416,18 @@
     letter-spacing: 1px; color: #fff;
   }
   .kl-station-desc { font-family: 'Barlow', sans-serif; font-size: 12.5px; color: rgba(235,228,255,0.7); }
+  /* Room behind the EXERCISES — so you're playing inside the building, never in
+     space. The building's scene, dimmed + blurred + scrimmed for readability;
+     all real puzzle content is forced above it. */
+  .kl-room-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .kl-room-bg svg { width: 100%; height: 100%; display: block; opacity: 0.5; filter: blur(1.5px); }
+  .kl-room-bg::after {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 38%, rgba(10,7,20,0.5) 0%, rgba(10,7,20,0.84) 100%);
+  }
+  .kl-wrap > *:not(.kl-room-bg) { position: relative; z-index: 1; }
+  /* In-room: the starfield shouldn't show through. */
+  #kidlab.kl-playing .kl-room-bg ~ * { position: relative; z-index: 1; }
   .kl-modbanner {
     display: flex; flex-direction: column; align-items: center; gap: 1px;
     font-family: 'Barlow Condensed', sans-serif; font-weight: 900;
@@ -11868,13 +11880,14 @@ const KL_MODULE_DEFS = [
   { id: 'waddy:drums',   building: 'waddy',  obj: '🥁', name: 'DRUMS',  desc: 'Lay down the beat.',        indices: [0, 1, 8] },
   { id: 'waddy:bass',    building: 'waddy',  obj: '🎸', name: 'BASS',   desc: 'Find the low end.',         indices: [2, 9] },
   { id: 'waddy:melody',  building: 'waddy',  obj: '🎹', name: 'MELODY', desc: 'Play the tune by ear.',     indices: [3, 4, 5, 6, 7, 10, 11, 12] },
-  { id: 'garage:drums',  building: 'garage', obj: '🥁', name: 'DRUMS',  desc: 'Advanced grooves.',         indices: [13, 18, 23], requires: 'waddy:drums' },
-  { id: 'garage:bass',   building: 'garage', obj: '🎸', name: 'BASS',   desc: 'Walking lines & leaps.',    indices: [14, 19, 24], requires: 'waddy:bass' },
-  { id: 'garage:melody', building: 'garage', obj: '🎹', name: 'MELODY', desc: 'Wide leaps, fast lines.',   indices: [15, 16, 17, 20, 21, 22, 25, 26, 27], requires: 'waddy:melody' },
+  { id: 'garage:jam', building: 'garage', obj: '🎸', name: 'JAM SESSION', desc: 'Put it all together — the advanced set.', indices: [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], requiresWaddy: true },
 ];
 function klModuleDef(id) { return KL_MODULE_DEFS.find(m => m.id === id) || null; }
 function klBuildingModules(building) { return KL_MODULE_DEFS.filter(m => m.building === building); }
-function klModuleUnlocked(mod) { return !mod.requires || !!(klState.modDone && klState.modDone[mod.requires]); }
+function klModuleUnlocked(mod) {
+  if (mod.requiresWaddy && !klState.waddyDone) return false;
+  return !mod.requires || !!(klState.modDone && klState.modDone[mod.requires]);
+}
 function klModuleIsDone(id) { return !!(klState.modDone && klState.modDone[id]); }
 function klActiveModuleDef() { return klState.activeModule ? klModuleDef(klState.activeModule) : null; }
 // Mark a module cleared; if its whole building is now cleared, grant that
@@ -12016,6 +12029,13 @@ function klToast(msg) {
 // as a real place (garage practice space, mystical lair, club, dull living room),
 // not a panel on a starfield. Pure SVG silhouettes + lighting — no image assets.
 // First pass; meant to be iterated on from screenshots.
+// Which building's room should sit behind the CURRENT puzzle (so you're never
+// playing in outer space). Shows are at the venue; sets play in their building.
+function klPuzzleBuilding() {
+  if (typeof klShow !== 'undefined' && klShow.active) return 'venue';
+  if (klState.activeSet === 'waddy' || klState.activeSet === 'garage') return klState.activeSet;
+  return null;
+}
 function klSceneArt(id) {
   const svg = (inner) => '<svg viewBox="0 0 1200 620" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg">' + inner + '</svg>';
   if (id === 'garage') {
@@ -12134,7 +12154,7 @@ function klRenderInterior(id) {
         return '<div class="kl-station locked">' +
           '<span class="kl-station-obj">🔒</span>' +
           '<span class="kl-station-txt"><span class="kl-station-name">' + m.name + '</span>' +
-          '<span class="kl-station-desc">Clear ' + m.name + ' at Sweet Waddy\u2019s to unlock.</span></span>' +
+          '<span class="kl-station-desc">' + (m.requiresWaddy ? 'Finish all the basics at Sweet Waddy\u2019s to unlock.' : 'Clear ' + m.name + ' at Sweet Waddy\u2019s to unlock.') + '</span></span>' +
         '</div>';
       }
       return '<button class="kl-station" onclick="klEnterModule(\'' + m.id + '\')">' +
@@ -13454,6 +13474,8 @@ function klRenderDrumPuzzle(p) {
   gridHtml += '</div>';
 
   wrap.innerHTML =
+    '' +
+    (klPuzzleBuilding() ? '<div class="kl-room-bg kt-bg-' + klPuzzleBuilding() + '">' + klSceneArt(klPuzzleBuilding()) + '</div>' : '') +
     '<div class="kl-puzzle-top">' +
       '<button class="kl-back" onclick="klExit()">←</button>' +
       storyHtml +
@@ -13473,8 +13495,7 @@ function klRenderDrumPuzzle(p) {
     '<div class="kl-grid-wrap" id="kl-grid-wrap">' + gridHtml + '</div>' +
     '<div class="kl-drummer" id="kl-drummer">' + KL_DRUMMER_SVG + '</div>' +
     '<div class="kl-bandmate" id="kl-bandmate">&nbsp;</div>' +
-    '<button class="kl-check" id="kl-check-btn" onclick="klDrumCheck()">CHECK ✓</button>' +
-    klBandStage();
+    '<button class="kl-check" id="kl-check-btn" onclick="klDrumCheck()">CHECK ✓</button>';
 
   klState.failCount = 0;
   klDrumFirstPlay = true;
@@ -14206,6 +14227,7 @@ function klRenderPuzzle() {
   // The bandmate line stays EMPTY until the kid does something or gets stuck.
 
   wrap.innerHTML =
+    (klPuzzleBuilding() ? '<div class="kl-room-bg kt-bg-' + klPuzzleBuilding() + '">' + klSceneArt(klPuzzleBuilding()) + '</div>' : '') +
     '<div class="kl-puzzle-top">' +
       '<button class="kl-back" onclick="klExit()">←</button>' +
       storyHtml +
@@ -14226,8 +14248,7 @@ function klRenderPuzzle() {
     (klIsMelodyPuzzle(p) ? '<div class="kl-melodist" id="kl-melodist">' + klMelodyFigSVG(klDotMelodyInstrument(p.dot)) + '</div>' : '') +
     '<div class="kl-bandmate" id="kl-bandmate">&nbsp;</div>' +
     paletteHtml +
-    '<button class="kl-check" id="kl-check-btn" onclick="klCheck()">CHECK ✓</button>' +
-    klBandStage();
+    '<button class="kl-check" id="kl-check-btn" onclick="klCheck()">CHECK ✓</button>';
 
   // Reset hint tracking for this puzzle
   klState.failCount = 0;
@@ -14454,7 +14475,7 @@ let klDrumFirstPlay = true;  // extra audio lead on the first drum play (ctx war
 // 0 = wired / built-in speakers. Tunable live from the DEV menu.
 let klAudioOffsetMs = 0;
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-27'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-28'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
@@ -14804,10 +14825,18 @@ function klPlaySequence(notes, opts) {
     }
   }
 
+  const isBass = (p.type === 'bass');
   notes.forEach(n => {
-    playTone(midiFreq(klPitchMidi(n.pitch)), t0 + n.start * beat, beat * n.dur * 0.95, ctx, g, klCurMelTimbre());
-    if (opts.bloom) {
-      playTone(midiFreq(klPitchMidi(n.pitch) + 12), t0 + n.start * beat, beat * n.dur * 0.95, ctx, g * 0.4, klCurMelTimbre());
+    const midi = klPitchMidi(n.pitch);
+    if (isBass) {
+      // Bass targets MUST use the bass voice — same as tap-input (klAuditionNote)
+      // and the backing — so LISTEN/MINE sound identical to what the kid plays.
+      klBass(t0 + n.start * beat, ctx.destination, ctx, midi, beat * n.dur * 0.9, g * 0.75);
+    } else {
+      playTone(midiFreq(midi), t0 + n.start * beat, beat * n.dur * 0.95, ctx, g, klCurMelTimbre());
+      if (opts.bloom) {
+        playTone(midiFreq(midi + 12), t0 + n.start * beat, beat * n.dur * 0.95, ctx, g * 0.4, klCurMelTimbre());
+      }
     }
   });
 
@@ -15079,11 +15108,12 @@ function klWin() {
       const pos = mod.indices.indexOf(klState.puzzleIdx);
       if (pos < 0 || pos + 1 >= mod.indices.length) {
         klMarkModuleDone(mod.id);
+        klState.day++; // a practice session takes a day — can't clear it all at once
         const building = mod.building;
         setTimeout(() => {
           klState.activeModule = null;
           klSaveProgress();
-          klToast('✅ ' + mod.name + ' cleared!');
+          klToast('✅ ' + mod.name + ' cleared! A day passes (now Day ' + klState.day + ' · ' + klDayName() + ').');
           klRenderInterior(building);
         }, stingMs + 200);
         return;
