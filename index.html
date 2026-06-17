@@ -4232,6 +4232,13 @@
     display: flex; flex-direction: column; align-items: stretch;
     pointer-events: none;
   }
+  .kl-dev-grouplbl {
+    flex-basis: 100%; font-family: 'Barlow Condensed', sans-serif; font-weight: 900;
+    font-size: 11px; letter-spacing: 2px; padding: 3px 6px 1px; margin-top: 2px;
+    opacity: 0.95;
+  }
+  .kl-dev-grouplbl.waddy { color: #c4b5fd; }
+  .kl-dev-grouplbl.garage { color: #fca5a5; }
   .kl-dev-toggle {
     pointer-events: auto; align-self: flex-start; margin-left: 14px;
     display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
@@ -4359,6 +4366,34 @@
     display: flex; align-items: flex-end; justify-content: center; gap: 12px;
     width: 100%; padding: 4px 16px 2px; margin-top: 0;
     border-top: 1px solid rgba(170,150,255,0.18);
+  }
+  /* === NO-SCROLL: fit the puzzle on short viewports ===
+     Both puzzle renderers (drum + melodic) share these classes, so one set of
+     height media queries compresses both. .kl-wrap keeps overflow:auto as a
+     SILENT safety net — it only ever shows a scrollbar if something STILL
+     overflows after compression. Progressive: gentle at 860, aggressive at 740. */
+  @media (max-height: 860px) {
+    .kl-wrap { padding: 8px 20px; gap: 6px; }
+    .kl-drummer-svg { width: clamp(150px, 32vw, 210px); }
+    .kl-bassist .kl-bassist-svg, .kl-melodist .kl-melodist-svg { width: clamp(80px, 15vw, 115px); }
+    .kl-check { font-size: 28px; padding: 13px 52px; }
+    .kl-listen { font-size: 26px; padding: 13px 38px; }
+    .kl-mine { font-size: 22px; padding: 12px 26px; }
+    .kl-bandmate { font-size: 20px; min-height: 22px; }
+    .kl-drumtitle { font-size: 22px; }
+    .kl-bandstage { transform: scale(0.85); transform-origin: bottom center; }
+  }
+  @media (max-height: 740px) {
+    .kl-wrap { padding: 5px 18px; gap: 3px; }
+    .kl-drummer, .kl-bassist, .kl-melodist { margin: 0; }
+    .kl-drummer-svg { width: clamp(120px, 26vw, 165px); }
+    .kl-bassist .kl-bassist-svg, .kl-melodist .kl-melodist-svg { width: clamp(64px, 12vw, 92px); }
+    .kl-check { font-size: 24px; padding: 10px 44px; box-shadow: 0 5px 0 #15803d, 0 8px 16px rgba(0,0,0,0.2); }
+    .kl-listen { font-size: 22px; padding: 10px 30px; }
+    .kl-mine { font-size: 19px; padding: 9px 22px; }
+    .kl-bandmate { font-size: 17px; min-height: 18px; }
+    .kl-drumtitle { font-size: 19px; }
+    .kl-bandstage { transform: scale(0.72); transform-origin: bottom center; padding: 0 16px; }
   }
   .kl-bandstage:empty { display: none; }
   .kl-band-member {
@@ -11766,19 +11801,33 @@ function klGrantWaddyMilestone() {
   return true;
 }
 
+// One-time Garage milestone — same idempotent + dev-skip-safe pattern. Worth more
+// XP than Waddy's since the Garage is the harder set.
+function klGrantGarageMilestone() {
+  if (klState.garageDone) return false;
+  klState.garageDone = true;
+  klState.xp = (klState.xp || 0) + 80;
+  klSaveProgress();
+  return true;
+}
+
 // Set finished → back to town with a beat.
 function klSetComplete(setId) {
   klState.activeSet = null;
-  // Beating Waddy's house is a real milestone: it grants XP (amplifies all future
+  // Beating a set is a real milestone: it grants XP (amplifies all future
   // earnings) — but only the first time, so dev shortcuts can't double-dip.
-  const awarded = (setId === 'waddy') ? klGrantWaddyMilestone() : false;
-  klSaveProgress();
   if (setId === 'waddy') {
+    const awarded = klGrantWaddyMilestone();
+    klSaveProgress();
     klToast(awarded
       ? '🧙 "That\u2019s everything I\u2019ve got, kid." (+60 XP — you earn more now!) Hit the Garage.'
       : '🧙 "Back already? Hit the Garage."');
   } else {
-    klToast('🎸 Garage cleared! Book a show at the Venue!');
+    const awarded = klGrantGarageMilestone();
+    klSaveProgress();
+    klToast(awarded
+      ? '🎸 Garage cleared! (+80 XP — you earn even more now!) Book a show at the Venue!'
+      : '🎸 Garage cleared! Book a show at the Venue!');
   }
   klRenderTown();
 }
@@ -12208,7 +12257,7 @@ function klSaveProgress() {
       v: 2, puzzleIdx: klState.puzzleIdx, score: klState.score, solved, savedAt: Date.now(),
       // === ECONOMY — START ===
       money: klState.money, xp: klState.xp, day: klState.day, bookedDay: klState.bookedDay,
-      promo: klState.promo, gear: klState.gear, van: klState.van, waddyDone: klState.waddyDone, setPos: klState.setPos,
+      promo: klState.promo, gear: klState.gear, van: klState.van, waddyDone: klState.waddyDone, garageDone: klState.garageDone, setPos: klState.setPos,
       // === ECONOMY — END ===
     }));
   } catch (e) { /* storage full/blocked — play on without saving */ }
@@ -12273,6 +12322,7 @@ const klState = {
   gear: [],              // instruments owned (shop flavor; future mechanics)
   van: false,            // THE END GOAL of the beta
   waddyDone: false,      // one-time milestone: Waddy's house cleared (gates the +XP)
+  garageDone: false,     // one-time milestone: the Garage cleared (gates the +XP)
   activeSet: null,       // 'waddy' | 'garage' | null — which puzzle set is in play
   setPos: { waddy: 0, garage: 13 }, // resume position per set (absolute puzzle indexes)
   // === ECONOMY — END ===
@@ -12490,6 +12540,7 @@ window.klPickKid = function(kidId) {
     klState.gear = save.gear || [];
     klState.van = !!save.van;
     klState.waddyDone = !!save.waddyDone;
+    klState.garageDone = !!save.garageDone;
     klState.setPos = save.setPos || { waddy: 0, garage: 13 };
     klState.activeSet = null;
     // === ECONOMY — END ===
@@ -13418,9 +13469,18 @@ function klDevBar() {
   // Single source of truth for play order (see klStorySequence). 🎬 = cutscene.
   const cutBtn = key => '<button class="kl-dev-btn kl-dev-cut" onclick="klDevCutscene(\'' + key + '\')" title="cutscene: ' + key + '">🎬' + key + '</button>';
   let btns = '<span class="kl-dev-tag" style="flex-basis:100%;color:#4ade80;">BUILD ' + KL_BUILD_TAG + ' · play sequence (🎬 = cutscene)</span>';
+  let labeledWaddy = false, labeledGarage = false;
+  const _waddyEnd = klSetRanges().waddy[1], _garageStart = klSetRanges().garage[0];
   klStorySequence().forEach(it => {
     if (it.cut) { btns += cutBtn(it.cut); return; }
     const p = KL_PUZZLES[it.level];
+    // Group dividers so it's clear which puzzles belong to which building.
+    if (!labeledWaddy && it.level <= _waddyEnd) {
+      btns += '<span class="kl-dev-grouplbl waddy">🧙 SWEET WADDY\u2019S</span>'; labeledWaddy = true;
+    }
+    if (!labeledGarage && it.level >= _garageStart) {
+      btns += '<span class="kl-dev-grouplbl garage">🎸 THE GARAGE</span>'; labeledGarage = true;
+    }
     const label = p.type === 'drums' ? '🥁' : p.type === 'bass' ? '🎸' : (it.level + 1);
     const cur = it.level === klState.puzzleIdx ? ' cur' : '';
     btns += '<button class="kl-dev-btn' + cur + '" onclick="klDevJump(' + it.level + ')" title="puzzle ' + (it.level+1) + (p.type ? ' (' + p.type + ')' : '') + '">' + label + '</button>';
@@ -13456,9 +13516,10 @@ window.klDevJump = function(idx) {
     if (matt) { klState.kid = matt; } else { return; }
   }
   klState.puzzleIdx = idx;
-  // Dev-skipping PAST Waddy's set still grants its milestone XP once, so testing
-  // from a jump behaves like a real playthrough.
+  // Dev-skipping PAST a set still grants its milestone XP once, so testing from a
+  // jump behaves like a real playthrough.
   if (idx > klSetRanges().waddy[1]) klGrantWaddyMilestone();
+  if (idx > klSetRanges().garage[1]) klGrantGarageMilestone();
   klState.failCount = 0; klState.hintShown = false; klState.hintNotes = null;
   // jumping mid-dot: activate that dot's earlier layers so the groove sounds
   // right (otherwise later puzzles would play over silence)
@@ -13474,7 +13535,7 @@ window.klDevReset = function() {
   klState.puzzleIdx = 0; klState.score = 0; klState.solved = [];
   klState.money = 20; klState.xp = 0; klState.day = 1; klState.bookedDay = null;
   klState.promo = { flyers: 0, ads: 0, radio: 0 };
-  klState.gear = []; klState.van = false; klState.waddyDone = false;
+  klState.gear = []; klState.van = false; klState.waddyDone = false; klState.garageDone = false;
   klState.activeSet = null; klState.setPos = { waddy: 0, garage: 13 };
   klRebuildLayersFor(0);
   klToast('♻ Clean slate — fresh save.');
@@ -13503,6 +13564,15 @@ window.klToggleDevBar = function() {
   const bar = document.getElementById('kl-devbar');
   if (bar) bar.classList.toggle('open', klState.devOpen);
 };
+// Hotkey: backtick ( ` ) toggles the DEV pane from anywhere (ignored while typing).
+document.addEventListener('keydown', (e) => {
+  if (e.key !== '`') return;
+  const tag = (e.target && e.target.tagName) || '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
+  if (!klIsDevAvailable()) return;
+  e.preventDefault();
+  klToggleDevBar();
+});
 window.klDevCutscene = function(key) {
   if (!klIsDev()) return;
   const seq = klStorySequence();
@@ -13593,7 +13663,9 @@ function klRenderPuzzle() {
   // for taller grids (more scale degrees) so it always fits the viewport.
   // Keep the grid from getting lanky on tall (7-8 row) puzzles: size cells so
   // the panel stays roughly the proportions of the earlier 3-5 row levels.
-  const maxGridH = 330;
+  // Grid height caps to the viewport so the whole puzzle fits without scrolling
+  // (≈34% of the available height, never above 330 or below 170).
+  const maxGridH = Math.max(170, Math.min(330, Math.round((window.innerHeight || 800) * 0.34)));
   const gap = 8;
   let cellSize = Math.floor((maxGridH - (rowCount - 1) * gap) / rowCount);
   cellSize = Math.max(38, Math.min(64, cellSize)); // never tiny, never huge
@@ -13890,7 +13962,7 @@ let klDrumFirstPlay = true;  // extra audio lead on the first drum play (ctx war
 // 0 = wired / built-in speakers. Tunable live from the DEV menu.
 let klAudioOffsetMs = 0;
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-17'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-18'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
@@ -14587,6 +14659,10 @@ function klRenderAllDone() {
   document.getElementById('kidlab').classList.remove('kl-playing');
   klStopClock();
   klStopBeatBar();
+  // Finishing everything = the Garage is cleared. Grant its milestone XP here
+  // (idempotent) since the last Garage puzzle routes through all-done, not
+  // klSetComplete('garage').
+  klGrantGarageMilestone();
   // Finale story beat first, then the completion screen that unlocks the studio.
   klPlayCutscene('finale', () => {
     const wrap = document.getElementById('kl-wrap');
