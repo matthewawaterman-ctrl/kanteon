@@ -3643,16 +3643,16 @@
   .kt-hud-show { color: #ffd97a; }
   .kt-hud-inline { position: static; justify-content: center; margin: 4px 0 10px; }
   .kt-interior { display: flex; align-items: center; justify-content: center; position: relative; }
-  /* Ground every interior as a real ROOM: a back wall up top and a floor band at
-     the bottom (with a horizon seam), so the card sits inside a space instead of
-     floating in front of the starfield. Sits behind the card (z-index 0). */
+  /* Illustrated room scene sits at the back; a vignette floats above it for card
+     contrast; the card sits in front. */
+  .kt-scene-art { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+  .kt-scene-art svg { width: 100%; height: 100%; display: block; }
   .kt-interior::after {
-    content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
-    background:
-      linear-gradient(180deg, transparent 0 60%, rgba(0,0,0,0.28) 72%, rgba(0,0,0,0.45) 100%),
-      linear-gradient(180deg, rgba(255,255,255,0.04) 0 1px, transparent 1px) 0 62% / 100% 100% no-repeat;
+    content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 44%, transparent 36%, rgba(0,0,0,0.32) 78%, rgba(0,0,0,0.5) 100%);
   }
-  .kt-interior > * { position: relative; z-index: 1; }
+  .kt-int-card { position: relative; z-index: 2; }
+  .kt-interior > .kl-devbar { z-index: 60; }
   .kt-int-card {
     width: min(440px, 92vw); text-align: center;
     background: rgba(26,18,44,0.92); border: 1.5px solid rgba(255,255,255,0.18);
@@ -4397,23 +4397,25 @@
   /* ── PIECE 1: PERSISTENT BOTTOM BAND STAGE ── */
   /* Module banner — flags a Book-of-Knowledge exercise now living as a native
      puzzle. Cyan/teal to match the game's futuristic theme. */
-  /* Module stations — selectable objects in the Garage (non-linear). Cyan theme. */
+  /* Module stations — selectable objects in the Garage (non-linear). Warm, not cyan. */
   .kl-station-grid { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 4px; }
   .kl-station {
     display: flex; align-items: center; gap: 14px; text-align: left; cursor: pointer;
     padding: 12px 14px; border-radius: 14px;
-    background: rgba(45,212,191,0.07); border: 1px solid rgba(45,212,191,0.32);
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.18);
     transition: transform 0.08s ease, background 0.15s ease, box-shadow 0.15s ease;
   }
-  .kl-station:hover { background: rgba(45,212,191,0.14); box-shadow: 0 0 18px rgba(45,212,191,0.25); }
+  .kl-station:hover { background: rgba(255,255,255,0.13); box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
   .kl-station:active { transform: scale(0.98); }
-  .kl-station-obj { font-size: 34px; line-height: 1; filter: drop-shadow(0 0 8px rgba(45,212,191,0.4)); }
+  .kl-station.locked { opacity: 0.5; cursor: default; filter: grayscale(0.6); }
+  .kl-station.locked:hover { background: rgba(255,255,255,0.07); box-shadow: none; }
+  .kl-station-obj { font-size: 34px; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); }
   .kl-station-txt { display: flex; flex-direction: column; gap: 2px; }
   .kl-station-name {
     font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 18px;
-    letter-spacing: 1px; color: #5eead4;
+    letter-spacing: 1px; color: #fff;
   }
-  .kl-station-desc { font-family: 'Barlow', sans-serif; font-size: 12.5px; color: rgba(220,255,250,0.7); }
+  .kl-station-desc { font-family: 'Barlow', sans-serif; font-size: 12.5px; color: rgba(235,228,255,0.7); }
   .kl-modbanner {
     display: flex; flex-direction: column; align-items: center; gap: 1px;
     font-family: 'Barlow Condensed', sans-serif; font-weight: 900;
@@ -11857,35 +11859,32 @@ window.klLeaveTown = function() {
 // call time (accessing it here at load time was a TDZ boot crash).
 function klSetRanges() { return { waddy: [0, 12], garage: [13, KL_STORY_END] }; }
 
-// ── MODULES ────────────────────────────────────────────────────────────────
-// The Garage's content is presented NON-LINEARLY: selectable "stations" (objects)
-// each representing a module (a contiguous block of puzzles). Derived from the
-// puzzle data so adding a tagged block automatically becomes a new station.
-// 'jam' = the untagged advanced puzzles; tagged blocks (e.g. module:'eartrain')
-// each become their own station.
-function klGarageModules() {
-  const gs = klSetRanges().garage[0], ge = klSetRanges().garage[1];
-  const tagged = {}; // moduleTag -> [start,end]
-  for (let i = gs; i <= ge; i++) {
-    const m = KL_PUZZLES[i] && KL_PUZZLES[i].module;
-    if (m) { if (!tagged[m]) tagged[m] = [i, i]; else tagged[m][1] = i; }
-  }
-  // 'jam' spans from the garage start up to the first tagged block (or the end).
-  const firstTagStart = Object.values(tagged).reduce((a, r) => Math.min(a, r[0]), ge + 1);
-  const jamEnd = (firstTagStart <= ge) ? firstTagStart - 1 : ge;
-  const META = {
-    eartrain: { obj: '🎧', name: 'EAR TRAINING', desc: 'Listen, then play it back by ear.' },
-  };
-  const mods = [{ id: 'jam', obj: '🎸', name: 'JAM SESSION', desc: 'Advanced grooves, basslines & melodies.', range: [gs, jamEnd] }];
-  Object.keys(tagged).forEach(tag => {
-    const meta = META[tag] || { obj: '⭐', name: tag.toUpperCase(), desc: '' };
-    mods.push({ id: tag, obj: meta.obj, name: meta.name, desc: meta.desc, range: tagged[tag] });
-  });
-  return mods;
-}
-function klActiveModuleDef() {
-  if (!klState.activeModule) return null;
-  return klGarageModules().find(m => m.id === klState.activeModule) || null;
+// ── MODULES (per-type, non-linear, gated) ──────────────────────────────────
+// Each puzzle TYPE is its own station. The EASY version of every type lives at
+// Sweet Waddy's (where you start); the Garage holds the ADVANCED version of each,
+// LOCKED until you've cleared that type's basics at Waddy's. Index lists group the
+// EXISTING puzzles by type+tier — the puzzle array never moves, so saves survive.
+const KL_MODULE_DEFS = [
+  { id: 'waddy:drums',   building: 'waddy',  obj: '🥁', name: 'DRUMS',  desc: 'Lay down the beat.',        indices: [0, 1, 8] },
+  { id: 'waddy:bass',    building: 'waddy',  obj: '🎸', name: 'BASS',   desc: 'Find the low end.',         indices: [2, 9] },
+  { id: 'waddy:melody',  building: 'waddy',  obj: '🎹', name: 'MELODY', desc: 'Play the tune by ear.',     indices: [3, 4, 5, 6, 7, 10, 11, 12] },
+  { id: 'garage:drums',  building: 'garage', obj: '🥁', name: 'DRUMS',  desc: 'Advanced grooves.',         indices: [13, 18, 23], requires: 'waddy:drums' },
+  { id: 'garage:bass',   building: 'garage', obj: '🎸', name: 'BASS',   desc: 'Walking lines & leaps.',    indices: [14, 19, 24], requires: 'waddy:bass' },
+  { id: 'garage:melody', building: 'garage', obj: '🎹', name: 'MELODY', desc: 'Wide leaps, fast lines.',   indices: [15, 16, 17, 20, 21, 22, 25, 26, 27], requires: 'waddy:melody' },
+];
+function klModuleDef(id) { return KL_MODULE_DEFS.find(m => m.id === id) || null; }
+function klBuildingModules(building) { return KL_MODULE_DEFS.filter(m => m.building === building); }
+function klModuleUnlocked(mod) { return !mod.requires || !!(klState.modDone && klState.modDone[mod.requires]); }
+function klModuleIsDone(id) { return !!(klState.modDone && klState.modDone[id]); }
+function klActiveModuleDef() { return klState.activeModule ? klModuleDef(klState.activeModule) : null; }
+// Mark a module cleared; if its whole building is now cleared, grant that
+// building's milestone (idempotent — drives XP + the Venue unlock).
+function klMarkModuleDone(id) {
+  if (!klState.modDone) klState.modDone = {};
+  klState.modDone[id] = true;
+  const mod = klModuleDef(id); if (!mod) return;
+  const allDone = klBuildingModules(mod.building).every(m => klState.modDone[m.id]);
+  if (allDone) { if (mod.building === 'waddy') klGrantWaddyMilestone(); else klGrantGarageMilestone(); }
 }
 
 window.klEnterBuilding = function(id) {
@@ -11914,16 +11913,22 @@ window.klEnterSet = function(setId) {
   }
 };
 
-// Enter a Garage module from its station — non-linear. Plays only that module's
-// puzzles; finishing the last one returns you to the Garage's station select.
-window.klEnterModule = function(building, moduleId) {
-  const mod = (building === 'garage' ? klGarageModules() : []).find(m => m.id === moduleId);
+// Enter a module from its station — non-linear. Plays only that module's puzzle
+// list (in order); finishing the last one returns to the building's station select.
+window.klEnterModule = function(moduleId) {
+  const mod = klModuleDef(moduleId);
   if (!mod) return;
-  klState.activeSet = building;
+  if (!klModuleUnlocked(mod)) { klToast('🔒 Clear that type\u2019s basics at Sweet Waddy\u2019s first.'); return; }
+  klState.activeSet = mod.building;
   klState.activeModule = moduleId;
-  klState.puzzleIdx = mod.range[0];
-  klRebuildLayersFor(mod.range[0]);
-  klRenderPuzzle();
+  klState.puzzleIdx = mod.indices[0];
+  klRebuildLayersFor(mod.indices[0]);
+  // First time ever into the drum basics: play the discovery cutscenes.
+  if (moduleId === 'waddy:drums' && (!klState.solved || klState.solved.length === 0)) {
+    klPlayCutsceneSeq(['find_kick', 'find_snare', 'find_hat', 'find_drumkit'], () => klRenderPuzzle());
+  } else {
+    klRenderPuzzle();
+  }
 };
 
 // One-time Waddy's milestone. Idempotent + dev-skip-safe: awards +60 XP exactly
@@ -12007,6 +12012,85 @@ function klToast(msg) {
 }
 
 // ── INTERIORS ──
+// Illustrated room scenes drawn behind the interior card so each building reads
+// as a real place (garage practice space, mystical lair, club, dull living room),
+// not a panel on a starfield. Pure SVG silhouettes + lighting — no image assets.
+// First pass; meant to be iterated on from screenshots.
+function klSceneArt(id) {
+  const svg = (inner) => '<svg viewBox="0 0 1200 620" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg">' + inner + '</svg>';
+  if (id === 'garage') {
+    // concrete band space: fluorescent strip, amp stacks, drum kit, cables
+    return svg(
+      '<defs><radialGradient id="gFluo" cx="50%" cy="0%" r="70%"><stop offset="0%" stop-color="rgba(220,235,245,0.5)"/><stop offset="100%" stop-color="rgba(220,235,245,0)"/></radialGradient></defs>' +
+      '<rect x="430" y="22" width="340" height="14" rx="4" fill="#dfeaf0"/>' +
+      '<ellipse cx="600" cy="60" rx="380" ry="120" fill="url(#gFluo)"/>' +
+      // left amp stack
+      '<rect x="70" y="300" width="170" height="240" rx="6" fill="#15171a"/>' +
+      '<rect x="84" y="316" width="142" height="120" rx="4" fill="#2a2d31"/><rect x="84" y="446" width="142" height="80" rx="4" fill="#212427"/>' +
+      '<text x="155" y="392" font-family="Barlow Condensed" font-size="22" font-weight="900" fill="#caa64a" text-anchor="middle">amp</text>' +
+      // right amp stack
+      '<rect x="960" y="320" width="170" height="220" rx="6" fill="#15171a"/><rect x="974" y="336" width="142" height="186" rx="4" fill="#26292d"/>' +
+      // drum kit center-back
+      '<ellipse cx="600" cy="500" rx="120" ry="40" fill="rgba(0,0,0,0.35)"/>' +
+      '<circle cx="600" cy="455" r="62" fill="#2b2420" stroke="#4a3e34" stroke-width="6"/><circle cx="600" cy="455" r="30" fill="#1c1714"/>' +
+      '<ellipse cx="520" cy="405" rx="40" ry="16" fill="#3a3128"/><ellipse cx="680" cy="405" rx="40" ry="16" fill="#3a3128"/>' +
+      '<line x1="470" y1="300" x2="500" y2="410" stroke="#555" stroke-width="4"/><circle cx="468" cy="300" r="28" fill="#9c8a3e" opacity="0.8"/>' +
+      '<line x1="730" y1="300" x2="700" y2="410" stroke="#555" stroke-width="4"/><circle cx="732" cy="300" r="24" fill="#9c8a3e" opacity="0.8"/>' +
+      // cables on floor
+      '<path d="M120 560 q200 -30 380 10 t400 -6" stroke="#0c0c0e" stroke-width="6" fill="none" opacity="0.6"/>' +
+      '<path d="M200 590 q250 20 520 -10" stroke="#111" stroke-width="5" fill="none" opacity="0.5"/>'
+    );
+  }
+  if (id === 'waddy') {
+    // mystical lair: brick wall, arched stained window, shelves, lamps, crystal ball
+    return svg(
+      '<defs><radialGradient id="wLamp" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="rgba(255,170,70,0.55)"/><stop offset="100%" stop-color="rgba(255,170,70,0)"/></radialGradient>' +
+      '<pattern id="brick" width="120" height="64" patternUnits="userSpaceOnUse"><rect width="120" height="64" fill="#3a2018"/><rect width="116" height="28" x="2" y="2" fill="#4a281d"/><rect width="116" height="28" x="2" y="34" fill="#46261b"/><rect width="56" height="28" x="62" y="34" fill="#4a281d"/></pattern></defs>' +
+      '<rect x="0" y="0" width="1200" height="470" fill="url(#brick)" opacity="0.9"/>' +
+      // arched stained window
+      '<path d="M120 90 q120 -70 240 0 v230 h-240 z" fill="#1a2b5a"/>' +
+      '<path d="M120 90 q120 -70 240 0 v230 h-240 z" fill="none" stroke="#0a0f22" stroke-width="8"/>' +
+      '<g opacity="0.85"><rect x="150" y="110" width="80" height="80" fill="#3b6fb0"/><rect x="250" y="110" width="80" height="80" fill="#6a3b9e"/><rect x="150" y="200" width="80" height="80" fill="#9e3b6a"/><rect x="250" y="200" width="80" height="80" fill="#3b9e8a"/></g>' +
+      // shelves with curios (right)
+      '<rect x="900" y="120" width="240" height="350" fill="#2a1b12"/>' +
+      '<rect x="910" y="170" width="220" height="8" fill="#1a110b"/><rect x="910" y="260" width="220" height="8" fill="#1a110b"/><rect x="910" y="350" width="220" height="8" fill="#1a110b"/>' +
+      '<circle cx="950" cy="150" r="16" fill="#caa24a"/><rect x="1000" y="128" width="20" height="40" fill="#b89a5a"/><circle cx="1080" cy="150" r="14" fill="#8a9ec4"/>' +
+      '<rect x="940" y="222" width="22" height="36" fill="#9a7a4a"/><circle cx="1030" cy="240" r="15" fill="#c47a3b"/><rect x="1080" y="220" width="26" height="38" fill="#7a5a9a"/>' +
+      // warm lamp glows
+      '<ellipse cx="70" cy="240" rx="120" ry="150" fill="url(#wLamp)"/>' +
+      '<circle cx="70" cy="250" r="26" fill="#ffb84d"/>' +
+      // crystal ball on a stand
+      '<ellipse cx="600" cy="520" rx="60" ry="20" fill="rgba(0,0,0,0.3)"/>' +
+      '<circle cx="600" cy="470" r="42" fill="rgba(150,200,255,0.5)" stroke="rgba(200,230,255,0.6)" stroke-width="2"/>' +
+      '<circle cx="588" cy="458" r="12" fill="rgba(255,255,255,0.5)"/>'
+    );
+  }
+  if (id === 'venue') {
+    // dark club: stage, spotlight beams, drum riser
+    return svg(
+      '<defs><linearGradient id="beamA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(255,80,180,0.28)"/><stop offset="100%" stop-color="rgba(255,80,180,0)"/></linearGradient>' +
+      '<linearGradient id="beamB" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(80,200,255,0.26)"/><stop offset="100%" stop-color="rgba(80,200,255,0)"/></linearGradient></defs>' +
+      '<polygon points="300,0 360,0 240,520 120,520" fill="url(#beamA)"/>' +
+      '<polygon points="900,0 840,0 960,520 1080,520" fill="url(#beamB)"/>' +
+      '<polygon points="560,0 640,0 720,460 480,460" fill="rgba(255,200,120,0.18)"/>' +
+      '<rect x="0" y="470" width="1200" height="150" fill="#0b0810"/>' +
+      '<rect x="430" y="430" width="340" height="44" rx="4" fill="#161020"/>' +
+      '<circle cx="600" cy="430" r="40" fill="#241a30"/><ellipse cx="540" cy="424" rx="28" ry="10" fill="#2e2238"/><ellipse cx="660" cy="424" rx="28" ry="10" fill="#2e2238"/>'
+    );
+  }
+  if (id === 'hater') {
+    // dull beige living room: boring couch, old TV, sad lamp
+    return svg(
+      '<rect x="0" y="0" width="1200" height="430" fill="#5b5746"/><rect x="0" y="430" width="1200" height="190" fill="#473f31"/>' +
+      '<rect x="120" y="360" width="360" height="150" rx="18" fill="#6b6450"/><rect x="120" y="330" width="360" height="60" rx="16" fill="#766e57"/>' +
+      '<rect x="760" y="300" width="260" height="180" rx="10" fill="#1c1c1c"/><rect x="780" y="320" width="220" height="140" fill="#3a3a32"/>' +
+      '<rect x="600" y="250" width="16" height="160" fill="#4a4436"/><path d="M580 250 h56 l-12 -40 h-32 z" fill="#8a7d52"/>'
+    );
+  }
+  // shop + fallback: a soft empty room (gradient bg already themed)
+  return svg('<rect x="0" y="430" width="1200" height="190" fill="rgba(0,0,0,0.25)"/>');
+}
+
 const KL_WADDY_LINES = [
   '"Music isn\u2019t notes, kid. It\u2019s the space between \u2019em."',
   '"They called me crazy. Then they called the cops. Keep playing."',
@@ -12029,22 +12113,39 @@ function klRenderInterior(id) {
   let title = '', art = '', body = '';
   if (id === 'waddy') {
     title = "SWEET WADDY'S"; art = '🧙';
+    const stations = klBuildingModules('waddy').map(m => {
+      const done = klModuleIsDone(m.id);
+      return '<button class="kl-station" onclick="klEnterModule(\'' + m.id + '\')">' +
+        '<span class="kl-station-obj">' + m.obj + '</span>' +
+        '<span class="kl-station-txt"><span class="kl-station-name">' + m.name + (done ? ' ✓' : '') + '</span>' +
+        '<span class="kl-station-desc">' + m.desc + '</span></span>' +
+      '</button>';
+    }).join('');
     body =
-      '<p class="kt-int-line">The wizard of rock and roll grins from behind a wall of busted amps.</p>' +
-      '<button class="kl-listen kt-int-btn" onclick="klEnterSet(\'waddy\')">🎵 LESSONS (the basics)</button>' +
+      '<p class="kt-int-line">The wizard of rock grins from behind a wall of busted amps. "Start with the basics, kid — pick one."</p>' +
+      '<div class="kl-station-grid">' + stations + '</div>' +
       '<button class="kt-int-sub" onclick="klTalkTo(\'waddy\')">💬 Talk to Waddy</button>';
   } else if (id === 'garage') {
     title = 'THE GARAGE'; art = '🎸';
-    const stations = klGarageModules().map(m =>
-      '<button class="kl-station" onclick="klEnterModule(\'garage\',\'' + m.id + '\')">' +
+    const stations = klBuildingModules('garage').map(m => {
+      const unlocked = klModuleUnlocked(m);
+      const done = klModuleIsDone(m.id);
+      if (!unlocked) {
+        return '<div class="kl-station locked">' +
+          '<span class="kl-station-obj">🔒</span>' +
+          '<span class="kl-station-txt"><span class="kl-station-name">' + m.name + '</span>' +
+          '<span class="kl-station-desc">Clear ' + m.name + ' at Sweet Waddy\u2019s to unlock.</span></span>' +
+        '</div>';
+      }
+      return '<button class="kl-station" onclick="klEnterModule(\'' + m.id + '\')">' +
         '<span class="kl-station-obj">' + m.obj + '</span>' +
-        '<span class="kl-station-txt"><span class="kl-station-name">' + m.name + '</span>' +
+        '<span class="kl-station-txt"><span class="kl-station-name">' + m.name + (done ? ' ✓' : '') + '</span>' +
         '<span class="kl-station-desc">' + m.desc + '</span></span>' +
-      '</button>').join('');
+      '</button>';
+    }).join('');
     body =
-      '<p class="kt-int-line">Your turf. Cables everywhere. Pick a station — work on whatever you want, in any order.</p>' +
-      '<div class="kl-station-grid">' + stations + '</div>' +
-      '<p class="kt-int-note">(more stations unlock as you grow)</p>';
+      '<p class="kt-int-line">Your turf. Cables everywhere. The advanced versions — each opens once you\u2019ve done its basics at Waddy\u2019s.</p>' +
+      '<div class="kl-station-grid">' + stations + '</div>';
   } else if (id === 'venue') {
     title = 'THE VENUE'; art = '🎤';
     if (!(klState.waddyDone && klState.garageDone)) {
@@ -12154,6 +12255,7 @@ function klRenderInterior(id) {
   }
   wrap.innerHTML =
     '<div class="kl-stage kt-interior kt-bg-' + id + '">' +
+      '<div class="kt-scene-art">' + klSceneArt(id) + '</div>' +
       '<div class="kt-int-card">' +
         '<div class="kt-int-art">' + art + '</div>' +
         '<div class="kt-int-title">' + title + '</div>' +
@@ -12472,17 +12574,6 @@ const KL_PUZZLES = [
     notes: [ {pitch:7, start:0, dur:1}, {pitch:5, start:1, dur:1}, {pitch:4, start:2, dur:1}, {pitch:7, start:3, dur:1} ] },
   { id: 28, bpm: 90, beats: 4, phase: 3, dot: 4, degrees: [0, 2, 4, 7],
     notes: [ {pitch:7, start:0, dur:1}, {pitch:4, start:1, dur:1}, {pitch:2, start:2, dur:1}, {pitch:0, start:3, dur:1} ] },
-
-  // ════ EAR TRAINING — Book of Knowledge module, rebuilt as native Garage puzzles.
-  // Pure dictation: listen, then play it back BY EAR (phase 3, no ghost hints).
-  // `module:'eartrain'` flags the cyan banner + framing. Appended at the end so
-  // existing puzzle indices (and saves) never shift.
-  { id: 201, bpm: 96, beats: 4, phase: 3, dot: 40, module: 'eartrain', degrees: [0, 2, 4],
-    notes: [ {pitch:0, start:0, dur:1}, {pitch:4, start:1, dur:1}, {pitch:2, start:2, dur:1}, {pitch:0, start:3, dur:1} ] },
-  { id: 202, bpm: 96, beats: 4, phase: 3, dot: 40, module: 'eartrain', degrees: [0, 2, 4, 5, 7],
-    notes: [ {pitch:7, start:0, dur:1}, {pitch:4, start:1, dur:1}, {pitch:5, start:2, dur:1}, {pitch:2, start:3, dur:1} ] },
-  { id: 203, bpm: 100, beats: 4, phase: 3, dot: 40, module: 'eartrain', degrees: [0, 2, 4, 5, 7],
-    notes: [ {pitch:0, start:0, dur:1}, {pitch:7, start:1, dur:1}, {pitch:5, start:2, dur:1}, {pitch:4, start:3, dur:1} ] },
 ];
 
 // Last STORY puzzle index — frozen BEFORE the show songs are appended so set
@@ -12575,7 +12666,7 @@ function klSaveProgress() {
       v: 2, puzzleIdx: klState.puzzleIdx, score: klState.score, solved, savedAt: Date.now(),
       // === ECONOMY — START ===
       money: klState.money, xp: klState.xp, day: klState.day, showsPlayed: klState.showsPlayed, bookedDay: klState.bookedDay,
-      promo: klState.promo, gear: klState.gear, gearCondition: klState.gearCondition, van: klState.van, vanLoan: klState.vanLoan, bookedDaysOut: klState.bookedDaysOut, waddyDone: klState.waddyDone, garageDone: klState.garageDone, setPos: klState.setPos,
+      promo: klState.promo, gear: klState.gear, gearCondition: klState.gearCondition, van: klState.van, vanLoan: klState.vanLoan, bookedDaysOut: klState.bookedDaysOut, waddyDone: klState.waddyDone, garageDone: klState.garageDone, modDone: klState.modDone, setPos: klState.setPos,
       // === ECONOMY — END ===
     }));
   } catch (e) { /* storage full/blocked — play on without saving */ }
@@ -12646,7 +12737,8 @@ const klState = {
   waddyDone: false,      // one-time milestone: Waddy's house cleared (gates the +XP)
   garageDone: false,     // one-time milestone: the Garage cleared (gates the +XP)
   activeSet: null,       // 'waddy' | 'garage' | null — which puzzle set is in play
-  activeModule: null,    // which Garage module/station is being played (null = none)
+  activeModule: null,    // which module/station is being played (null = none)
+  modDone: {},           // per-module completion: { 'waddy:drums': true, ... }
   setPos: { waddy: 0, garage: 13 }, // resume position per set (absolute puzzle indexes)
   // === ECONOMY — END ===
   devOpen: true,         // DEV tray unfolded by default on load (dev convenience)
@@ -12910,6 +13002,15 @@ window.klPickKid = function(kidId) {
     klState.vanLoan = !!save.vanLoan;
     klState.waddyDone = !!save.waddyDone;
     klState.garageDone = !!save.garageDone;
+    // Per-module completion. Migrate older saves: a fully-cleared building (or a
+    // module whose every puzzle is already in `solved`) counts its modules done.
+    klState.modDone = save.modDone || {};
+    KL_MODULE_DEFS.forEach(m => {
+      if (klState.modDone[m.id]) return;
+      const buildingDone = (m.building === 'waddy' && save.waddyDone) || (m.building === 'garage' && save.garageDone);
+      const allSolved = m.indices.every(i => (save.solved || []).includes(i));
+      if (buildingDone || allSolved) klState.modDone[m.id] = true;
+    });
     klState.setPos = save.setPos || { waddy: 0, garage: 13 };
     klState.activeSet = null;
     // === ECONOMY — END ===
@@ -13908,7 +14009,7 @@ window.klDevReset = function() {
   klState.money = 50; klState.xp = 0; klState.day = 1; klState.showsPlayed = 0; klState.bookedDay = null; klState.bookedDaysOut = 0;
   klState.promo = { flyers: 0, ads: 0, radio: 0 };
   klState.gear = []; klState.gearCondition = 100; klState.van = false; klState.vanLoan = false; klState.waddyDone = false; klState.garageDone = false;
-  klState.activeSet = null; klState.activeModule = null; klState.setPos = { waddy: 0, garage: 13 };
+  klState.activeSet = null; klState.activeModule = null; klState.modDone = {}; klState.setPos = { waddy: 0, garage: 13 };
   klRebuildLayersFor(0);
   klToast('♻ Clean slate — fresh save.');
   klRenderTown();
@@ -14353,7 +14454,7 @@ let klDrumFirstPlay = true;  // extra audio lead on the first drum play (ctx war
 // 0 = wired / built-in speakers. Tunable live from the DEV menu.
 let klAudioOffsetMs = 0;
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-25'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-27'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
@@ -14968,20 +15069,31 @@ function klWin() {
   const allDone = nextIdx > KL_STORY_END;
   const dotEnd = !allDone && (klDotOf(nextIdx) !== klDotOf(klState.puzzleIdx));
 
-  // MODULE BOUNDARY (Garage, non-linear): finishing the active module's last
-  // puzzle returns you to the Garage's station select — not into the next block.
-  // Clearing the main JAM module is what grants the Garage milestone.
+  // MODULE FLOW (per-type, non-linear): advance through the active module's
+  // explicit puzzle list; clearing its last puzzle returns to the building's
+  // station select. Each puzzle still gets its proper dot-based backing — only
+  // the navigation order changed.
   if (klState.activeModule) {
     const mod = klActiveModuleDef();
-    if (mod && klState.puzzleIdx >= mod.range[1]) {
-      const building = klState.activeSet;
-      if (mod.id === 'jam') klGrantGarageMilestone();
+    if (mod) {
+      const pos = mod.indices.indexOf(klState.puzzleIdx);
+      if (pos < 0 || pos + 1 >= mod.indices.length) {
+        klMarkModuleDone(mod.id);
+        const building = mod.building;
+        setTimeout(() => {
+          klState.activeModule = null;
+          klSaveProgress();
+          klToast('✅ ' + mod.name + ' cleared!');
+          klRenderInterior(building);
+        }, stingMs + 200);
+        return;
+      }
+      const nIdx = mod.indices[pos + 1];
       setTimeout(() => {
-        klState.activeModule = null;
-        klSaveProgress();
-        klToast('✅ ' + mod.name + ' complete!');
-        klRenderInterior(building);
-      }, stingMs + 200);
+        klState.puzzleIdx = nIdx;
+        klRebuildLayersFor(nIdx);
+        klRenderPuzzle();
+      }, stingMs + 100);
       return;
     }
   }
