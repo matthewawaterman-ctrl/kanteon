@@ -11921,7 +11921,7 @@ window.klEnterSet = function(setId) {
   klRebuildLayersFor(pos);
   // First-ever visit to Waddy's set: play the discovery cutscenes.
   if (setId === 'waddy' && pos === 0 && (!klState.solved || klState.solved.length === 0)) {
-    klPlayCutsceneSeq(['find_kick', 'find_snare', 'find_hat', 'find_drumkit'], () => klRenderPuzzle());
+    klPlayCutsceneSeq(['find_drums'], () => klRenderPuzzle());
   } else {
     klRenderPuzzle();
   }
@@ -11937,9 +11937,11 @@ window.klEnterModule = function(moduleId) {
   klState.activeModule = moduleId;
   klState.puzzleIdx = mod.indices[0];
   klRebuildLayersFor(mod.indices[0]);
-  // First time ever into the drum basics: play the discovery cutscenes.
-  if (moduleId === 'waddy:drums' && (!klState.solved || klState.solved.length === 0)) {
-    klPlayCutsceneSeq(['find_kick', 'find_snare', 'find_hat', 'find_drumkit'], () => klRenderPuzzle());
+  // First time into the drum basics: find the KICK + SNARE together (one beat).
+  // The HI-HAT discovery is NOT here — it fires from klWin AFTER the first
+  // kick+snare level is cleared, right before the hi-hat level (puzzle index 1).
+  if (moduleId === 'waddy:drums' && !(klState.solved || []).includes(0)) {
+    klPlayCutsceneSeq(['find_drums'], () => klRenderPuzzle());
   } else {
     klRenderPuzzle();
   }
@@ -13062,7 +13064,7 @@ window.klPickKid = function(kidId) {
 // auto-fire (intro, dotN, finale) sit at dot boundaries; discovery beats cluster
 // in dot 0 as the band is assembled.
 function klStorySequence() {
-  const cutBefore = { 1: ['intro', 'find_kick', 'find_snare', 'find_hat', 'find_drumkit'], 3: ['find_bass'] };
+  const cutBefore = { 1: ['intro', 'find_drums'], 2: ['find_hat'], 3: ['find_bass'] };
   const cutAfter  = { 8: ['dot0'], 13: ['dot1'], 18: ['dot2'], 23: ['dot3'], 28: ['finale'] };
   const seq = [];
   KL_PUZZLES.forEach((p, i) => {
@@ -13101,25 +13103,43 @@ const KL_STORY = {
   // === KANTEON NAMING — END ===
   // ── INSTRUMENT DISCOVERIES (PLACEHOLDER art + copy — Matt to rewrite) ──
   // Play when each instrument is first found. Swap the emoji art for real later.
-  find_kick: {
-    art: '🥁',
-    title: '[FOUND: KICK DRUM]',
-    line: '[STORY: You dig a kick drum out of the rubble. One stomp — the first heartbeat the galaxy has felt in years.]',
-  },
-  find_snare: {
-    art: '🪘',
-    title: '[FOUND: SNARE]',
-    line: '[STORY: A snare drum, skin still tight. CRACK — now there is a backbeat.]',
+  // KICK + SNARE found together (one beat). Art reuses the drum-kit vector pieces
+  // (purple kick / red snare) so the cutscene matches the grid rows AND the
+  // animated drummer the kid is about to play. find_hat is a SEPARATE later beat;
+  // the old find_kick/find_snare/find_drumkit beats were merged/dropped (b31-30).
+  find_drums: {
+    art:
+      '<svg viewBox="0 0 220 150" width="200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+        '<ellipse cx="110" cy="138" rx="95" ry="8" fill="rgba(0,0,0,0.18)"/>' +
+        // SNARE on its stand (red — matches the SNARE grid row)
+        '<path d="M150 80 L138 132 M150 80 L162 132 M150 80 L150 134" stroke="#9aa0b5" stroke-width="2.5" stroke-linecap="round" fill="none"/>' +
+        '<rect x="130" y="66" width="40" height="16" fill="#e0556a"/>' +
+        '<ellipse cx="150" cy="66" rx="20" ry="6" fill="#fb7185"/>' +
+        '<ellipse cx="150" cy="82" rx="20" ry="6" fill="#c9485c"/>' +
+        // KICK drum (big, front — purple, matches the KICK grid row)
+        '<circle cx="72" cy="98" r="42" fill="#c084fc"/>' +
+        '<circle cx="72" cy="98" r="42" fill="none" stroke="#a855f7" stroke-width="5"/>' +
+        '<circle cx="72" cy="98" r="13" fill="#9333ea"/>' +
+        '<path d="M44 132 L38 145 M100 132 L106 145" stroke="#2a2740" stroke-width="3" stroke-linecap="round" fill="none"/>' +
+      '</svg>',
+    title: '[FOUND: KICK + SNARE]',
+    line: '[STORY: You haul two drums out of the rubble — a deep kick and a sharp snare. Stomp, CRACK, stomp, CRACK. The galaxy just got its heartbeat back.]',
   },
   find_hat: {
-    art: '🎩',
+    art:
+      '<svg viewBox="0 0 140 150" width="150" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+        '<ellipse cx="70" cy="140" rx="46" ry="7" fill="rgba(0,0,0,0.18)"/>' +
+        // stand + tripod feet
+        '<line x1="70" y1="42" x2="70" y2="132" stroke="#9aa0b5" stroke-width="4"/>' +
+        '<path d="M70 132 L56 145 M70 132 L84 145 M70 132 L70 147" stroke="#9aa0b5" stroke-width="3" stroke-linecap="round" fill="none"/>' +
+        // HI-HAT cymbals (gold — matches the HI-HAT grid row)
+        '<ellipse cx="70" cy="38" rx="34" ry="8" fill="#f0c040"/>' +
+        '<ellipse cx="70" cy="46" rx="34" ry="8" fill="#d9a82c"/>' +
+        // stick
+        '<path d="M104 14 L80 38" stroke="#d9a06b" stroke-width="4.5" stroke-linecap="round"/>' +
+      '</svg>',
     title: '[FOUND: HI-HAT]',
-    line: '[STORY: Two cymbals on a stand. Tss-tss — the groove starts to shimmer.]',
-  },
-  find_drumkit: {
-    art: '🥁🪘🎩',
-    title: '[FOUND: THE WHOLE DRUM KIT]',
-    line: '[STORY: Kick, snare, hi-hat — all in one place now. A full kit, waiting for someone brave enough to count it in. (Matt: rewrite this slide.)]',
+    line: '[STORY: Two little cymbals on a stand. Tss-tss-tss — now the beat shimmers between every hit.]',
   },
   find_bass: {
     art: '🎸',
@@ -13575,7 +13595,7 @@ function klDrumPlaySet(setObj, opts) {
   // quantize to a downbeat — that's just waiting on silence. Fire immediately.
   // (If a layer is already active, we DO sync so it locks to the groove.)
   const anyDrumLive = Object.keys(klActiveLayers.drumVoices).length > 0;
-  const syncToGroove = klClock.active && (anyDrumLive || klActiveLayers.bass);
+  const syncToGroove = !opts.immediate && klClock.active && (anyDrumLive || klActiveLayers.bass);
   // Small lead before an immediate (non-synced) play. A touch more headroom on
   // the very first play so a still-warming AudioContext doesn't let the audio
   // and the setTimeout-driven playhead drift apart.
@@ -13653,7 +13673,11 @@ function klDrumPlaySet(setObj, opts) {
 window.klDrumPlayTarget = function() {
   const p = KL_PUZZLES[klState.puzzleIdx];
   if (klPlaybackBusyUntil > performance.now()) return;
-  klDrumPlaySet(klDrumTargetSetObj(p), { armBtnId: 'kl-listen-btn' });
+  // LISTEN is a teaching/audition playback — fire it NOW. Only a live SHOW locks
+  // the target to the running groove; in the basics + jam practice a full-bar
+  // wait for the next downbeat just looks broken (hi-hat basics regression: once
+  // the kick+snare layer goes live, the hi-hat target was syncing to it).
+  klDrumPlaySet(klDrumTargetSetObj(p), { armBtnId: 'kl-listen-btn', immediate: !(typeof klShow !== 'undefined' && klShow.active) });
 };
 window.klDrumPlayMine = function() {
   if (Object.keys(klState.drumPlaced).length === 0 && Object.keys(klState.drumLocked).length === 0) {
@@ -14476,7 +14500,7 @@ let klDrumFirstPlay = true;  // extra audio lead on the first drum play (ctx war
 // 0 = wired / built-in speakers. Tunable live from the DEV menu.
 let klAudioOffsetMs = 0;
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-29'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-30'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
@@ -15123,7 +15147,13 @@ function klWin() {
       setTimeout(() => {
         klState.puzzleIdx = nIdx;
         klRebuildLayersFor(nIdx);
-        klRenderPuzzle();
+        // HI-HAT discovery: fires once, the first time the drum basics advance
+        // into the hi-hat level (puzzle index 1), right after kick+snare.
+        if (mod.id === 'waddy:drums' && nIdx === 1 && !(klState.solved || []).includes(1)) {
+          klPlayCutsceneSeq(['find_hat'], () => klRenderPuzzle());
+        } else {
+          klRenderPuzzle();
+        }
       }, stingMs + 100);
       return;
     }
