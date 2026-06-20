@@ -4265,10 +4265,14 @@
     display: flex; flex-direction: column; align-items: stretch;
     pointer-events: none;
   }
+  /* Open = full-screen scrollable panel (dev work wants room + readability). */
+  .kl-devbar.open {
+    top: 0; bottom: 0; background: rgba(6,4,16,0.97); pointer-events: auto;
+  }
   .kl-dev-grouplbl {
     flex-basis: 100%; font-family: 'Barlow Condensed', sans-serif; font-weight: 900;
-    font-size: 11px; letter-spacing: 2px; padding: 3px 6px 1px; margin-top: 2px;
-    opacity: 0.95;
+    font-size: 14px; letter-spacing: 2px; padding: 8px 6px 2px; margin-top: 6px;
+    border-top: 1px dashed rgba(255,255,255,0.12); opacity: 0.95;
   }
   .kl-dev-grouplbl.waddy { color: #c4b5fd; }
   .kl-dev-grouplbl.garage { color: #fca5a5; }
@@ -4293,12 +4297,16 @@
   }
   .kl-dev-sync { display: inline-flex; flex-wrap: nowrap; align-items: center; gap: 5px; }
   .kl-dev-cut { background: rgba(250,204,21,0.16) !important; border-color: rgba(250,204,21,0.5) !important; color: #fde68a !important; }
-  .kl-devbar.open .kl-dev-tray { max-height: 42vh; overflow-y: auto; padding: 10px 12px 12px; }
+  .kl-devbar.open .kl-dev-tray {
+    flex: 1 1 auto; max-height: none; overflow-y: auto;
+    width: 100%; max-width: 540px; margin: 0 auto;
+    padding: 14px 16px 28px; align-content: flex-start; justify-content: center;
+  }
   .kl-dev-btn {
-    min-width: 26px; height: 26px; padding: 0 6px;
-    border: 1px solid rgba(255,255,255,0.2); border-radius: 7px;
+    min-width: 34px; height: 34px; padding: 0 13px;
+    border: 1px solid rgba(255,255,255,0.2); border-radius: 8px;
     background: rgba(255,255,255,0.08); color: #e8e8ff;
-    font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 14px;
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 16px;
     cursor: pointer; line-height: 1;
   }
   .kl-dev-btn:hover { background: rgba(255,255,255,0.18); }
@@ -12910,27 +12918,28 @@ KL_BUILD_DEFS.forEach((b, i) => {
 // Steps are 8th-notes in a 4/4 bar (0-7). Basics at Waddy's, syncopation in the
 // Garage. Built on the module framework — stations appear in the interiors.
 const KL_TAP_STEPS = 8;
+// Sweet Waddy's RHYTHM TAP — now the SAME notation engine as Groove Lab (type
+// 'groove'), with the easy on-the-beat patterns. "Two big beats" reads as
+// quarter, quarter-REST, quarter, quarter-REST — real notation, rests and all.
 const KL_TAP_DEFS = [
-  // Sweet Waddy's — on-the-beat basics (the timeline-pad RHYTHM TAP)
-  { id: 301, building: 'waddy',  name: 'TWO BIG BEATS', hint: 'two big taps',          steps: [0, 4] },
-  { id: 302, building: 'waddy',  name: 'STEADY BEAT',   hint: 'four steady taps',      steps: [0, 2, 4, 6] },
-  { id: 303, building: 'waddy',  name: 'SNEAK A SKIP',  hint: 'sneak in an upbeat',    steps: [0, 2, 4, 5, 6] },
+  { id: 301, name: 'TWO BIG BEATS', hint: 'play, rest, play, rest',                sub: 1,   events: [{d:1},{d:1,rest:true},{d:1},{d:1,rest:true}] },
+  { id: 302, name: 'STEADY BEAT',   hint: 'four steady quarter notes',            sub: 1,   events: [{d:1},{d:1},{d:1},{d:1}] },
+  { id: 303, name: 'SNEAK A SKIP',  hint: 'two quarters, two eighths, a quarter', sub: 0.5, events: [{d:1},{d:1},{d:0.5},{d:0.5},{d:1}] },
 ];
 const KL_TAP_START = KL_PUZZLES.length;
 KL_TAP_DEFS.forEach((td, i) => {
-  KL_PUZZLES.push({ id: td.id, type: 'tap', bpm: 90, dot: 70 + i, tdef: td });
+  KL_PUZZLES.push({ id: td.id, type: 'groove', bpm: 84, dot: 70 + i, gdef: td });
 });
 (function registerTapStations() {
-  const waddyIdx = [];
-  KL_TAP_DEFS.forEach((td, i) => { waddyIdx.push(KL_TAP_START + i); });
-  KL_MODULE_DEFS.push({ id: 'waddy:tap',  building: 'waddy',  obj: '🪘', name: 'RHYTHM TAP', desc: 'Tap the rhythm back in time.', indices: waddyIdx, requires: ['waddy:drums', 'waddy:bass', 'waddy:melody'] });
+  const waddyIdx = KL_TAP_DEFS.map((td, i) => KL_TAP_START + i);
+  KL_MODULE_DEFS.push({ id: 'waddy:tap', building: 'waddy', obj: '🪘', name: 'RHYTHM TAP', desc: 'Read & play rhythms from notation.', indices: waddyIdx, requires: ['waddy:drums', 'waddy:bass', 'waddy:melody'] });
 })();
 
 // ── GROOVE LAB (b31-47) ─────────────────────────────────────────────────────
 // The Garage's advanced rhythm station — NO sequencer cells. The kid READS real
 // rhythmic notation (noteheads / stems / beams / rests), hears an audio example
-// with each written note + rest lighting up in sync, then performs it on the
-// SPACE bar over an always-on metronome with a 4-beat count-in. Grading quantizes
+// with each written note + rest lighting up in sync, then performs it on a
+// HOME-ROW key over an always-on metronome with a 4-beat count-in. Grading quantizes
 // the taps to the puzzle's smallest subdivision. One voice (space) for now; more
 // keys can be added as patterns get harder.
 //   events: { d: duration in beats (1=quarter, 0.5=eighth, 2=half), rest:true=silent }
@@ -15105,6 +15114,9 @@ window.klEarPick = function(i) {
 };
 
 // ── GROOVE LAB engine ───────────────────────────────────────────────────────
+// Home-row keys for tapping. Single voice taps on ANY of them for now; later each
+// key maps to a pitch (Pro-Tools-style musical typing) for multi-voice rhythms.
+const KL_HOMEROW = ['KeyA','KeyS','KeyD','KeyF','KeyG','KeyH','KeyJ','KeyK','KeyL'];
 let klGroove = { events: [], onsets: [], sub: 1, bpm: 84, beat: 0, barDur: 0,
   startTs: 0, nextBeat: 0, metroId: null, rafId: null, recording: false,
   recStart: 0, taps: [], solved: false };
@@ -15321,22 +15333,24 @@ function klRenderGroovePuzzle(p) {
       '<button class="kl-mute" id="kl-mute-btn" onclick="klToggleMute()" title="Mute backing">' + (klClock.muted ? '🔇' : '🔊') + '</button>' +
     '</div>' +
     '<div class="kl-drumtitle">🥁 ' + gd.name + '</div>' +
-    '<div class="kl-build-hint">' + gd.hint + ' — read it, hear it, then play it on SPACE</div>' +
+    '<div class="kl-build-hint">' + gd.hint + ' — read it, hear it, then play it back</div>' +
     '<div class="kl-groove-beats">' + [0,1,2,3].map(() => '<span class="kl-groove-beat"></span>').join('') + '</div>' +
     '<div class="kl-groove-staff" id="kl-groove">' + klGrooveNotationSVG(meta) + '</div>' +
     '<div class="kl-listen-row">' +
       '<button class="kl-listen" id="kl-groove-listen" onclick="klGroovePlay()">🔊 LISTEN<kbd class="kl-kbd">space</kbd></button>' +
       '<button class="kl-mine" id="kl-groove-record" onclick="klGrooveRecord()">🥁 PLAY IT</button>' +
     '</div>' +
-    '<button class="kl-tap-pad" id="kl-groove-pad" onpointerdown="klGrooveTap()">TAP / SPACE</button>' +
+    '<button class="kl-tap-pad" id="kl-groove-pad" onpointerdown="klGrooveTap()">TAP<kbd class="kl-kbd">home row (A–L)</kbd></button>' +
     '<div class="kl-bandmate" id="kl-bandmate">&nbsp;</div>';
-  // bind the SPACE key once (LISTEN when idle, tap when recording)
+  // Keys (bound once): SPACE = LISTEN (reference); a home-row key = TAP the rhythm.
+  // Separating them frees you to hear the example and perform without a conflict.
+  // The home row is also the seed for multi-pitch performance later (Pro-Tools-style
+  // musical typing: A S D F G H J K L → pitches).
   if (!window.__klGrooveKeyBound) {
     window.addEventListener('keydown', (e) => {
-      if (e.code !== 'Space' || !document.getElementById('kl-groove')) return;
-      e.preventDefault();
-      if (klGroove.recording) klGrooveTap();
-      else klGroovePlay();
+      if (!document.getElementById('kl-groove')) return;
+      if (e.code === 'Space') { e.preventDefault(); if (!klGroove.recording) klGroovePlay(); return; }
+      if (KL_HOMEROW.indexOf(e.code) !== -1) { e.preventDefault(); if (!e.repeat) klGrooveTap(); }
     });
     window.__klGrooveKeyBound = true;
   }
@@ -15720,7 +15734,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-47'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-49'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
