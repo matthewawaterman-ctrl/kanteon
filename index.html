@@ -3547,6 +3547,13 @@
     transition: background 0.15s;
   }
   .kl-tools-link:hover { background: rgba(0,0,0,0.42); }
+  .kl-bt-note {
+    max-width: 360px; margin: 16px auto 2px; padding: 9px 14px;
+    background: rgba(250,204,21,0.1); border: 1px solid rgba(250,204,21,0.42);
+    border-radius: 12px; color: #fde68a;
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 600;
+    font-size: 13.5px; line-height: 1.35; letter-spacing: 0.3px; text-align: center;
+  }
   /* === KANTEON RENAME — START === */
   .kl-company-credit {
     margin-top: 12px;
@@ -13061,7 +13068,7 @@ function klSaveProgress() {
       v: 2, puzzleIdx: klState.puzzleIdx, score: klState.score, solved, savedAt: Date.now(),
       // === ECONOMY — START ===
       money: klState.money, xp: klState.xp, day: klState.day, showsPlayed: klState.showsPlayed, bookedDay: klState.bookedDay,
-      promo: klState.promo, gear: klState.gear, gearCondition: klState.gearCondition, van: klState.van, vanLoan: klState.vanLoan, bookedDaysOut: klState.bookedDaysOut, waddyDone: klState.waddyDone, garageDone: klState.garageDone, modDone: klState.modDone, devUnlock: klState.devUnlock, rhythmOffsetMs: klRhythmOffsetMs, setPos: klState.setPos,
+      promo: klState.promo, gear: klState.gear, gearCondition: klState.gearCondition, van: klState.van, vanLoan: klState.vanLoan, bookedDaysOut: klState.bookedDaysOut, waddyDone: klState.waddyDone, garageDone: klState.garageDone, modDone: klState.modDone, devUnlock: klState.devUnlock, setPos: klState.setPos,
       // === ECONOMY — END ===
     }));
   } catch (e) { /* storage full/blocked — play on without saving */ }
@@ -13321,6 +13328,7 @@ function klRenderPlayerSelect() {
       '<div class="kl-panel">' +
         '<div class="kl-panel-title">Who\'s playing?</div>' +
         '<div class="kl-panel-players">' + players.map(btn).join('') + addTile + '</div>' +
+        '<div class="kl-bt-note">🔊 Use your device\u2019s built-in speakers. Bluetooth headphones &amp; speakers add a delay that throws off the rhythm games — please turn them off first.</div>' +
         '<button class="kl-tools-link" onclick="klOpenTools()">📖 Book of Knowledge</button>' +
         // === KANTEON RENAME — START ===
         '<div class="kl-company-credit">a Velion game</div>' +
@@ -13402,7 +13410,6 @@ window.klPickKid = function(kidId) {
     // module whose every puzzle is already in `solved`) counts its modules done.
     klState.modDone = save.modDone || {};
     klState.devUnlock = save.devUnlock || {};
-    if (typeof save.rhythmOffsetMs === 'number') klRhythmOffsetMs = save.rhythmOffsetMs;
     KL_MODULE_DEFS.forEach(m => {
       if (klState.modDone[m.id]) return;
       const buildingDone = (m.building === 'waddy' && save.waddyDone) || (m.building === 'garage' && save.garageDone);
@@ -15263,13 +15270,15 @@ window.klGrooveRecord = function() {
   }, Math.max(0, (t0 + klGroove.barDur + 0.22 - ctx.currentTime) * 1000));
 };
 window.klGrooveTap = function() {
-  const ctx = getAudio();
-  klTapClick(ctx.currentTime + 0.004, 0.55, false);
+  // No tap SOUND — a graded rhythm task shouldn't make the kid chase their own
+  // delayed click. Feedback is VISUAL (instant, latency-free); the metronome is
+  // the timing anchor and calibration handles the offset.
   const pad = document.getElementById('kl-groove-pad');
   if (pad) { pad.classList.add('hit'); setTimeout(() => pad.classList.remove('hit'), 110); }
   if (!klGroove.recording) return;
   // Subtract the calibrated round-trip offset (output + input latency) so a tap
   // that REGISTERS late but was FELT on the beat lands on the right subdivision.
+  const ctx = getAudio();
   const tapTime = ctx.currentTime - (klRhythmOffsetMs / 1000);
   const beatPos = (tapTime - klGroove.recStart) / klGroove.beat;
   if (beatPos < -0.25 || beatPos > klGroove.barBeats + 0.25) return;
@@ -15399,7 +15408,6 @@ function klRenderGroovePuzzle(p) {
       '<button class="kl-mine" id="kl-groove-record" onclick="klGrooveRecord()">🥁 PLAY IT</button>' +
     '</div>' +
     '<button class="kl-tap-pad" id="kl-groove-pad" onpointerdown="klGrooveTap()">TAP<kbd class="kl-kbd">home row (A–L)</kbd></button>' +
-    '<div class="kl-build-sustain-row"><button class="kl-build-sustain" onclick="klRenderCalibrate()" title="tap to the beat to sync timing on your device (great for Bluetooth)">⚙ Calibrate taps</button></div>' +
     '<div class="kl-bandmate" id="kl-bandmate">&nbsp;</div>';
   // Keys (bound once): SPACE = LISTEN (reference); a home-row key = TAP the rhythm.
   // Separating them frees you to hear the example and perform without a conflict.
@@ -15417,129 +15425,6 @@ function klRenderGroovePuzzle(p) {
   setTimeout(() => klGroovePlay(), 700); // hear + see the example once on load
 }
 
-// ── TAP CALIBRATION ─────────────────────────────────────────────────────────
-// "Tap to the beat" — the kid taps a home-row key on each metronome beat; we take
-// the median gap between their taps and the true beats and store it as the
-// round-trip offset. One measurement absorbs BOTH hearing-the-click-late (output
-// latency) and the-keypress-arriving-late (input latency) — exactly what differs
-// on Bluetooth gear — because it measures the loop as the kid actually feels it.
-let klCalib = { startTs: 0, beat: 0, taps: [], running: false, metroId: null, nextBeat: 0, pending: null, returnTo: 0 };
-function klCalibStopMetro() { if (klCalib.metroId) { clearInterval(klCalib.metroId); klCalib.metroId = null; } }
-function klCalibStatus(t) { const el = document.getElementById('kl-calib-status'); if (el) el.textContent = t; }
-function klCalibBeatVis(k, total, from) {
-  const dots = document.querySelectorAll('.kl-calib-beat');
-  const bib = k % 4;
-  dots.forEach((d, i) => d.classList.toggle('on', i === bib));
-  setTimeout(() => dots.forEach(d => d.classList.remove('on')), 150);
-  if (k < from) klCalibStatus('Get ready… ' + (from - k));
-  else if (k < total) klCalibStatus('TAP on every beat! (home row)');
-}
-function klCalibActions(done) {
-  const el = document.getElementById('kl-calib-actions'); if (!el) return;
-  if (!done) {
-    el.innerHTML =
-      '<button class="kl-listen" onclick="klCalibRun()">▶ START</button>' +
-      '<button class="kl-build-sustain" onclick="klCalibBack()">← Back</button>';
-  } else {
-    el.innerHTML =
-      (klCalib.pending != null ? '<button class="kl-listen" onclick="klCalibSave()">💾 SAVE ' + klCalib.pending + 'ms</button>' : '') +
-      '<button class="kl-mine" onclick="klCalibRun()">↻ Try again</button>' +
-      '<button class="kl-build-sustain" onclick="klCalibReset()">Reset to 0</button>' +
-      '<button class="kl-build-sustain" onclick="klCalibBack()">← Back</button>';
-  }
-}
-window.klRenderCalibrate = function() {
-  if (typeof klGrooveStop === 'function') klGrooveStop();
-  klCalib.returnTo = klState.puzzleIdx;
-  klCalib.running = false; klCalib.pending = null; klCalibStopMetro();
-  const wrap = document.getElementById('kl-wrap');
-  wrap.innerHTML =
-    '<div class="kl-puzzle-top"><button class="kl-back" onclick="klCalibBack()">←</button></div>' +
-    '<div class="kl-drumtitle">⚙ Sync Calibration</div>' +
-    '<div class="kl-build-hint">Tap any home-row key (A–L) right on each beat. Keep tapping along for a while — I\u2019ll measure 16 beats and average them.</div>' +
-    '<div class="kl-groove-beats">' + [0,1,2,3].map(() => '<span class="kl-calib-beat kl-groove-beat"></span>').join('') + '</div>' +
-    '<button class="kl-tap-pad" id="kl-calib-pad" onpointerdown="klCalibTap()">TAP<kbd class="kl-kbd">home row</kbd></button>' +
-    '<div class="kl-bandmate" id="kl-calib-status">Current offset: ' + klRhythmOffsetMs + ' ms. Press START, then tap along.</div>' +
-    '<div class="kl-listen-row" id="kl-calib-actions"></div>';
-  klCalibActions(false);
-  if (!window.__klCalibKeyBound) {
-    window.addEventListener('keydown', (e) => {
-      if (!document.getElementById('kl-calib-pad')) return;
-      if (KL_HOMEROW.indexOf(e.code) !== -1) { e.preventDefault(); if (!e.repeat) klCalibTap(); }
-    });
-    window.__klCalibKeyBound = true;
-  }
-};
-window.klCalibTap = function() {
-  const ctx = getAudio();
-  klTapClick(ctx.currentTime + 0.004, 0.5, false);
-  const pad = document.getElementById('kl-calib-pad');
-  if (pad) { pad.classList.add('hit'); setTimeout(() => pad.classList.remove('hit'), 110); }
-  if (klCalib.running) klCalib.taps.push(ctx.currentTime);
-};
-window.klCalibRun = function() {
-  const ctx = getAudio();
-  klCalib.beat = 60 / 90;            // calibration tempo
-  klCalib.startTs = ctx.currentTime + 0.45;
-  klCalib.taps = []; klCalib.running = true; klCalib.pending = null; klCalib.nextBeat = 0;
-  const total = 20, from = 4, to = 19; // 4-beat count-in, then 16 measured beats
-  klCalibActions(false); klCalibStatus('Get ready…');
-  klCalibStopMetro();
-  klCalib.metroId = setInterval(() => {
-    if (!document.getElementById('kl-calib-pad') || !klCalib.running) { klCalibStopMetro(); return; }
-    const ctx = getAudio();
-    while (klCalib.nextBeat <= total && klCalib.startTs + klCalib.nextBeat * klCalib.beat < ctx.currentTime + 0.2) {
-      const k = klCalib.nextBeat;
-      const t = klCalib.startTs + k * klCalib.beat;
-      if (k < total && t >= ctx.currentTime - 0.02) {
-        klTapClick(t, k % 4 === 0 ? 0.34 : 0.2, true);
-        setTimeout(() => klCalibBeatVis(k, total, from), Math.max(0, (t - ctx.currentTime) * 1000));
-      }
-      if (k === total) {
-        const tEnd = klCalib.startTs + (to + 0.55) * klCalib.beat;
-        setTimeout(() => klCalibCompute(from, to), Math.max(0, (tEnd - ctx.currentTime) * 1000));
-        klCalibStopMetro();
-      }
-      klCalib.nextBeat++;
-    }
-  }, 25);
-};
-function klCalibCompute(from, to) {
-  klCalib.running = false;
-  const offs = [];
-  klCalib.taps.forEach(t => {
-    const k = Math.round((t - klCalib.startTs) / klCalib.beat);
-    if (k >= from && k <= to) { const off = t - (klCalib.startTs + k * klCalib.beat); if (Math.abs(off) < 0.5 * klCalib.beat) offs.push(off); }
-  });
-  if (offs.length < 3) {
-    klCalib.pending = null;
-    klCalibStatus('Didn\u2019t catch enough taps — tap a home-row key on every beat, then try again.');
-    klCalibActions(true); return;
-  }
-  offs.sort((a, b) => a - b);
-  const med = offs[Math.floor(offs.length / 2)];
-  let ms = Math.round(med * 1000); ms = Math.max(-150, Math.min(350, ms));
-  klCalib.pending = ms;
-  klCalibStatus('Measured offset: ' + ms + ' ms (from ' + offs.length + ' taps). Save it, or try again to be sure.');
-  klCalibActions(true);
-}
-window.klCalibSave = function() {
-  if (klCalib.pending == null) return;
-  klRhythmOffsetMs = klCalib.pending;
-  if (typeof klSaveProgress === 'function') klSaveProgress();
-  klCalibStatus('Saved! Your taps are now offset by ' + klRhythmOffsetMs + ' ms. 🎯');
-};
-window.klCalibReset = function() {
-  klRhythmOffsetMs = 0; klCalib.pending = 0;
-  if (typeof klSaveProgress === 'function') klSaveProgress();
-  klCalibStatus('Reset to 0 ms.');
-};
-window.klCalibBack = function() {
-  klCalibStopMetro(); klCalib.running = false;
-  const p = KL_PUZZLES[klCalib.returnTo];
-  if (p && p.type === 'groove') klRenderGroovePuzzle(p);
-  else klRenderTown();
-};
 
 function klRenderPuzzle() {
   // === ECONOMY: SET BOUNDARY — finishing a set returns to town, not the next set
@@ -15898,9 +15783,10 @@ let klDrumFirstPlay = true;  // extra audio lead on the first drum play (ctx war
 // Positive = delay the visual playhead a little more; negative = pull it earlier.
 // 0 = trust the measured value. Tunable live from DEV → Sync.
 let klAudioOffsetMs = 40; // default trim: +40ms felt locked on Matt's setup (built-in speakers)
-// Calibrated rhythm-tap offset (ms): the round-trip delay between hearing a beat
-// and the tap REGISTERING (output latency + input latency, e.g. Bluetooth). Set by
-// the "tap to the beat" calibration; subtracted from captured taps when grading.
+// Baked rhythm-tap trim (ms), subtracted from captured taps when grading. 0 works
+// well on built-in audio (Chromebooks / iPads), which is what the game targets;
+// it's a single tunable here if a fixed nudge is ever wanted. No Bluetooth — the
+// player is told to use built-in speakers (BT latency can't be calibrated away).
 let klRhythmOffsetMs = 0;
 // Visual-sync delay (seconds) for the playheads. Audio reaches the speakers about
 // `outputLatency` AFTER ctx.currentTime — tens of ms on built-in speakers, 150-250ms
@@ -15921,7 +15807,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-52'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-54'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
