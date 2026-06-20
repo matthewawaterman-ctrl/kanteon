@@ -4403,6 +4403,24 @@
   .kl-groove-beats { display: flex; gap: 12px; justify-content: center; margin: 4px auto 2px; }
   .kl-groove-beat { width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,0.16); transition: transform 0.08s ease, background 0.08s ease, box-shadow 0.08s ease; }
   .kl-groove-beat.on { background: #34d399; transform: scale(1.4); box-shadow: 0 0 12px rgba(52,211,153,0.7); }
+  .kl-groove-ts { fill: #fde047; font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 30px; }
+  .kl-ts-badge { display: inline-block; margin-left: 10px; padding: 1px 9px; border-radius: 8px;
+    background: rgba(253,224,71,0.16); border: 1px solid rgba(253,224,71,0.5); color: #fde047;
+    font-size: 0.62em; vertical-align: middle; letter-spacing: 1px; }
+  /* count-in overlay: drummer + big 1-2-3-4 over the staff */
+  .kl-groove-stage { position: relative; width: min(560px, 94vw); margin: 0 auto; }
+  .kl-countin { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center;
+    justify-content: center; z-index: 6; pointer-events: none; }
+  .kl-countin.show { display: flex; }
+  .kl-countin-drum { font-size: 52px; line-height: 1; }
+  .kl-countin-num { font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 92px; line-height: 0.9;
+    color: #fde047; text-shadow: 0 4px 20px rgba(0,0,0,0.6); }
+  .kl-countin-label { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; letter-spacing: 3px;
+    color: #fff; opacity: 0.72; text-transform: uppercase; font-size: 13px; }
+  .kl-countin.beat .kl-countin-num { animation: klCountPop 0.32s ease; }
+  .kl-countin.beat .kl-countin-drum { animation: klCountBounce 0.32s ease; }
+  @keyframes klCountPop { 0% { transform: scale(0.5); opacity: 0.3; } 45% { transform: scale(1.25); opacity: 1; } 100% { transform: scale(1); } }
+  @keyframes klCountBounce { 0% { transform: translateY(0) rotate(0deg); } 40% { transform: translateY(-14px) rotate(-10deg); } 100% { transform: translateY(0) rotate(0deg); } }
   /* ── EAR ID (b31-39) ── */
   .kl-ear-choices { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; width: min(460px, 92vw); margin: 12px auto; }
   .kl-ear-choice {
@@ -12951,6 +12969,9 @@ const KL_GROOVE_DEFS = [
   { id: 314, name: 'STEADY EIGHTHS',    hint: 'eight even eighth notes',       sub: 0.5, events: [{d:0.5},{d:0.5},{d:0.5},{d:0.5},{d:0.5},{d:0.5},{d:0.5},{d:0.5}] },
   { id: 315, name: 'MIX IT UP',         hint: 'quarters with a pair of eighths', sub: 0.5, events: [{d:1},{d:0.5},{d:0.5},{d:1},{d:1}] },
   { id: 316, name: 'SYNCOPATED',        hint: 'an eighth-note push off the beat', sub: 0.5, events: [{d:0.5},{d:1},{d:0.5},{d:1},{d:1}] },
+  // Advanced: a different time signature. Three beats per bar — a waltz.
+  { id: 317, name: 'WALTZ TIME',        hint: 'three beats per bar — count 1-2-3', sub: 1, ts: [3, 4], events: [{d:1},{d:1},{d:1}] },
+  { id: 318, name: 'WALTZ SWAY',        hint: 'a rest on beat 2, in 3/4',          sub: 1, ts: [3, 4], events: [{d:1},{d:1,rest:true},{d:1}] },
 ];
 const KL_GROOVE_START = KL_PUZZLES.length;
 KL_GROOVE_DEFS.forEach((gd, i) => {
@@ -13040,7 +13061,7 @@ function klSaveProgress() {
       v: 2, puzzleIdx: klState.puzzleIdx, score: klState.score, solved, savedAt: Date.now(),
       // === ECONOMY — START ===
       money: klState.money, xp: klState.xp, day: klState.day, showsPlayed: klState.showsPlayed, bookedDay: klState.bookedDay,
-      promo: klState.promo, gear: klState.gear, gearCondition: klState.gearCondition, van: klState.van, vanLoan: klState.vanLoan, bookedDaysOut: klState.bookedDaysOut, waddyDone: klState.waddyDone, garageDone: klState.garageDone, modDone: klState.modDone, devUnlock: klState.devUnlock, setPos: klState.setPos,
+      promo: klState.promo, gear: klState.gear, gearCondition: klState.gearCondition, van: klState.van, vanLoan: klState.vanLoan, bookedDaysOut: klState.bookedDaysOut, waddyDone: klState.waddyDone, garageDone: klState.garageDone, modDone: klState.modDone, devUnlock: klState.devUnlock, rhythmOffsetMs: klRhythmOffsetMs, setPos: klState.setPos,
       // === ECONOMY — END ===
     }));
   } catch (e) { /* storage full/blocked — play on without saving */ }
@@ -13381,6 +13402,7 @@ window.klPickKid = function(kidId) {
     // module whose every puzzle is already in `solved`) counts its modules done.
     klState.modDone = save.modDone || {};
     klState.devUnlock = save.devUnlock || {};
+    if (typeof save.rhythmOffsetMs === 'number') klRhythmOffsetMs = save.rhythmOffsetMs;
     KL_MODULE_DEFS.forEach(m => {
       if (klState.modDone[m.id]) return;
       const buildingDone = (m.building === 'waddy' && save.waddyDone) || (m.building === 'garage' && save.garageDone);
@@ -15117,7 +15139,7 @@ window.klEarPick = function(i) {
 // Home-row keys for tapping. Single voice taps on ANY of them for now; later each
 // key maps to a pitch (Pro-Tools-style musical typing) for multi-voice rhythms.
 const KL_HOMEROW = ['KeyA','KeyS','KeyD','KeyF','KeyG','KeyH','KeyJ','KeyK','KeyL'];
-let klGroove = { events: [], onsets: [], sub: 1, bpm: 84, beat: 0, barDur: 0,
+let klGroove = { events: [], onsets: [], sub: 1, bpm: 84, beat: 0, barDur: 0, barBeats: 4, ts: [4, 4],
   startTs: 0, nextBeat: 0, metroId: null, rafId: null, recording: false,
   recStart: 0, taps: [], solved: false };
 
@@ -15128,14 +15150,23 @@ function klGrooveBeatPulse(beatInBar) {
   dots.forEach((d, i) => d.classList.toggle('on', i === beatInBar));
   setTimeout(() => { dots.forEach(d => d.classList.remove('on')); }, 140);
 }
-// Always-on metronome: a steady beat click + visual pulse, anchored to startTs so
-// everything (example + recording) lines up to the same grid. Self-cleans when
-// you leave the puzzle.
+// Big drummer + number count-in overlay (1..barBeats), shown over the staff so the
+// kid clearly sees the bar of count-in before the rhythm starts.
+function klGrooveCountInVis(n) {
+  const el = document.getElementById('kl-countin'); if (!el) return;
+  if (n > 0) {
+    el.classList.add('show');
+    const num = document.getElementById('kl-countin-num'); if (num) num.textContent = n;
+    el.classList.remove('beat'); void el.offsetWidth; el.classList.add('beat'); // restart bounce
+  } else { el.classList.remove('show', 'beat'); }
+}
+// Always-on metronome, RE-ANCHORED on each LISTEN/PLAY so the count-in is exactly
+// ONE BAR (barBeats). Click + visual pulse per beat, accenting the downbeat.
 function klGrooveStartMetro() {
   const ctx = getAudio();
   klGroove.beat = 60 / klGroove.bpm;
-  klGroove.barDur = klGroove.beat * 4;
-  klGroove.startTs = ctx.currentTime + 0.18;
+  klGroove.barDur = klGroove.beat * klGroove.barBeats;
+  klGroove.startTs = ctx.currentTime + 0.16;
   klGroove.nextBeat = 0;
   if (klGroove.metroId) clearInterval(klGroove.metroId);
   klGroove.metroId = setInterval(() => {
@@ -15144,10 +15175,9 @@ function klGrooveStartMetro() {
     while (klGroove.startTs + klGroove.nextBeat * klGroove.beat < ctx.currentTime + 0.18) {
       const t = klGroove.startTs + klGroove.nextBeat * klGroove.beat;
       if (t >= ctx.currentTime - 0.02) {
-        const bib = klGroove.nextBeat % 4;
+        const bib = klGroove.nextBeat % klGroove.barBeats;
         klTapClick(t, bib === 0 ? 0.34 : 0.2, true);
-        const dt = (t - ctx.currentTime) * 1000;
-        setTimeout(() => klGrooveBeatPulse(bib), Math.max(0, dt));
+        setTimeout(() => klGrooveBeatPulse(bib), Math.max(0, (t - ctx.currentTime) * 1000));
       }
       klGroove.nextBeat++;
     }
@@ -15158,19 +15188,25 @@ function klGrooveStop() {
   if (klGroove.rafId) { cancelAnimationFrame(klGroove.rafId); klGroove.rafId = null; }
   klGroove.recording = false;
 }
-// First bar-downbeat at least `leadBeats` beats out — gives a clean count-in.
-function klGrooveNextDownbeat(leadBeats) {
+// Re-anchor the metronome to NOW and return the downbeat exactly ONE BAR out — a
+// tight count-in of barBeats beats. Also schedules the drummer + 1-2-3-4 visual.
+function klGrooveCountIn() {
+  klGrooveStartMetro();
   const ctx = getAudio();
-  const target = ctx.currentTime + leadBeats * klGroove.beat;
-  const bars = Math.ceil((target - klGroove.startTs) / klGroove.barDur);
-  return klGroove.startTs + Math.max(0, bars) * klGroove.barDur;
+  const t0 = klGroove.startTs + klGroove.barBeats * klGroove.beat;
+  for (let k = 0; k < klGroove.barBeats; k++) {
+    const t = t0 - (klGroove.barBeats - k) * klGroove.beat;
+    setTimeout(() => klGrooveCountInVis(k + 1), Math.max(0, (t - ctx.currentTime) * 1000));
+  }
+  setTimeout(() => klGrooveCountInVis(0), Math.max(0, (t0 - ctx.currentTime) * 1000));
+  return t0;
 }
 // Light each written event (note OR rest) in sync as the example plays.
 function klGrooveLightSync(t0) {
   if (klGroove.rafId) cancelAnimationFrame(klGroove.rafId);
   const ctx = getAudio();
   const evs = klGroove.events;
-  const endT = t0 + 4 * klGroove.beat;
+  const endT = t0 + klGroove.barBeats * klGroove.beat;
   let last = -1;
   const tick = () => {
     if (!document.getElementById('kl-groove')) { klGroove.rafId = null; return; }
@@ -15180,7 +15216,6 @@ function klGrooveLightSync(t0) {
       klGroove.rafId = null; return;
     }
     const beatPos = (now - t0) / klGroove.beat;
-    // find the current event index by onset
     let cur = -1;
     for (let i = 0; i < evs.length; i++) { if (beatPos + 0.02 >= evs[i].onset) cur = i; else break; }
     if (cur !== last && cur >= 0) {
@@ -15193,33 +15228,33 @@ function klGrooveLightSync(t0) {
   klGroove.rafId = requestAnimationFrame(tick);
 }
 function klGrooveStatus(txt) { const bm = document.getElementById('kl-bandmate'); if (bm) bm.textContent = txt; }
-// LISTEN — play the example on a downbeat (4-beat count-in via the running metro),
-// sounding each played note and lighting every written note + rest in time.
+// LISTEN — one-bar count-in (drummer + 1-2-3-4), then sound each played note and
+// light every written note + rest in time.
 window.klGroovePlay = function() {
   if (klGroove.recording || klGroove.solved) return;
-  const t0 = klGrooveNextDownbeat(4);
+  const t0 = klGrooveCountIn();
   klGroove.onsets.forEach(b => klTapClick(t0 + b * klGroove.beat, 0.6, false));
   klGrooveLightSync(t0);
   const ctx = getAudio();
-  klGrooveStatus('Counting in…');
+  klGrooveStatus('Count in…');
   setTimeout(() => klGrooveStatus('Listen 🎵'), Math.max(0, (t0 - ctx.currentTime) * 1000));
   const lb = document.getElementById('kl-groove-listen');
-  if (lb) { lb.classList.add('playing'); setTimeout(() => lb.classList.remove('playing'), (t0 - ctx.currentTime + 4 * klGroove.beat) * 1000); }
+  if (lb) { lb.classList.add('playing'); setTimeout(() => lb.classList.remove('playing'), (t0 - ctx.currentTime + klGroove.barDur) * 1000); }
 };
-// PLAY IT — 4-beat count-in, then a one-bar record window. SPACE taps the rhythm.
+// PLAY IT — one-bar count-in, then a one-bar record window. Home-row taps.
 window.klGrooveRecord = function() {
   if (klGroove.recording || klGroove.solved) return;
   const ctx = getAudio();
-  const t0 = klGrooveNextDownbeat(4);
+  const t0 = klGrooveCountIn();
   klGroove.recStart = t0;
   klGroove.taps = [];
-  klGrooveStatus('Counting in… get ready!');
+  klGrooveStatus('Count in… get ready!');
   const pad = document.getElementById('kl-groove-pad');
   setTimeout(() => {
     if (!document.getElementById('kl-groove')) return;
     klGroove.recording = true;
     if (pad) pad.classList.add('live');
-    klGrooveStatus('TAP the rhythm on SPACE!');
+    klGrooveStatus('TAP the rhythm! (home row)');
   }, Math.max(0, (t0 - ctx.currentTime) * 1000));
   setTimeout(() => {
     klGroove.recording = false;
@@ -15233,15 +15268,18 @@ window.klGrooveTap = function() {
   const pad = document.getElementById('kl-groove-pad');
   if (pad) { pad.classList.add('hit'); setTimeout(() => pad.classList.remove('hit'), 110); }
   if (!klGroove.recording) return;
-  const beatPos = (ctx.currentTime - klGroove.recStart) / klGroove.beat;
-  if (beatPos < -0.25 || beatPos > 4.25) return;
+  // Subtract the calibrated round-trip offset (output + input latency) so a tap
+  // that REGISTERS late but was FELT on the beat lands on the right subdivision.
+  const tapTime = ctx.currentTime - (klRhythmOffsetMs / 1000);
+  const beatPos = (tapTime - klGroove.recStart) / klGroove.beat;
+  if (beatPos < -0.25 || beatPos > klGroove.barBeats + 0.25) return;
   klGroove.taps.push(beatPos);
 };
 function klGrooveGrade() {
   if (!document.getElementById('kl-groove') || klGroove.solved) return;
   const sub = klGroove.sub;
   const q = new Set();
-  klGroove.taps.forEach(b => { let s = Math.round(b / sub) * sub; s = Math.max(0, Math.min(4 - sub, s)); q.add(+s.toFixed(3)); });
+  klGroove.taps.forEach(b => { let s = Math.round(b / sub) * sub; s = Math.max(0, Math.min(klGroove.barBeats - sub, s)); q.add(+s.toFixed(3)); });
   const target = new Set(klGroove.onsets.map(b => +b.toFixed(3)));
   const match = q.size === target.size && [...target].every(x => q.has(x));
   if (match) {
@@ -15256,10 +15294,12 @@ function klGrooveGrade() {
     setTimeout(() => klGroovePlay(), 500);
   }
 }
-// Build REAL rhythmic notation (noteheads / stems / beams / rests) on one line.
-function klGrooveNotationSVG(meta) {
-  const leftPad = 44, beatW = 84, headY = 82, stemTopY = 30, H = 120;
-  const W = leftPad + 4 * beatW + 30;
+// Build REAL rhythmic notation (time signature, noteheads / stems / beams / rests).
+function klGrooveNotationSVG(meta, barBeats, ts) {
+  barBeats = barBeats || 4; ts = ts || [4, 4];
+  const tsW = 34, beatW = 84, headY = 82, stemTopY = 30, H = 120;
+  const leftPad = 30 + tsW; // room for the time signature at the left
+  const W = leftPad + barBeats * beatW + 30;
   const xOf = bp => leftPad + bp * beatW;
   let notes = '', beams = '';
   // beam runs of consecutive eighth NOTES (non-rest)
@@ -15303,11 +15343,18 @@ function klGrooveNotationSVG(meta) {
     g += '</g>';
     notes += g;
   });
+  // time signature: two stacked numbers at the left of the staff
+  const tsX = 20 + tsW / 2;
+  const tsSVG = '<text x="' + tsX + '" y="' + (headY - 9) + '" class="kl-groove-ts" text-anchor="middle">' + ts[0] + '</text>' +
+                '<text x="' + tsX + '" y="' + (headY + 19) + '" class="kl-groove-ts" text-anchor="middle">' + ts[1] + '</text>';
+  // beat ticks 0..barBeats (accent the bar lines)
+  let ticks = '';
+  for (let b = 0; b <= barBeats; b++) {
+    ticks += '<line x1="' + (leftPad + b * beatW) + '" y1="' + (headY - 4) + '" x2="' + (leftPad + b * beatW) + '" y2="' + (headY + 4) + '" stroke="rgba(255,255,255,0.22)" stroke-width="' + (b % barBeats === 0 ? 2.5 : 1) + '"/>';
+  }
   return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="kl-groove-svg" xmlns="http://www.w3.org/2000/svg">' +
-    '<line x1="20" y1="' + headY + '" x2="' + (W - 12) + '" y2="' + headY + '" stroke="rgba(255,255,255,0.18)" stroke-width="2"/>' +
-    // bar/beat ticks
-    [0, 1, 2, 3, 4].map(b => '<line x1="' + (leftPad + b * beatW) + '" y1="' + (headY - 4) + '" x2="' + (leftPad + b * beatW) + '" y2="' + (headY + 4) + '" stroke="rgba(255,255,255,0.22)" stroke-width="' + (b % 4 === 0 ? 2.5 : 1) + '"/>').join('') +
-    beams + notes + '</svg>';
+    '<line x1="' + (leftPad - 6) + '" y1="' + headY + '" x2="' + (W - 12) + '" y2="' + headY + '" stroke="rgba(255,255,255,0.18)" stroke-width="2"/>' +
+    tsSVG + ticks + beams + notes + '</svg>';
 }
 function klRenderGroovePuzzle(p) {
   document.getElementById('kidlab').classList.add('kl-playing');
@@ -15324,23 +15371,35 @@ function klRenderGroovePuzzle(p) {
   klGroove.onsets = meta.filter(e => !e.rest).map(e => e.onset);
   klGroove.sub = gd.sub;
   klGroove.bpm = p.bpm;
+  klGroove.ts = gd.ts || [4, 4];
+  klGroove.barBeats = klGroove.ts[0];
   klGroove.solved = false;
   klGroove.recording = false;
+  const dots = [];
+  for (let d = 0; d < klGroove.barBeats; d++) dots.push('<span class="kl-groove-beat"></span>');
   wrap.innerHTML =
     (klPuzzleBuilding() ? '<div class="kl-room-bg kt-bg-' + klPuzzleBuilding() + '">' + klSceneArt(klPuzzleBuilding()) + '</div>' : '') +
     '<div class="kl-puzzle-top">' +
       '<button class="kl-back" onclick="klExit()">←</button>' +
       '<button class="kl-mute" id="kl-mute-btn" onclick="klToggleMute()" title="Mute backing">' + (klClock.muted ? '🔇' : '🔊') + '</button>' +
     '</div>' +
-    '<div class="kl-drumtitle">🥁 ' + gd.name + '</div>' +
+    '<div class="kl-drumtitle">🥁 ' + gd.name + '<span class="kl-ts-badge">' + klGroove.ts[0] + '/' + klGroove.ts[1] + '</span></div>' +
     '<div class="kl-build-hint">' + gd.hint + ' — read it, hear it, then play it back</div>' +
-    '<div class="kl-groove-beats">' + [0,1,2,3].map(() => '<span class="kl-groove-beat"></span>').join('') + '</div>' +
-    '<div class="kl-groove-staff" id="kl-groove">' + klGrooveNotationSVG(meta) + '</div>' +
+    '<div class="kl-groove-beats">' + dots.join('') + '</div>' +
+    '<div class="kl-groove-stage">' +
+      '<div class="kl-groove-staff" id="kl-groove">' + klGrooveNotationSVG(meta, klGroove.barBeats, klGroove.ts) + '</div>' +
+      '<div class="kl-countin" id="kl-countin">' +
+        '<div class="kl-countin-drum">🥁</div>' +
+        '<div class="kl-countin-num" id="kl-countin-num">1</div>' +
+        '<div class="kl-countin-label">count in</div>' +
+      '</div>' +
+    '</div>' +
     '<div class="kl-listen-row">' +
       '<button class="kl-listen" id="kl-groove-listen" onclick="klGroovePlay()">🔊 LISTEN<kbd class="kl-kbd">space</kbd></button>' +
       '<button class="kl-mine" id="kl-groove-record" onclick="klGrooveRecord()">🥁 PLAY IT</button>' +
     '</div>' +
     '<button class="kl-tap-pad" id="kl-groove-pad" onpointerdown="klGrooveTap()">TAP<kbd class="kl-kbd">home row (A–L)</kbd></button>' +
+    '<div class="kl-build-sustain-row"><button class="kl-build-sustain" onclick="klRenderCalibrate()" title="tap to the beat to sync timing on your device (great for Bluetooth)">⚙ Calibrate taps</button></div>' +
     '<div class="kl-bandmate" id="kl-bandmate">&nbsp;</div>';
   // Keys (bound once): SPACE = LISTEN (reference); a home-row key = TAP the rhythm.
   // Separating them frees you to hear the example and perform without a conflict.
@@ -15357,6 +15416,130 @@ function klRenderGroovePuzzle(p) {
   klGrooveStartMetro();
   setTimeout(() => klGroovePlay(), 700); // hear + see the example once on load
 }
+
+// ── TAP CALIBRATION ─────────────────────────────────────────────────────────
+// "Tap to the beat" — the kid taps a home-row key on each metronome beat; we take
+// the median gap between their taps and the true beats and store it as the
+// round-trip offset. One measurement absorbs BOTH hearing-the-click-late (output
+// latency) and the-keypress-arriving-late (input latency) — exactly what differs
+// on Bluetooth gear — because it measures the loop as the kid actually feels it.
+let klCalib = { startTs: 0, beat: 0, taps: [], running: false, metroId: null, nextBeat: 0, pending: null, returnTo: 0 };
+function klCalibStopMetro() { if (klCalib.metroId) { clearInterval(klCalib.metroId); klCalib.metroId = null; } }
+function klCalibStatus(t) { const el = document.getElementById('kl-calib-status'); if (el) el.textContent = t; }
+function klCalibBeatVis(k, total, from) {
+  const dots = document.querySelectorAll('.kl-calib-beat');
+  const bib = k % 4;
+  dots.forEach((d, i) => d.classList.toggle('on', i === bib));
+  setTimeout(() => dots.forEach(d => d.classList.remove('on')), 150);
+  if (k < from) klCalibStatus('Get ready… ' + (from - k));
+  else if (k < total) klCalibStatus('TAP on every beat! (home row)');
+}
+function klCalibActions(done) {
+  const el = document.getElementById('kl-calib-actions'); if (!el) return;
+  if (!done) {
+    el.innerHTML =
+      '<button class="kl-listen" onclick="klCalibRun()">▶ START</button>' +
+      '<button class="kl-build-sustain" onclick="klCalibBack()">← Back</button>';
+  } else {
+    el.innerHTML =
+      (klCalib.pending != null ? '<button class="kl-listen" onclick="klCalibSave()">💾 SAVE ' + klCalib.pending + 'ms</button>' : '') +
+      '<button class="kl-mine" onclick="klCalibRun()">↻ Try again</button>' +
+      '<button class="kl-build-sustain" onclick="klCalibReset()">Reset to 0</button>' +
+      '<button class="kl-build-sustain" onclick="klCalibBack()">← Back</button>';
+  }
+}
+window.klRenderCalibrate = function() {
+  if (typeof klGrooveStop === 'function') klGrooveStop();
+  klCalib.returnTo = klState.puzzleIdx;
+  klCalib.running = false; klCalib.pending = null; klCalibStopMetro();
+  const wrap = document.getElementById('kl-wrap');
+  wrap.innerHTML =
+    '<div class="kl-puzzle-top"><button class="kl-back" onclick="klCalibBack()">←</button></div>' +
+    '<div class="kl-drumtitle">⚙ Sync Calibration</div>' +
+    '<div class="kl-build-hint">Tap any home-row key (A–L) right on each beat. Keep tapping along for a while — I\u2019ll measure 16 beats and average them.</div>' +
+    '<div class="kl-groove-beats">' + [0,1,2,3].map(() => '<span class="kl-calib-beat kl-groove-beat"></span>').join('') + '</div>' +
+    '<button class="kl-tap-pad" id="kl-calib-pad" onpointerdown="klCalibTap()">TAP<kbd class="kl-kbd">home row</kbd></button>' +
+    '<div class="kl-bandmate" id="kl-calib-status">Current offset: ' + klRhythmOffsetMs + ' ms. Press START, then tap along.</div>' +
+    '<div class="kl-listen-row" id="kl-calib-actions"></div>';
+  klCalibActions(false);
+  if (!window.__klCalibKeyBound) {
+    window.addEventListener('keydown', (e) => {
+      if (!document.getElementById('kl-calib-pad')) return;
+      if (KL_HOMEROW.indexOf(e.code) !== -1) { e.preventDefault(); if (!e.repeat) klCalibTap(); }
+    });
+    window.__klCalibKeyBound = true;
+  }
+};
+window.klCalibTap = function() {
+  const ctx = getAudio();
+  klTapClick(ctx.currentTime + 0.004, 0.5, false);
+  const pad = document.getElementById('kl-calib-pad');
+  if (pad) { pad.classList.add('hit'); setTimeout(() => pad.classList.remove('hit'), 110); }
+  if (klCalib.running) klCalib.taps.push(ctx.currentTime);
+};
+window.klCalibRun = function() {
+  const ctx = getAudio();
+  klCalib.beat = 60 / 90;            // calibration tempo
+  klCalib.startTs = ctx.currentTime + 0.45;
+  klCalib.taps = []; klCalib.running = true; klCalib.pending = null; klCalib.nextBeat = 0;
+  const total = 20, from = 4, to = 19; // 4-beat count-in, then 16 measured beats
+  klCalibActions(false); klCalibStatus('Get ready…');
+  klCalibStopMetro();
+  klCalib.metroId = setInterval(() => {
+    if (!document.getElementById('kl-calib-pad') || !klCalib.running) { klCalibStopMetro(); return; }
+    const ctx = getAudio();
+    while (klCalib.nextBeat <= total && klCalib.startTs + klCalib.nextBeat * klCalib.beat < ctx.currentTime + 0.2) {
+      const k = klCalib.nextBeat;
+      const t = klCalib.startTs + k * klCalib.beat;
+      if (k < total && t >= ctx.currentTime - 0.02) {
+        klTapClick(t, k % 4 === 0 ? 0.34 : 0.2, true);
+        setTimeout(() => klCalibBeatVis(k, total, from), Math.max(0, (t - ctx.currentTime) * 1000));
+      }
+      if (k === total) {
+        const tEnd = klCalib.startTs + (to + 0.55) * klCalib.beat;
+        setTimeout(() => klCalibCompute(from, to), Math.max(0, (tEnd - ctx.currentTime) * 1000));
+        klCalibStopMetro();
+      }
+      klCalib.nextBeat++;
+    }
+  }, 25);
+};
+function klCalibCompute(from, to) {
+  klCalib.running = false;
+  const offs = [];
+  klCalib.taps.forEach(t => {
+    const k = Math.round((t - klCalib.startTs) / klCalib.beat);
+    if (k >= from && k <= to) { const off = t - (klCalib.startTs + k * klCalib.beat); if (Math.abs(off) < 0.5 * klCalib.beat) offs.push(off); }
+  });
+  if (offs.length < 3) {
+    klCalib.pending = null;
+    klCalibStatus('Didn\u2019t catch enough taps — tap a home-row key on every beat, then try again.');
+    klCalibActions(true); return;
+  }
+  offs.sort((a, b) => a - b);
+  const med = offs[Math.floor(offs.length / 2)];
+  let ms = Math.round(med * 1000); ms = Math.max(-150, Math.min(350, ms));
+  klCalib.pending = ms;
+  klCalibStatus('Measured offset: ' + ms + ' ms (from ' + offs.length + ' taps). Save it, or try again to be sure.');
+  klCalibActions(true);
+}
+window.klCalibSave = function() {
+  if (klCalib.pending == null) return;
+  klRhythmOffsetMs = klCalib.pending;
+  if (typeof klSaveProgress === 'function') klSaveProgress();
+  klCalibStatus('Saved! Your taps are now offset by ' + klRhythmOffsetMs + ' ms. 🎯');
+};
+window.klCalibReset = function() {
+  klRhythmOffsetMs = 0; klCalib.pending = 0;
+  if (typeof klSaveProgress === 'function') klSaveProgress();
+  klCalibStatus('Reset to 0 ms.');
+};
+window.klCalibBack = function() {
+  klCalibStopMetro(); klCalib.running = false;
+  const p = KL_PUZZLES[klCalib.returnTo];
+  if (p && p.type === 'groove') klRenderGroovePuzzle(p);
+  else klRenderTown();
+};
 
 function klRenderPuzzle() {
   // === ECONOMY: SET BOUNDARY — finishing a set returns to town, not the next set
@@ -15715,6 +15898,10 @@ let klDrumFirstPlay = true;  // extra audio lead on the first drum play (ctx war
 // Positive = delay the visual playhead a little more; negative = pull it earlier.
 // 0 = trust the measured value. Tunable live from DEV → Sync.
 let klAudioOffsetMs = 40; // default trim: +40ms felt locked on Matt's setup (built-in speakers)
+// Calibrated rhythm-tap offset (ms): the round-trip delay between hearing a beat
+// and the tap REGISTERING (output latency + input latency, e.g. Bluetooth). Set by
+// the "tap to the beat" calibration; subtracted from captured taps when grading.
+let klRhythmOffsetMs = 0;
 // Visual-sync delay (seconds) for the playheads. Audio reaches the speakers about
 // `outputLatency` AFTER ctx.currentTime — tens of ms on built-in speakers, 150-250ms
 // on Bluetooth. The playheads read ctx.currentTime (schedule time), so without this
@@ -15734,7 +15921,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-49'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-51'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
