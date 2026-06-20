@@ -15242,7 +15242,7 @@ let klDrumFirstPlay = true;  // extra audio lead on the first drum play (ctx war
 // Manual audio-sync TRIM (ms), layered on top of the auto-measured latency below.
 // Positive = delay the visual playhead a little more; negative = pull it earlier.
 // 0 = trust the measured value. Tunable live from DEV → Sync.
-let klAudioOffsetMs = 0;
+let klAudioOffsetMs = 40; // default trim: +40ms felt locked on Matt's setup (built-in speakers)
 // Visual-sync delay (seconds) for the playheads. Audio reaches the speakers about
 // `outputLatency` AFTER ctx.currentTime — tens of ms on built-in speakers, 150-250ms
 // on Bluetooth. The playheads read ctx.currentTime (schedule time), so without this
@@ -15262,7 +15262,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-41'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-42'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
