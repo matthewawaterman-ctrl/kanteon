@@ -13763,6 +13763,12 @@ function klBandStage() {
 // (klDrummerHit/klBassistHit removed — superseded by the clock-independent jam sway)
 function klRenderDrumPuzzle(p) {
   document.getElementById('kidlab').classList.add('kl-playing');
+  // End a drag-paint even if the finger/mouse lifts off the grid. Bound once.
+  if (!window.__klDrumDragBound) {
+    window.addEventListener('pointerup', klDrumDragEnd);
+    window.addEventListener('pointercancel', klDrumDragEnd);
+    window.__klDrumDragBound = true;
+  }
   klState.drumPlaced = {};
   klState.drumLocked = {};
   const steps = klDrumStepCount(p);
@@ -13778,7 +13784,7 @@ function klRenderDrumPuzzle(p) {
   const shownRows = p.voices
     ? KL_DRUM_ROWS.filter(r => p.voices.includes(r.id))
     : KL_DRUM_ROWS;
-  let gridHtml = '<div class="kl-drumgrid" id="kl-grid">';
+  let gridHtml = '<div class="kl-drumgrid" id="kl-grid" onpointerdown="klDrumGridDown(event)" onpointermove="klDrumGridMove(event)" style="touch-action:none;">';
   shownRows.forEach(row => {
     gridHtml += '<div class="kl-drumrow">';
     gridHtml += '<div class="kl-drumlabel">' + row.emoji + '<span>' + row.label + '</span></div>';
@@ -13786,8 +13792,7 @@ function klRenderDrumPuzzle(p) {
     for (let s = 0; s < steps; s++) {
       const beatStart = (s % 2 === 0);
       gridHtml += '<div class="kl-drumcell' + (beatStart ? ' beatstart' : '') +
-        '" data-voice="' + row.id + '" data-step="' + s +
-        '" onclick="klDrumTap(\'' + row.id + '\',' + s + ')"></div>';
+        '" data-voice="' + row.id + '" data-step="' + s + '"></div>';
     }
     gridHtml += '</div></div>';
   });
@@ -13887,6 +13892,56 @@ window.klDrumTap = function(voice, step) {
     klDrumVoiceSound(voice, ctx.currentTime, ctx);
   }
 };
+
+// ── Click-and-drag painting (b31-43) ───────────────────────────────────────
+// Press a cell and drag to fill a run of cells in one motion. The FIRST cell
+// sets the mode: pressing an empty cell PAINTS (fills + erases nothing), pressing
+// a filled cell ERASES. Locked-correct cells are never touched by a drag. A plain
+// tap is just a one-cell drag, so single-tap toggle still works. Pointer events
+// cover mouse + touch; on touch we hit-test with elementFromPoint since the grid
+// captures the pointer and per-cell enter events don't fire.
+let klDrumDrag = { active: false, mode: null };
+function klDrumApplyCell(cell) {
+  if (!cell) return;
+  const voice = cell.getAttribute('data-voice');
+  const step = cell.getAttribute('data-step');
+  if (voice == null || step == null) return;
+  const key = voice + '@' + step;
+  if (klState.drumLocked[key]) return; // never paint/erase a locked-correct cell mid-drag
+  const has = !!klState.drumPlaced[key];
+  if (klDrumDrag.mode === 'paint' && !has) {
+    klState.drumPlaced[key] = true;
+    cell.classList.add('on', 'v-' + voice);
+    const ctx = getAudio(); klDrumVoiceSound(voice, ctx.currentTime, ctx);
+  } else if (klDrumDrag.mode === 'erase' && has) {
+    delete klState.drumPlaced[key];
+    cell.classList.remove('on', 'v-' + voice);
+  }
+}
+window.klDrumGridDown = function(e) {
+  const cell = (e.target && e.target.closest) ? e.target.closest('.kl-drumcell') : null;
+  if (!cell) return;
+  e.preventDefault();
+  const voice = cell.getAttribute('data-voice');
+  const step = cell.getAttribute('data-step');
+  const key = voice + '@' + step;
+  if (klState.drumLocked[key]) { // tapping a locked-correct cell: friendly nudge, no drag
+    cell.classList.add('kl-stay'); setTimeout(() => cell.classList.remove('kl-stay'), 350);
+    klLockedTapMsg();
+    return;
+  }
+  klDrumDrag.active = true;
+  klDrumDrag.mode = klState.drumPlaced[key] ? 'erase' : 'paint';
+  klDrumApplyCell(cell);
+};
+window.klDrumGridMove = function(e) {
+  if (!klDrumDrag.active) return;
+  e.preventDefault();
+  const under = document.elementFromPoint(e.clientX, e.clientY);
+  const cell = under && under.closest ? under.closest('.kl-drumcell') : null;
+  if (cell) klDrumApplyCell(cell);
+};
+function klDrumDragEnd() { klDrumDrag.active = false; klDrumDrag.mode = null; }
 
 function klDrumPlaySet(setObj, opts) {
   opts = opts || {};
@@ -14381,9 +14436,29 @@ function klDevBarMarkup() {
   s += btn("klDevReset()", '♻ Clean', 'wipe this player\u2019s save + reset economy to a fresh start', 'danger');
   s += sub('Sync trim (live):');
   s += btn("klAdjustAudioOffset(-20)", '−20', 'pull the highlight 20ms earlier');
+  s += btn("klAdjustAudioOffset(-5)", '−5', 'fine: 5ms earlier');
   s += '<span class="kl-dev-btn" id="kl-sync-val" style="cursor:default;min-width:96px;color:#facc15;">' + klSyncReadout() + '</span>';
+  s += btn("klAdjustAudioOffset(5)", '+5', 'fine: 5ms later');
   s += btn("klAdjustAudioOffset(20)", '+20', 'push the highlight 20ms later');
   s += btn("klResetAudioOffset()", '0', 'reset trim to 0 (keep measured latency)');
+
+  // ── UNLOCKS — flip progression state for testing. Each button toggles a
+  // module DONE/undone; completing upstream auto-unlocks downstream (the ladder).
+  // Milestones (Venue gate) recompute from module state on every change.
+  s += lbl('tools', '🔓 UNLOCKS');
+  s += btn("klDevUnlockAll()", '✅ Unlock ALL', 'mark every module done — all stations + Venue open', 'done');
+  s += btn("klDevLockAll()", '🔒 Lock ALL', 're-lock everything for a fresh-ladder test', 'danger');
+  const unlockBtn = m => {
+    const done = klModuleIsDone(m.id);
+    return btn("klDevUnlock('" + m.id + "')", (done ? '✓ ' : '') + m.obj + ' ' + m.name,
+      (done ? 'click to RE-LOCK ' : 'click to complete/unlock ') + m.name, done ? 'done' : '');
+  };
+  s += sub('Waddy\u2019s:'); klBuildingModules('waddy').forEach(m => s += unlockBtn(m));
+  s += sub('Garage:');     klBuildingModules('garage').forEach(m => s += unlockBtn(m));
+  s += sub('Milestones (auto):');
+  s += '<span class="kl-dev-btn" style="cursor:default;min-width:200px;color:#9ca3af;">Waddy ' +
+    (klState.waddyDone ? '✓' : '✗') + ' · Garage ' + (klState.garageDone ? '✓' : '✗') +
+    ' · Venue ' + ((klState.waddyDone && klState.garageDone) ? 'OPEN' : 'locked') + '</span>';
 
   return '<div class="kl-devbar' + (klState.devOpen ? ' open' : '') + '" id="kl-devbar">' +
     '<button class="kl-dev-toggle" onclick="klToggleDevBar()" title="DEV menu (hotkey: ` )">' +
@@ -14462,6 +14537,35 @@ window.klDevGo = function(where) {
 window.klDevModule = function(id) {
   if (!klIsDevAvailable() || !klDevBecomeMatt()) return;
   klEnterModule(id, true); // force = bypass the basics-first lock so any station is testable
+};
+// Milestones are DERIVED from module completion — recompute (not award) so they
+// stay correct whether dev toggles unlock OR re-lock. No XP side-effects in dev.
+function klDevSyncMilestones() {
+  klState.waddyDone  = klBuildingModules('waddy').every(m => klModuleIsDone(m.id));
+  klState.garageDone = klBuildingModules('garage').every(m => klModuleIsDone(m.id));
+}
+window.klDevUnlock = function(id) {
+  if (!klIsDevAvailable() || !klDevBecomeMatt()) return;
+  if (!klState.modDone) klState.modDone = {};
+  klState.modDone[id] = !klState.modDone[id]; // toggle done/undone
+  klDevSyncMilestones();
+  klSaveProgress();
+  klDevBar(); // refresh the tray so ✓ marks + milestone readout update in place
+};
+window.klDevUnlockAll = function() {
+  if (!klIsDevAvailable() || !klDevBecomeMatt()) return;
+  if (!klState.modDone) klState.modDone = {};
+  KL_MODULE_DEFS.forEach(m => { klState.modDone[m.id] = true; });
+  klDevSyncMilestones();
+  klSaveProgress();
+  klRenderTown(); // clean view: every station open, Venue unlocked
+};
+window.klDevLockAll = function() {
+  if (!klIsDevAvailable() || !klDevBecomeMatt()) return;
+  klState.modDone = {};
+  klState.waddyDone = false; klState.garageDone = false;
+  klSaveProgress();
+  klRenderTown(); // back to a fresh ladder (only the trio open)
 };
 window.klDevPlayCut = function(key) {
   if (!klIsDevAvailable() || !klDevBecomeMatt()) return;
@@ -15262,7 +15366,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-42'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-43'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
