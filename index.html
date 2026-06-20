@@ -4299,8 +4299,8 @@
   .kl-dev-cut { background: rgba(250,204,21,0.16) !important; border-color: rgba(250,204,21,0.5) !important; color: #fde68a !important; }
   .kl-devbar.open .kl-dev-tray {
     flex: 1 1 auto; max-height: none; overflow-y: auto;
-    width: 100%; max-width: 540px; margin: 0 auto;
-    padding: 14px 16px 28px; align-content: flex-start; justify-content: center;
+    width: 100%; max-width: none; margin: 0;
+    padding: 16px 28px 32px; align-content: flex-start; justify-content: flex-start;
   }
   .kl-dev-btn {
     min-width: 34px; height: 34px; padding: 0 13px;
@@ -13137,7 +13137,7 @@ const klState = {
   devUnlock: {},         // DEV-only per-module unlock overrides (testing aid)
   setPos: { waddy: 0, garage: 13 }, // resume position per set (absolute puzzle indexes)
   // === ECONOMY — END ===
-  devOpen: true,         // DEV tray unfolded by default on load (dev convenience)
+  devOpen: false,        // DEV tray starts CLOSED; tap the DEV tab or backtick to open
 };
 
 // === ECONOMY HELPERS — START ===
@@ -15921,7 +15921,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-51'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-52'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
