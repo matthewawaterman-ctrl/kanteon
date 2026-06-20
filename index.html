@@ -13951,9 +13951,11 @@ function klDrumPlaySet(setObj, opts) {
   const stepMs = stepDur * 1000;
   let lastStep = -1;
   const endTime = t0 + steps * stepDur;
-  // ZERO latency compensation: the playhead and the audio must derive from the
-  // SAME t0 + s*stepDur. Never subtract an offset here that the audio doesn't
-  // also get — that one-sided term was a real desync regression (drummer session).
+  // VISUAL latency comp: the light should flip when each hit is HEARD, not when
+  // it's scheduled. Audio is audible ~klSyncDelay() after ctx.currentTime, so the
+  // playhead reads (now - syncDelay). Captured once per playback (not per frame).
+  // Applied to the VISUAL only — the audio schedule above is untouched.
+  const syncDelay = klSyncDelay();
   if (klDrumPlayheadRAF) cancelAnimationFrame(klDrumPlayheadRAF);
   // Cache the cell nodes ONCE per playback and index them by step. Previously
   // every step ran two full-document querySelectorAll scans — expensive with the
@@ -13966,7 +13968,7 @@ function klDrumPlaySet(setObj, opts) {
   });
   let litCells = [];
   const tick = () => {
-    const now = ctx.currentTime;
+    const now = ctx.currentTime - syncDelay; // VISUAL time: where the sound is HEARD now
     if (now >= endTime + 0.05) {
       litCells.forEach(c => c.classList.remove('kl-beat-now'));
       klDrumPlayheadRAF = null;
@@ -14377,11 +14379,11 @@ function klDevBarMarkup() {
   s += btn("klToggleComposePanel()", '🎼 Compose', 'piano-roll composer');
   s += btn("klToggleCutEditor()", '🎬 Cut editor', 'cutscene editor');
   s += btn("klDevReset()", '♻ Clean', 'wipe this player\u2019s save + reset economy to a fresh start', 'danger');
-  s += sub('Sync (parked):');
-  s += btn("klAdjustAudioOffset(-20)", '−20', 'parked: not wired to timing (zero-compensation playheads)');
-  s += '<span class="kl-dev-btn" id="kl-sync-val" style="cursor:default;min-width:58px;color:#facc15;">' + klAudioOffsetMs + 'ms</span>';
-  s += btn("klAdjustAudioOffset(20)", '+20', 'parked: not wired to timing');
-  s += btn("klResetAudioOffset()", '0', 'reset offset to 0');
+  s += sub('Sync trim (live):');
+  s += btn("klAdjustAudioOffset(-20)", '−20', 'pull the highlight 20ms earlier');
+  s += '<span class="kl-dev-btn" id="kl-sync-val" style="cursor:default;min-width:96px;color:#facc15;">' + klSyncReadout() + '</span>';
+  s += btn("klAdjustAudioOffset(20)", '+20', 'push the highlight 20ms later');
+  s += btn("klResetAudioOffset()", '0', 'reset trim to 0 (keep measured latency)');
 
   return '<div class="kl-devbar' + (klState.devOpen ? ' open' : '') + '" id="kl-devbar">' +
     '<button class="kl-dev-toggle" onclick="klToggleDevBar()" title="DEV menu (hotkey: ` )">' +
@@ -14526,19 +14528,25 @@ window.klDevCutscene = function(key) {
   };
   klPlayCutsceneSeq(cuts, after);
 };
-// SYNC control is intentionally DISCONNECTED from the timing path. The playheads
-// now use zero compensation (ctx.currentTime only). klAudioOffsetMs is a parked
-// value with NO timing effect — a future Bluetooth calibration must shift BOTH
-// audio and visual or neither; it must never re-apply a one-sided term.
+// SYNC control (live): klAudioOffsetMs is a manual TRIM in ms layered on top of the
+// per-device measured latency (see klSyncDelay). It delays the VISUAL playhead only
+// — never the audio schedule — so the highlight lands when the sound is heard. Trim
+// defaults to 0 (trust the measurement); nudge it by ear if the light still leads/lags.
+function klSyncReadout() {
+  let autoMs = 0;
+  try { autoMs = Math.round((klSyncDelay() - klAudioOffsetMs / 1000) * 1000); } catch (e) {}
+  const total = autoMs + klAudioOffsetMs;
+  return 'auto ' + autoMs + ' + ' + klAudioOffsetMs + ' = ' + total + 'ms';
+}
 window.klAdjustAudioOffset = function(delta) {
   klAudioOffsetMs = Math.max(-200, Math.min(400, klAudioOffsetMs + delta));
   const el = document.getElementById('kl-sync-val');
-  if (el) el.textContent = klAudioOffsetMs + 'ms (off)';
+  if (el) el.textContent = klSyncReadout();
 };
 window.klResetAudioOffset = function() {
   klAudioOffsetMs = 0;
   const el = document.getElementById('kl-sync-val');
-  if (el) el.textContent = '0ms (off)';
+  if (el) el.textContent = klSyncReadout();
 };
 window.klToggleDrummerAnim = function() {
   klDrummerAnim = !klDrummerAnim;
@@ -15231,12 +15239,30 @@ window.klPlayMine = function() {
 // clock, quantization, the kid's sequence locking to the downbeat) keeps working.
 let klPlaybackBusyUntil = 0; // performance.now() timestamp; blocks rapid re-triggers
 let klDrumFirstPlay = true;  // extra audio lead on the first drum play (ctx warmup)
-// Manual audio-sync offset (ms). Positive = delay the visual playhead/animation to
-// line up with audio that arrives late (e.g. Bluetooth headphones, ~150-250ms).
-// 0 = wired / built-in speakers. Tunable live from the DEV menu.
+// Manual audio-sync TRIM (ms), layered on top of the auto-measured latency below.
+// Positive = delay the visual playhead a little more; negative = pull it earlier.
+// 0 = trust the measured value. Tunable live from DEV → Sync.
 let klAudioOffsetMs = 0;
+// Visual-sync delay (seconds) for the playheads. Audio reaches the speakers about
+// `outputLatency` AFTER ctx.currentTime — tens of ms on built-in speakers, 150-250ms
+// on Bluetooth. The playheads read ctx.currentTime (schedule time), so without this
+// the highlight flips BEFORE the sound is heard — the light leads the beat. We delay
+// the VISUAL only (never the audio schedule) by the device's measured latency, clamped
+// against a bogus value, plus the manual trim. This is the principled per-device version
+// of the old parked offset: measured, not a blind constant.
+function klSyncDelay() {
+  let auto = 0;
+  try {
+    const c = getAudio();
+    auto = (typeof c.outputLatency === 'number' && c.outputLatency > 0) ? c.outputLatency
+         : (typeof c.baseLatency === 'number' ? c.baseLatency : 0);
+  } catch (e) { auto = 0; }
+  if (!(auto > 0)) auto = 0;
+  if (auto > 0.25) auto = 0.25; // clamp — never let a wild value run the light far behind
+  return auto + (klAudioOffsetMs / 1000);
+}
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-40'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-41'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
@@ -15603,15 +15629,17 @@ function klPlaySequence(notes, opts) {
 
   // playhead driven off the AUDIO CLOCK (rAF reading ctx.currentTime), not
   // setTimeout — setTimeout is throttled by the main thread and drifts from the
-  // sample-accurate audio. ZERO latency compensation: same t0 + n*beat as the
-  // audio, no one-sided offset (that was a desync regression).
+  // sample-accurate audio. VISUAL latency comp via klSyncDelay(): the highlight
+  // flips when the note is HEARD (now - syncDelay), not when it's scheduled. The
+  // audio schedule (t0 + n*beat) is untouched — visual-only, captured once.
   const gen = ++klPlayGen;
   const endT = t0 + p.beats * beat;
+  const mSyncDelay = klSyncDelay();
   let lastB = -1;
   if (klMelodyPlayheadRAF) cancelAnimationFrame(klMelodyPlayheadRAF);
   const mtick = () => {
     if (gen !== klPlayGen) { klMelodyPlayheadRAF = null; klUpdateJam(); return; }
-    const now = ctx.currentTime;
+    const now = ctx.currentTime - mSyncDelay; // VISUAL time: where the sound is HEARD now
     if (now >= endT + 0.05) {
       document.querySelectorAll('#kl-grid .kl-cell.kl-beat-now').forEach(c => c.classList.remove('kl-beat-now'));
       klMelodyPlayheadRAF = null;
