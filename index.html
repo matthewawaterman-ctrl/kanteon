@@ -4353,6 +4353,11 @@
     background: linear-gradient(90deg, #f59e0b, #ef4444); color: #fff; border-color: #fbbf24;
     box-shadow: 0 0 16px rgba(245,158,11,0.5);
   }
+  /* A/B held side — a steady ring (not the pulse) so you can see which is droning */
+  .kl-listen.holding, .kl-mine.holding {
+    outline: 3px solid #34d399; outline-offset: 2px;
+    box-shadow: 0 0 20px rgba(52,211,153,0.55);
+  }
   /* ── RHYTHM TAP (b31-38) ── */
   .kl-tap-grid { display: flex; gap: 6px; justify-content: center; width: min(460px, 92vw); margin: 8px auto; }
   .kl-tap-slot {
@@ -11982,9 +11987,12 @@ const KL_MODULE_DEFS = [
 ];
 function klModuleDef(id) { return KL_MODULE_DEFS.find(m => m.id === id) || null; }
 function klBuildingModules(building) { return KL_MODULE_DEFS.filter(m => m.building === building); }
-// A module is unlocked once every prerequisite in `requires` is cleared.
-// `requires` may be a single id or an array of ids; missing means "open at start".
+// A module is unlocked if it's already completed, dev-unlocked, or every
+// prerequisite in `requires` is cleared. (Completed ⇒ always accessible — a
+// finished station must never render as locked at its own home.)
 function klModuleUnlocked(mod) {
+  if (klModuleIsDone(mod.id)) return true;
+  if (klState.devUnlock && klState.devUnlock[mod.id]) return true;
   if (!mod.requires) return true;
   const reqs = Array.isArray(mod.requires) ? mod.requires : [mod.requires];
   return reqs.every(r => klModuleIsDone(r));
@@ -12361,6 +12369,7 @@ const KL_HATER_LINES = [
 let klTalkIdx = 0;
 
 function klRenderInterior(id) {
+  klState.devRoom = id; // remembered so dev unlock toggles can re-render this room live
   document.getElementById('kidlab').classList.remove('kl-playing');
   klStopClock(); klStopBeatBar();
   const wrap = document.getElementById('kl-wrap');
@@ -12993,7 +13002,7 @@ function klSaveProgress() {
       v: 2, puzzleIdx: klState.puzzleIdx, score: klState.score, solved, savedAt: Date.now(),
       // === ECONOMY — START ===
       money: klState.money, xp: klState.xp, day: klState.day, showsPlayed: klState.showsPlayed, bookedDay: klState.bookedDay,
-      promo: klState.promo, gear: klState.gear, gearCondition: klState.gearCondition, van: klState.van, vanLoan: klState.vanLoan, bookedDaysOut: klState.bookedDaysOut, waddyDone: klState.waddyDone, garageDone: klState.garageDone, modDone: klState.modDone, setPos: klState.setPos,
+      promo: klState.promo, gear: klState.gear, gearCondition: klState.gearCondition, van: klState.van, vanLoan: klState.vanLoan, bookedDaysOut: klState.bookedDaysOut, waddyDone: klState.waddyDone, garageDone: klState.garageDone, modDone: klState.modDone, devUnlock: klState.devUnlock, setPos: klState.setPos,
       // === ECONOMY — END ===
     }));
   } catch (e) { /* storage full/blocked — play on without saving */ }
@@ -13066,6 +13075,7 @@ const klState = {
   activeSet: null,       // 'waddy' | 'garage' | null — which puzzle set is in play
   activeModule: null,    // which module/station is being played (null = none)
   modDone: {},           // per-module completion: { 'waddy:drums': true, ... }
+  devUnlock: {},         // DEV-only per-module unlock overrides (testing aid)
   setPos: { waddy: 0, garage: 13 }, // resume position per set (absolute puzzle indexes)
   // === ECONOMY — END ===
   devOpen: true,         // DEV tray unfolded by default on load (dev convenience)
@@ -13332,6 +13342,7 @@ window.klPickKid = function(kidId) {
     // Per-module completion. Migrate older saves: a fully-cleared building (or a
     // module whose every puzzle is already in `solved`) counts its modules done.
     klState.modDone = save.modDone || {};
+    klState.devUnlock = save.devUnlock || {};
     KL_MODULE_DEFS.forEach(m => {
       if (klState.modDone[m.id]) return;
       const buildingDone = (m.building === 'waddy' && save.waddyDone) || (m.building === 'garage' && save.garageDone);
@@ -14442,16 +14453,21 @@ function klDevBarMarkup() {
   s += btn("klAdjustAudioOffset(20)", '+20', 'push the highlight 20ms later');
   s += btn("klResetAudioOffset()", '0', 'reset trim to 0 (keep measured latency)');
 
-  // ── UNLOCKS — flip progression state for testing. Each button toggles a
-  // module DONE/undone; completing upstream auto-unlocks downstream (the ladder).
-  // Milestones (Venue gate) recompute from module state on every change.
+  // ── UNLOCKS — flip progression state for testing. Per-module buttons toggle a
+  // dev UNLOCK override (station becomes playable, NOT completed). Bulk buttons
+  // unlock-all, complete-all (opens Venue), or reset everything.
   s += lbl('tools', '🔓 UNLOCKS');
-  s += btn("klDevUnlockAll()", '✅ Unlock ALL', 'mark every module done — all stations + Venue open', 'done');
-  s += btn("klDevLockAll()", '🔒 Lock ALL', 're-lock everything for a fresh-ladder test', 'danger');
+  s += btn("klDevUnlockAll()", '🔓 Unlock ALL', 'make every station playable (does not complete them)');
+  s += btn("klDevCompleteAll()", '✅ Complete ALL', 'mark every module done — opens the Venue', 'done');
+  s += btn("klDevLockAll()", '🔒 Reset', 'clear all unlocks + completions (fresh ladder)', 'danger');
   const unlockBtn = m => {
     const done = klModuleIsDone(m.id);
-    return btn("klDevUnlock('" + m.id + "')", (done ? '✓ ' : '') + m.obj + ' ' + m.name,
-      (done ? 'click to RE-LOCK ' : 'click to complete/unlock ') + m.name, done ? 'done' : '');
+    const unlocked = klModuleUnlocked(m);
+    const icon = done ? '✓' : (unlocked ? '🔓' : '🔒');
+    const tip = done ? 'completed (always unlocked)'
+      : unlocked ? 'unlocked — click to re-lock'
+      : 'locked — click to unlock';
+    return btn("klDevUnlock('" + m.id + "')", icon + ' ' + m.obj + ' ' + m.name, tip, done ? 'done' : '');
   };
   s += sub('Waddy\u2019s:'); klBuildingModules('waddy').forEach(m => s += unlockBtn(m));
   s += sub('Garage:');     klBuildingModules('garage').forEach(m => s += unlockBtn(m));
@@ -14497,7 +14513,7 @@ window.klDevReset = function() {
   klState.money = 50; klState.xp = 0; klState.day = 1; klState.showsPlayed = 0; klState.bookedDay = null; klState.bookedDaysOut = 0;
   klState.promo = { flyers: 0, ads: 0, radio: 0 };
   klState.gear = []; klState.gearCondition = 100; klState.van = false; klState.vanLoan = false; klState.waddyDone = false; klState.garageDone = false;
-  klState.activeSet = null; klState.activeModule = null; klState.modDone = {}; klState.setPos = { waddy: 0, garage: 13 };
+  klState.activeSet = null; klState.activeModule = null; klState.modDone = {}; klState.devUnlock = {}; klState.setPos = { waddy: 0, garage: 13 };
   klRebuildLayersFor(0);
   klToast('♻ Clean slate — fresh save.');
   klRenderTown();
@@ -14544,28 +14560,43 @@ function klDevSyncMilestones() {
   klState.waddyDone  = klBuildingModules('waddy').every(m => klModuleIsDone(m.id));
   klState.garageDone = klBuildingModules('garage').every(m => klModuleIsDone(m.id));
 }
+// Per-thing UNLOCK: toggles a dev override that makes the station playable at its
+// home WITHOUT marking it done — so it stays fresh to test, and downstream gates
+// (which need it DONE) aren't falsely tripped. Persists so it survives reloads.
 window.klDevUnlock = function(id) {
   if (!klIsDevAvailable() || !klDevBecomeMatt()) return;
-  if (!klState.modDone) klState.modDone = {};
-  klState.modDone[id] = !klState.modDone[id]; // toggle done/undone
-  klDevSyncMilestones();
+  if (!klState.devUnlock) klState.devUnlock = {};
+  klState.devUnlock[id] = !klState.devUnlock[id];
   klSaveProgress();
-  klDevBar(); // refresh the tray so ✓ marks + milestone readout update in place
+  // Auto-refresh: if you're standing in a building, re-render it so the station
+  // tiles flip lock state live; otherwise just refresh the dev tray.
+  if (klState.devRoom && document.querySelector('.kl-station-grid')) klRenderInterior(klState.devRoom);
+  else klDevBar();
 };
+// Unlock everything (all stations playable) — does NOT complete them.
 window.klDevUnlockAll = function() {
+  if (!klIsDevAvailable() || !klDevBecomeMatt()) return;
+  if (!klState.devUnlock) klState.devUnlock = {};
+  KL_MODULE_DEFS.forEach(m => { klState.devUnlock[m.id] = true; });
+  klSaveProgress();
+  klRenderTown();
+};
+// Complete everything (mark DONE) — opens the Venue + grants both milestones.
+window.klDevCompleteAll = function() {
   if (!klIsDevAvailable() || !klDevBecomeMatt()) return;
   if (!klState.modDone) klState.modDone = {};
   KL_MODULE_DEFS.forEach(m => { klState.modDone[m.id] = true; });
   klDevSyncMilestones();
   klSaveProgress();
-  klRenderTown(); // clean view: every station open, Venue unlocked
+  klRenderTown();
 };
+// Reset all progression: clears dev unlocks, completions, and milestones.
 window.klDevLockAll = function() {
   if (!klIsDevAvailable() || !klDevBecomeMatt()) return;
-  klState.modDone = {};
+  klState.devUnlock = {}; klState.modDone = {};
   klState.waddyDone = false; klState.garageDone = false;
   klSaveProgress();
-  klRenderTown(); // back to a fresh ladder (only the trio open)
+  klRenderTown();
 };
 window.klDevPlayCut = function(key) {
   if (!klIsDevAvailable() || !klDevBecomeMatt()) return;
@@ -14676,8 +14707,9 @@ function klRenderBuildPuzzle(p) {
   const b = p.bdef;
   klState.buildOn = {};
   klState.buildSolved = false;
-  klState.buildSustain = false;
-  if (klState.buildSustainTimer) { clearInterval(klState.buildSustainTimer); klState.buildSustainTimer = null; }
+  klState.buildHold = false;
+  klState.buildSide = 'target';
+  klBuildDroneStop();
   // Rows = the full diatonic octave, highest pitch on top (like a keyboard standing up).
   const rows = [0, 1, 2, 3, 4, 5, 6, 7];
   let gridHtml = '<div class="kl-build-grid" id="kl-build-grid">';
@@ -14698,10 +14730,10 @@ function klRenderBuildPuzzle(p) {
     '<div class="kl-build-hint">' + b.hint + '</div>' +
     '<div class="kl-listen-row">' +
       '<button class="kl-listen" id="kl-build-target" onclick="klBuildPlay(\'target\')">🔊 TARGET<kbd class="kl-kbd">space</kbd></button>' +
-      '<button class="kl-mine" id="kl-build-yours" onclick="klBuildPlay(\'yours\')">🎧 YOURS<kbd class="kl-kbd">⌘/⌃ space</kbd></button>' +
+      '<button class="kl-mine" id="kl-build-yours" onclick="klBuildPlay(\'yours\')">🎧 YOURS<kbd class="kl-kbd">⌘ space</kbd></button>' +
     '</div>' +
     '<div class="kl-build-sustain-row">' +
-      '<button class="kl-build-sustain" id="kl-build-sustain" onclick="klBuildSustainToggle()" title="hold the chord ringing so you can build hands-free">🔁 SUSTAIN</button>' +
+      '<button class="kl-build-sustain" id="kl-build-hold" onclick="klBuildHoldToggle()" title="hold the chord ringing continuously — then click TARGET / YOURS to A/B between them seamlessly">🔁 HOLD</button>' +
     '</div>' +
     gridHtml +
     '<div class="kl-bandmate" id="kl-bandmate">&nbsp;</div>';
@@ -14714,21 +14746,33 @@ window.klBuildToggle = function(deg) {
   if (adding) klState.buildOn[deg] = true; else delete klState.buildOn[deg];
   const row = document.getElementById('kl-brow-' + deg);
   if (row) row.classList.toggle('on', adding);
-  // Audio feedback: in SUSTAIN mode, re-ring the whole updated chord so you hear
-  // the change live; otherwise just sound the single note you added.
-  if (klState.buildSustain) klBuildSustainTick();
-  else if (adding) klBuildTone(deg);
+  // While HOLDing YOURS, edit the live drone seamlessly (only the changed note
+  // fades in/out). Otherwise just sound the single note you added.
+  if (klState.buildHold && klState.buildSide === 'yours') {
+    klBuildDroneSet(Object.keys(klState.buildOn).map(Number));
+  } else if (adding) {
+    klBuildTone(deg);
+  }
   klBuildCheckMatch();
 };
 window.klBuildPlay = function(which) {
   const p = KL_PUZZLES[klState.puzzleIdx];
   if (!p || !p.bdef) return;
-  const ctx = getAudio();
   const degs = which === 'target' ? p.bdef.degrees.slice() : Object.keys(klState.buildOn).map(Number);
+  klState.buildSide = which;
   const tb = document.getElementById('kl-build-target'), yb = document.getElementById('kl-build-yours');
+  // HOLD mode: the buttons are the A/B switch — flip the continuous drone to this
+  // side. Shared notes keep ringing (no restrike); only the differences crossfade.
+  if (klState.buildHold) {
+    klBuildDroneSet(degs);
+    klBuildSideUI(which);
+    return;
+  }
+  // One-shot audition (HOLD off).
   if (tb) tb.classList.toggle('playing', which === 'target' && degs.length > 0);
   if (yb) yb.classList.toggle('playing', which === 'yours' && degs.length > 0);
   if (!degs.length) return; // nothing built yet — YOURS is silent
+  const ctx = getAudio();
   const t = ctx.currentTime + 0.05;
   degs.forEach(d => klBuildTone(d, t, 1.0, 0.24)); // play the whole chord together
   setTimeout(() => { if (tb) tb.classList.remove('playing'); if (yb) yb.classList.remove('playing'); }, 1000);
@@ -14740,7 +14784,7 @@ function klBuildCheckMatch() {
   if (have.length !== target.length || !target.every((d, i) => d === have[i])) return;
   // MATCH — instant solve, no CHECK. Green the stack, ring the finished chord, advance.
   klState.buildSolved = true;
-  if (klState.buildSustainTimer) { clearInterval(klState.buildSustainTimer); klState.buildSustainTimer = null; }
+  klBuildDroneStop();
   target.forEach(d => { const r = document.getElementById('kl-brow-' + d); if (r) { r.classList.remove('on'); r.classList.add('locked'); } });
   const ctx = getAudio();
   const t = ctx.currentTime + 0.05;
@@ -14748,32 +14792,71 @@ function klBuildCheckMatch() {
   klConfetti();
   setTimeout(() => klWin(), 760);
 }
-// SUSTAIN: hold the YOURS chord ringing (a gentle loop) so the kid can build and
-// compare hands-free instead of re-tapping. Self-terminates if you leave the
-// puzzle or solve it. Toggling a note re-rings the updated chord immediately.
-window.klBuildSustainToggle = function() {
-  klState.buildSustain = !klState.buildSustain;
-  const btn = document.getElementById('kl-build-sustain');
-  if (btn) btn.classList.toggle('on', klState.buildSustain);
-  if (klState.buildSustain) klBuildSustainTick();
-  else if (klState.buildSustainTimer) { clearInterval(klState.buildSustainTimer); klState.buildSustainTimer = null; }
+// HOLD: a true continuous drone (no loop, no restrike). Each chord tone is a
+// pair of detuned oscillators held open; switching sides (A/B) keeps notes COMMON
+// to both chords ringing untouched and only fades the differing ones — so flipping
+// TARGET↔YOURS is seamless. Self-stops via a watchdog if you leave the puzzle.
+let klBuildDrone = { voices: {}, bus: null, watchId: null };
+function klBuildDroneEnsure() {
+  const ctx = getAudio();
+  if (!klBuildDrone.bus) { klBuildDrone.bus = ctx.createGain(); klBuildDrone.bus.gain.value = 1; klBuildDrone.bus.connect(ctx.destination); }
+}
+function klBuildVoiceCreate(deg) {
+  const ctx = getAudio();
+  const f = midiFreq(KL_SCALE[deg]);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.15, ctx.currentTime + 0.06); // gentle attack — no click
+  const o1 = ctx.createOscillator(); o1.type = 'triangle'; o1.frequency.value = f;
+  const o2 = ctx.createOscillator(); o2.type = 'sine';     o2.frequency.value = f; o2.detune.value = 4;
+  o1.connect(g); o2.connect(g); g.connect(klBuildDrone.bus);
+  o1.start(); o2.start();
+  return { oscs: [o1, o2], gain: g };
+}
+function klBuildVoiceStop(v) {
+  const ctx = getAudio(); const now = ctx.currentTime;
+  try {
+    v.gain.gain.cancelScheduledValues(now);
+    v.gain.gain.setValueAtTime(Math.max(0.0001, v.gain.gain.value), now);
+    v.gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.09); // gentle release
+    v.oscs.forEach(o => o.stop(now + 0.11));
+  } catch (e) {}
+}
+function klBuildDroneSet(degrees) {
+  klBuildDroneEnsure();
+  const want = new Set(degrees);
+  Object.keys(klBuildDrone.voices).forEach(k => {
+    if (!want.has(+k)) { klBuildVoiceStop(klBuildDrone.voices[k]); delete klBuildDrone.voices[k]; }
+  });
+  degrees.forEach(d => { if (!klBuildDrone.voices[d]) klBuildDrone.voices[d] = klBuildVoiceCreate(d); });
+  if (klBuildDrone.watchId == null) {
+    klBuildDrone.watchId = setInterval(() => { if (!document.getElementById('kl-build-grid')) klBuildDroneStop(); }, 350);
+  }
+}
+function klBuildDroneStop() {
+  Object.keys(klBuildDrone.voices).forEach(k => klBuildVoiceStop(klBuildDrone.voices[k]));
+  klBuildDrone.voices = {};
+  if (klBuildDrone.watchId != null) { clearInterval(klBuildDrone.watchId); klBuildDrone.watchId = null; }
+}
+// HOLD toggle — when on, the active side rings continuously; the TARGET / YOURS
+// buttons act as the A/B switch (click or hotkey to jump, seamlessly).
+window.klBuildHoldToggle = function() {
+  klState.buildHold = !klState.buildHold;
+  const btn = document.getElementById('kl-build-hold');
+  if (btn) btn.classList.toggle('on', klState.buildHold);
+  if (klState.buildHold) {
+    if (!klState.buildSide) klState.buildSide = 'target';
+    klBuildPlay(klState.buildSide); // start the drone on the active side
+  } else {
+    klBuildDroneStop();
+    klBuildSideUI(null);
+  }
 };
-function klBuildSustainTick() {
-  if (klState.buildSustainTimer) { clearInterval(klState.buildSustainTimer); klState.buildSustainTimer = null; }
-  const play = () => {
-    // self-clean: stop if sustain turned off, solved, or the kid navigated away
-    if (!klState.buildSustain || klState.buildSolved || !document.getElementById('kl-build-grid')) {
-      if (klState.buildSustainTimer) { clearInterval(klState.buildSustainTimer); klState.buildSustainTimer = null; }
-      return;
-    }
-    const degs = Object.keys(klState.buildOn).map(Number);
-    if (!degs.length) return;
-    const ctx = getAudio();
-    const t = ctx.currentTime + 0.02;
-    degs.forEach(d => klBuildTone(d, t, 1.4, 0.20));
-  };
-  play();
-  klState.buildSustainTimer = setInterval(play, 1200);
+// Reflect which side is the live A/B selection (highlights the held button).
+function klBuildSideUI(side) {
+  const tb = document.getElementById('kl-build-target'), yb = document.getElementById('kl-build-yours');
+  if (tb) tb.classList.toggle('holding', klState.buildHold && side === 'target');
+  if (yb) yb.classList.toggle('holding', klState.buildHold && side === 'yours');
 }
 
 // ── RHYTHM TAP puzzle (performance: hear a rhythm, tap it back in time) ─────
@@ -14848,7 +14931,7 @@ function klRenderTapPuzzle(p) {
     '<div class="kl-build-hint">' + td.hint + ' — hear it, then tap it back</div>' +
     '<div class="kl-listen-row">' +
       '<button class="kl-listen" id="kl-tap-target" onclick="klTapPlay(\'target\')">🔊 TARGET<kbd class="kl-kbd">space</kbd></button>' +
-      '<button class="kl-mine" id="kl-tap-yours" onclick="klTapPlay(\'yours\')">🎧 YOURS<kbd class="kl-kbd">⌘/⌃ space</kbd></button>' +
+      '<button class="kl-mine" id="kl-tap-yours" onclick="klTapPlay(\'yours\')">🎧 YOURS<kbd class="kl-kbd">⌘ space</kbd></button>' +
     '</div>' +
     slots +
     '<button class="kl-tap-record" id="kl-tap-record" onclick="klTapRecord()">🎙 TAP IT BACK</button>' +
@@ -15366,7 +15449,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-43'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-45'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
@@ -16169,6 +16252,7 @@ window.klPlayAgain = function() {
 window.klExit = function() {
   klStopClock();
   klStopBeatBar();
+  if (typeof klBuildDroneStop === 'function') klBuildDroneStop();
   if (klDrumPlayheadRAF) { cancelAnimationFrame(klDrumPlayheadRAF); klDrumPlayheadRAF = null; }
   // === KANTEON TOWN — START ===
   klRenderTown(); // back to the hometown directory (the town's own ← leaves to player-select)
