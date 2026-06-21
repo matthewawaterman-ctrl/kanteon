@@ -368,6 +368,38 @@
   .carousel-item.mod-anatomy  { color: #7c6ff7; }
   .carousel-item.mod-studio   { color: var(--green); }
 
+  /* ── BOOK OF KNOWLEDGE — FLAT LIST ── */
+  .bok-screen { width: 100%; max-width: 560px; margin: 0 auto; padding: 2px 0 8px;
+    flex: 1 1 auto; min-height: 0; display: flex; }
+  .bok-list { display: flex; flex-direction: column; gap: 8px; width: 100%;
+    overflow-y: auto; padding: 2px 6px 2px 2px; }
+  .bok-row { display: flex; align-items: center; gap: 13px; width: 100%; text-align: left;
+    cursor: pointer; color: var(--gold);
+    background: rgba(255,255,255,0.045); border: 1px solid rgba(255,255,255,0.10);
+    border-left: 4px solid currentColor; border-radius: 13px; padding: 11px 14px;
+    transition: background 0.12s, transform 0.05s; }
+  .bok-row:hover { background: rgba(255,255,255,0.09); }
+  .bok-row:active { transform: scale(0.992); }
+  .bok-row-icon { font-size: 25px; line-height: 1; flex: 0 0 auto; width: 32px; text-align: center; }
+  .bok-row-text { display: flex; flex-direction: column; gap: 1px; flex: 1 1 auto; min-width: 0; }
+  .bok-row-name { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 19px;
+    letter-spacing: 0.6px; color: #fff; line-height: 1.08; }
+  .bok-row-desc { font-family: 'Barlow', sans-serif; font-size: 12px; letter-spacing: 0.4px;
+    line-height: 1.25; color: rgba(228,224,245,0.6); text-transform: uppercase; }
+  .bok-row-go { font-size: 12px; color: currentColor; opacity: 0.75; flex: 0 0 auto; }
+  .bok-row.bok-row-mix { background: rgba(240,192,64,0.10); border-color: rgba(240,192,64,0.28);
+    border-left-color: var(--gold); }
+  .bok-row.cat-mixtape  { color: var(--gold); }
+  .bok-row.mod-ear      { color: #7c6ff7; }
+  .bok-row.mod-listen   { color: var(--green); }
+  .bok-row.mod-build    { color: var(--cyan); }
+  .bok-row.mod-tx       { color: #7c6ff7; }
+  .bok-row.mod-rhythm   { color: var(--gold); }
+  .bok-row.mod-notation { color: var(--cyan); }
+  .bok-row.mod-theory   { color: var(--gold); }
+  .bok-row.mod-anatomy  { color: #7c6ff7; }
+  .bok-row.mod-studio   { color: var(--green); }
+
   /* Carousel controls + breadcrumb */
   .carousel-breadcrumb {
     text-align: center;
@@ -3714,8 +3746,8 @@
     font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 26px;
     letter-spacing: 2px; color: #fff; margin: 6px 0 2px;
   }
-  .kt-int-line { font-family: 'Barlow', sans-serif; font-size: 14.5px; color: rgba(235,228,255,0.85); margin: 10px 0; }
-  .kt-int-note { font-family: 'Barlow', sans-serif; font-size: 12px; color: rgba(220,210,255,0.55); margin: 6px 0; }
+  .kt-int-line { font-family: 'Barlow', sans-serif; font-size: 16.5px; line-height: 1.5; color: rgba(240,234,255,0.94); margin: 11px 0; }
+  .kt-int-note { font-family: 'Barlow', sans-serif; font-size: 14px; line-height: 1.45; color: rgba(228,220,255,0.78); margin: 8px 0; }
   .kt-int-btn { width: 100%; margin: 8px 0 2px; }
   .kt-int-row { display: flex; gap: 8px; justify-content: center; margin: 8px 0; flex-wrap: wrap; }
   .kt-int-sub {
@@ -3736,13 +3768,13 @@
     background: rgba(255,255,255,0.06); border-radius: 12px; padding: 8px 12px;
   }
   .kt-shop-item.owned { opacity: 0.6; }
-  .kt-shop-label { font-family: 'Barlow', sans-serif; font-size: 15px; color: #fff; }
-  .kt-shop-label i { font-style: normal; color: #9ff4d2; font-size: 12.5px; }
-  .kt-shop-own { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 12px; color: #8ef0c8; }
-  .kt-shop-extra { font-family: 'Barlow', sans-serif; font-size: 12.5px; color: rgba(255,221,140,0.95); }
+  .kt-shop-label { font-family: 'Barlow', sans-serif; font-size: 16px; color: #fff; }
+  .kt-shop-label i { font-style: normal; color: #9ff4d2; font-size: 13px; }
+  .kt-shop-own { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 13px; color: #8ef0c8; }
+  .kt-shop-extra { font-family: 'Barlow', sans-serif; font-size: 13.5px; color: rgba(255,221,140,0.95); }
   .kt-shop-divider {
-    font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 13.5px;
-    letter-spacing: 1.2px; color: rgba(232,224,255,0.82); margin: 14px 0 2px; text-align: left;
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 15px;
+    letter-spacing: 1.2px; color: rgba(236,229,255,0.88); margin: 15px 0 3px; text-align: left;
     text-transform: uppercase;
   }
   .kt-npc-line { font-size: 16px; font-style: italic; min-height: 44px; }
@@ -3804,8 +3836,8 @@
     padding: 7px 12px; margin: 4px 0; border-radius: 11px;
     background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
   }
-  .kt-song-title { font-family: 'Barlow', sans-serif; font-weight: 700; font-size: 14px; color: #fff; }
-  .kt-song-vibe { font-family: 'Barlow', sans-serif; font-size: 12px; color: rgba(252,211,77,0.85); white-space: nowrap; }
+  .kt-song-title { font-family: 'Barlow', sans-serif; font-weight: 700; font-size: 15.5px; color: #fff; }
+  .kt-song-vibe { font-family: 'Barlow', sans-serif; font-size: 13.5px; color: rgba(252,211,77,0.92); white-space: nowrap; }
   /* ── DEV SOUND PANEL ── */
   .kl-sndpanel {
     position: fixed; top: 12px; left: 12px; z-index: 1000;
@@ -4908,21 +4940,9 @@
     </div>
   </div>
 
-  <!-- 3D CAROUSEL HOME MENU -->
-  <div class="carousel-screen">
-    <button class="carousel-back-btn" id="carousel-back" onclick="carouselBack()" disabled>←</button>
-    <div class="carousel-breadcrumb" id="carousel-breadcrumb">
-      <span class="crumb-active">HOME</span>
-    </div>
-    <div class="carousel-stage">
-      <div class="carousel-track" id="carousel-track"></div>
-    </div>
-    <div class="carousel-description" id="carousel-description"></div>
-    <div class="carousel-arrows">
-      <button class="carousel-arrow" onclick="carouselRotate(-1)">◀</button>
-      <div class="carousel-dots" id="carousel-dots"></div>
-      <button class="carousel-arrow" onclick="carouselRotate(1)">▶</button>
-    </div>
+  <!-- BOOK OF KNOWLEDGE — FLAT MODULE LIST -->
+  <div class="bok-screen">
+    <div class="bok-list" id="bok-list"></div>
   </div>
 
   <div class="home-footer">
@@ -11592,126 +11612,30 @@ const carouselState = {
   animating: false
 };
 
+// BOOK OF KNOWLEDGE — flat list. Every module is one button; click launches it.
+// No carousel, no submenus. (Kept the name buildCarousel so existing callers work.)
 function buildCarousel() {
-  const items = CAROUSEL_DATA[carouselState.level] || [];
-  const track = document.getElementById('carousel-track');
-  if (!track) return;
-  track.innerHTML = '';
-  items.forEach((item, i) => {
-    const el = document.createElement('div');
-    el.className = 'carousel-item ' + item.cls;
-    el.dataset.index = i;
-    el.onclick = () => {
-      if (i === carouselState.index) {
-        carouselEnter();
-      } else {
-        carouselGoTo(i);
-      }
-    };
-    el.innerHTML =
-      '<div class="carousel-item-inner">' +
-        '<span class="ci-corner tl"></span>' +
-        '<span class="ci-corner tr"></span>' +
-        '<span class="ci-corner bl"></span>' +
-        '<span class="ci-corner br"></span>' +
-        '<div class="ci-icon-wrap">' + item.icon + '</div>' +
-        '<div>' +
-          '<div class="ci-name">' + item.name + '</div>' +
-          '<div class="ci-sub">' + item.sub + '</div>' +
-        '</div>' +
-      '</div>';
-    track.appendChild(el);
-  });
-  // Build dots
-  const dots = document.getElementById('carousel-dots');
-  dots.innerHTML = '';
-  items.forEach((_, i) => {
-    const d = document.createElement('div');
-    d.className = 'carousel-dot' + (i === carouselState.index ? ' active' : '');
-    d.onclick = () => carouselGoTo(i);
-    dots.appendChild(d);
-  });
-  // Breadcrumb
-  const crumb = document.getElementById('carousel-breadcrumb');
-  if (carouselState.level === 'home') {
-    crumb.innerHTML = '<span class="crumb-active">HOME</span>';
-  } else {
-    crumb.innerHTML =
-      '<span style="color:var(--text3);cursor:pointer" onclick="carouselBack()">HOME</span>' +
-      '<span class="crumb-sep">/</span>' +
-      '<span class="crumb-active">' + CAROUSEL_LABELS[carouselState.level] + '</span>';
-  }
-  // Back button enable/disable
-  const backBtn = document.getElementById('carousel-back');
-  if (backBtn) backBtn.disabled = (carouselState.level === 'home');
-
-  // Initial layout
-  layoutCarousel();
+  const list = document.getElementById('bok-list');
+  if (!list) return;
+  const flat = [CAROUSEL_DATA.home[0]]
+    .concat(CAROUSEL_DATA.play, CAROUSEL_DATA.read, CAROUSEL_DATA.study, CAROUSEL_DATA.tools);
+  list.innerHTML = flat.map(function(item) {
+    const isMix = item.action === 'mixtape';
+    const key = item.action.indexOf('mod:') === 0 ? item.action.split(':')[1] : '';
+    const onclick = isMix ? 'openMixtape()' : ("selectModule('" + key + "')");
+    return '<button class="bok-row ' + item.cls + (isMix ? ' bok-row-mix' : '') + '" onclick="' + onclick + '">' +
+        '<span class="bok-row-icon">' + item.icon + '</span>' +
+        '<span class="bok-row-text">' +
+          '<span class="bok-row-name">' + item.name + '</span>' +
+          '<span class="bok-row-desc">' + item.sub + '</span>' +
+        '</span>' +
+        '<span class="bok-row-go">▶</span>' +
+      '</button>';
+  }).join('');
 }
-
-function layoutCarousel() {
-  const items = document.querySelectorAll('#carousel-track .carousel-item');
-  const n = items.length;
-  if (n === 0) return;
-  items.forEach((el, i) => {
-    // Compute shortest signed offset (handles wrap-around)
-    let offset = i - carouselState.index;
-    if (offset > n / 2)  offset -= n;
-    if (offset < -n / 2) offset += n;
-    const absOff = Math.abs(offset);
-    let angle, x, z, opacity, cls;
-
-    if (absOff === 0) {
-      angle = 0; x = 0; z = 0; opacity = 1; cls = 'is-center';
-    } else if (absOff === 1) {
-      angle = offset > 0 ? -38 : 38;
-      x = offset > 0 ? 180 : -180;
-      z = -100;
-      opacity = 0.85;
-      cls = 'is-side';
-    } else if (absOff === 2) {
-      angle = offset > 0 ? -55 : 55;
-      x = offset > 0 ? 310 : -310;
-      z = -220;
-      opacity = 0.4;
-      cls = 'is-far';
-    } else {
-      // For larger sets, push out of view but still on the wrap-arc
-      angle = offset > 0 ? -60 : 60;
-      x = offset > 0 ? 420 : -420;
-      z = -340;
-      opacity = 0;
-      cls = 'is-far';
-    }
-    el.style.transform =
-      'translate3d(' + x + 'px, 0, ' + z + 'px) rotateY(' + angle + 'deg)';
-    el.style.opacity = opacity;
-    el.style.zIndex = 100 - absOff;
-    el.classList.remove('is-center', 'is-side', 'is-far');
-    el.classList.add(cls);
-  });
-  // Update dots
-  document.querySelectorAll('#carousel-dots .carousel-dot').forEach((d, i) => {
-    d.classList.toggle('active', i === carouselState.index);
-  });
-  // Update description — rendered as an open-book spread (title left, desc right).
-  const data = CAROUSEL_DATA[carouselState.level] || [];
-  const current = data[carouselState.index];
-  const descEl = document.getElementById('carousel-description');
-  if (descEl && current) {
-    descEl.innerHTML =
-      '<div class="bok-spread">' +
-        '<div class="bok-page bok-left">' +
-          '<div class="bok-icon">' + (current.icon || '📖') + '</div>' +
-          '<div class="bok-title">' + (current.name || '') + '</div>' +
-          (current.sub ? '<div class="bok-sub">' + current.sub + '</div>' : '') +
-        '</div>' +
-        '<div class="bok-seam"></div>' +
-        '<div class="bok-page bok-right"><div class="bok-desc">' + (current.desc || '') + '</div></div>' +
-      '</div>';
-  }
-}
-
+// Carousel nav is retired — these no-op now that the Book is a flat list. (Kept so
+// the old keyboard/swipe/Enter handlers can call them harmlessly.)
+function layoutCarousel() { return; }
 window.carouselRotate = function(dir) {
   const items = CAROUSEL_DATA[carouselState.level] || [];
   if (items.length === 0) return;
@@ -11727,6 +11651,7 @@ window.carouselGoTo = function(idx) {
 };
 
 window.carouselEnter = function() {
+  return; // retired: the Book is a flat list now; each button launches directly
   const items = CAROUSEL_DATA[carouselState.level] || [];
   const item = items[carouselState.index];
   if (!item) return;
@@ -12739,7 +12664,7 @@ function klRenderInterior(id) {
             '<button class="kt-int-sub" ' + (klState.money < rentOwed ? 'disabled' : '') + ' onclick="klPayRent()">Pay $' + rentOwed + '</button>' +
             (rentDaysLeft != null ? '<span class="kt-shop-extra">' + Math.max(0, rentDaysLeft) + ' day' + (rentDaysLeft === 1 ? '' : 's') + ' before eviction</span>' : '') +
           '</div>'
-        : '<div style="padding:4px 4px 6px;font-family:\'Barlow\',sans-serif;font-size:13.5px;color:rgba(232,224,255,0.85);">Paid up. Next rent on Day ' + nextRentDay + ' (' + klSeason(nextRentDay) + ').</div>');
+        : '<div style="padding:4px 4px 6px;font-family:\'Barlow\',sans-serif;font-size:15.5px;color:rgba(238,231,255,0.92);">Paid up. Next rent on Day ' + nextRentDay + ' (' + klSeason(nextRentDay) + ').</div>');
     body =
       '<p class="kt-int-line">Strings, amps, and the only van for sale in fifty miles.</p>' +
       '<div class="kt-shop-grid">' +
@@ -12785,7 +12710,7 @@ function klRenderInterior(id) {
             '<button class="kt-int-sub" ' + (klState.money < rentOwed ? 'disabled' : '') + ' onclick="klPayRent()">Pay $' + rentOwed + '</button>' +
             (rentDaysLeft != null ? '<span class="kt-shop-extra">' + Math.max(0, rentDaysLeft) + ' day' + (rentDaysLeft === 1 ? '' : 's') + ' before eviction</span>' : '') +
           '</div>'
-        : '<div style="padding:4px 4px 6px;font-family:\'Barlow\',sans-serif;font-size:13.5px;color:rgba(232,224,255,0.85);">Paid up. Next rent on Day ' + nextRentDay + ' (' + klSeason(nextRentDay) + ').</div>');
+        : '<div style="padding:4px 4px 6px;font-family:\'Barlow\',sans-serif;font-size:15.5px;color:rgba(238,231,255,0.92);">Paid up. Next rent on Day ' + nextRentDay + ' (' + klSeason(nextRentDay) + ').</div>');
     const songs = klState.songs || [];
     const catMult = klCatalogMult();
     const avg = songs.length ? Math.round(songs.reduce((a, sg) => a + (sg.score || 0), 0) / songs.length) : 0;
@@ -13621,10 +13546,12 @@ const KL_SONG_WEIGHT = 0.05; // a perfect (100) song = +5% to busk & show pay; a
 // Quality roll: mostly skill (your level sets the range), a bit of pure luck.
 function klSongRollScore() {
   const lvl = klLevel();
-  const lo = lvl * 5, hi = lvl * 10;
-  const levelRoll = Math.min(100, lo + Math.random() * (hi - lo));
-  const luckRoll = 1 + Math.random() * 99;
-  return Math.max(1, Math.min(100, Math.floor(levelRoll * 0.75 + luckRoll * 0.25)));
+  // Skill sets the base (level*5 … level*10). Luck is a MULTIPLIER that can drag a
+  // song down or, rarely, push it up — but it scales with skill, so a Lv.1 song
+  // lands in single digits no matter how lucky you get. Better players, better songs.
+  const skill = lvl * 5 + Math.random() * (lvl * 5);
+  const luck = 0.6 + Math.random() * 0.65; // 0.60 … 1.25
+  return Math.max(1, Math.min(100, Math.floor(skill * luck)));
 }
 function klSongTier(score) {
   if (score >= 76) return { label: 'Hit', emoji: '\U0001F31F' };
@@ -13672,10 +13599,10 @@ function klRenderSongwriter(step) {
     const score = klSongDraft.score, t = klSongTier(score);
     el.innerHTML = cardOpen +
       '<div style="font-family:\'Barlow Condensed\',sans-serif;font-weight:900;font-size:23px;letter-spacing:1px;">' + t.emoji + ' YOU WROTE A ' + t.label.toUpperCase() + '!</div>' +
-      '<div style="font-size:13.5px;opacity:0.78;margin-bottom:14px;">Quality is mostly your skill, with a little luck.</div>' +
-      '<div style="display:flex;justify-content:space-between;font-weight:800;font-size:14px;margin-bottom:4px;"><span>Quality</span><span style="color:#fcd34d;">' + score + '/100</span></div>' +
+      '<div style="font-size:15px;opacity:0.9;margin-bottom:16px;">Quality is mostly your skill, with a little luck.</div>' +
+      '<div style="display:flex;justify-content:space-between;font-weight:800;font-size:16px;margin-bottom:5px;"><span>Quality</span><span style="color:#fcd34d;">' + score + '/100</span></div>' +
       '<div style="height:12px;border-radius:99px;background:rgba(255,255,255,0.12);overflow:hidden;margin-bottom:14px;"><div style="height:100%;width:' + score + '%;border-radius:99px;background:linear-gradient(90deg,#f59e0b,#fcd34d);"></div></div>' +
-      '<div style="font-size:12.5px;opacity:0.7;margin-bottom:6px;">NAME YOUR SONG</div>' +
+      '<div style="font-size:14px;opacity:0.82;margin-bottom:7px;letter-spacing:0.5px;">NAME YOUR SONG</div>' +
       '<input id="kl-song-name" type="text" maxlength="40" placeholder="Name your song\u2026" style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:12px;border:1.5px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.3);color:#fff;font-family:\'Barlow\',sans-serif;font-size:16px;margin-bottom:14px;" />' +
       '<button onclick="klSongSave()" style="width:100%;padding:12px;border-radius:12px;border:none;background:linear-gradient(180deg,#a78bfa,#7c4ddb);color:#fff;font-weight:900;font-size:15px;cursor:pointer;">\U0001F4BE Save to Song Bank</button>' +
     '</div>';
@@ -13686,7 +13613,7 @@ function klRenderSongwriter(step) {
   const lvl = klLevel();
   el.innerHTML = cardOpen +
     '<div style="font-family:\'Barlow Condensed\',sans-serif;font-weight:900;font-size:23px;letter-spacing:1px;">\u270D\uFE0F WRITE A SONG</div>' +
-    '<div style="font-size:14px;opacity:0.82;margin:8px 0 16px;line-height:1.45;">Lay down a new track for your Song Bank. Takes one day. The song\u2019s quality is mostly your skill (you\u2019re <b>Lv.' + lvl + '</b>) with a bit of luck \u2014 better musicians write better songs. You\u2019ll get to name it once it\u2019s done.</div>' +
+    '<div style="font-size:16px;opacity:0.92;margin:10px 0 18px;line-height:1.5;">Lay down a new track for your Song Bank. Takes one day. The song\u2019s quality is mostly your skill (you\u2019re <b>Lv.' + lvl + '</b>) with a bit of luck \u2014 better musicians write better songs. You\u2019ll get to name it once it\u2019s done.</div>' +
     '<div style="display:flex;gap:10px;">' +
       '<button onclick="klSongCancel()" style="flex:1;padding:11px;border-radius:12px;border:1px solid rgba(255,255,255,0.18);background:transparent;color:#fff;font-weight:700;font-size:14px;cursor:pointer;">Cancel</button>' +
       '<button onclick="klSongWrite()" style="flex:2;padding:11px;border-radius:12px;border:none;background:linear-gradient(180deg,#a78bfa,#7c4ddb);color:#fff;font-weight:900;font-size:15px;cursor:pointer;">Write it \u00B7 1 day</button>' +
@@ -16480,7 +16407,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-70'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-72'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
