@@ -3557,7 +3557,7 @@
     transition: background 0.15s;
   }
   .kl-tools-link:hover { background: rgba(0,0,0,0.42); }
-  .kl-build-stamp { margin-top: 10px; font-family: 'VT323', monospace; font-size: 13px; color: rgba(255,255,255,0.3); letter-spacing: 1px; }
+  .kl-build-stamp { margin-top: 10px; font-family: 'VT323', monospace; font-size: 22px; color: rgba(255,255,255,0.55); letter-spacing: 2px; }
   .kl-bt-note {
     max-width: 360px; margin: 16px auto 2px; padding: 9px 14px;    background: rgba(250,204,21,0.1); border: 1px solid rgba(250,204,21,0.42);
     border-radius: 12px; color: #fde68a;
@@ -4192,7 +4192,6 @@
     cursor: pointer; position: relative;
     transition: transform 0.1s, background 0.15s;
     display: flex; align-items: center; justify-content: center;
-    min-height: 56px;
     -webkit-tap-highlight-color: transparent;
     outline: none;
   }
@@ -4377,6 +4376,7 @@
   .kl-build-row:active { transform: scale(0.985); }
   .kl-build-step { font-weight: 900; font-size: 20px; min-width: 22px; color: #facc15; }
   .kl-build-note { font-weight: 700; font-size: 15px; opacity: 0.65; }
+  .kl-build-key { margin-left: auto; opacity: 0.4; font-size: 11px; }
   .kl-build-row.on {
     background: linear-gradient(90deg, rgba(167,139,250,0.5), rgba(96,165,250,0.4));
     border-color: #a78bfa; box-shadow: 0 0 16px rgba(167,139,250,0.4);
@@ -12000,7 +12000,8 @@ function klRenderTown() {
   document.getElementById('kidlab').classList.remove('kl-playing');
   klStopClock(); klStopBeatBar();
   klState.activeSet = null;
-  if (klCheckRent()) return; // rent came due — auto-paid, or overdue/evicted (eviction takes the screen)
+  if (klCheckRent()) return; // rent came due — notified, or overdue/evicted (eviction takes the screen)
+  klExpirePromo();           // clear any promotion whose run has ended
   const wrap = document.getElementById('kl-wrap');
   const showHint = klState.bookedDay
     ? (klState.day >= klState.bookedDay ? '🎤 SHOW NIGHT — get to the venue!' : '🎤 show booked · day ' + klState.bookedDay)
@@ -12016,10 +12017,10 @@ function klRenderTown() {
           '<span class="kt-hustle-lbl">Busk</span>' +
           '<span class="kt-hustle-sub">' + (klBuskDayMult() >= 1.3 ? 'big crowd today!' : klBuskDayMult() < 0.8 ? 'slow day · 1 day' : 'tips · 1 day') + '</span>' +
         '</button>' +
-        '<button class="kt-hustle-btn job" onclick="klDayJob()">' +
+        '<button class="kt-hustle-btn job" onclick="klOpenWorkPlan()">' +
           '<span class="kt-hustle-emoji">💼</span>' +
           '<span class="kt-hustle-lbl">Day Job</span>' +
-          '<span class="kt-hustle-sub">steady · 1 day</span>' +
+          '<span class="kt-hustle-sub">$' + KL_DAYJOB_PAY + '/day · pick days</span>' +
         '</button>' +
       '</div>' +
       '<button class="kl-back kt-town-back" onclick="klLeaveTown()" title="Leave">←</button>' +
@@ -12047,8 +12048,8 @@ function klSetRanges() { return { waddy: [0, 12], garage: [13, KL_STORY_END] }; 
 // EXISTING puzzles by type+tier — the puzzle array never moves, so saves survive.
 const KL_MODULE_DEFS = [
   { id: 'waddy:drums',   building: 'waddy',  obj: '🥁', name: 'DRUMS',  desc: 'Lay down the beat.',        indices: [0, 1, 8] },
-  { id: 'waddy:bass',    building: 'waddy',  obj: '🎸', name: 'BASS',   desc: 'Find the low end.',         indices: [2, 9] },
-  { id: 'waddy:melody',  building: 'waddy',  obj: '🎹', name: 'MELODY', desc: 'Play the tune by ear.',     indices: [3, 4, 5, 6, 7, 10, 11, 12] },
+  { id: 'waddy:bass',    building: 'waddy',  obj: '🎸', name: 'BASS',   desc: 'Find the low end.',         indices: [2, 9], requires: ['waddy:drums'] },
+  { id: 'waddy:melody',  building: 'waddy',  obj: '🎹', name: 'MELODY', desc: 'Play the tune by ear.',     indices: [3, 4, 5, 6, 7, 10, 11, 12], requires: ['waddy:bass'] },
   { id: 'garage:jam', building: 'garage', obj: '🎸', name: 'JAM SESSION', desc: 'Put it all together — the advanced set.', indices: [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], requires: ['waddy:drums', 'waddy:bass', 'waddy:melody'] },
 ];
 function klModuleDef(id) { return KL_MODULE_DEFS.find(m => m.id === id) || null; }
@@ -12058,6 +12059,9 @@ function klBuildingModules(building) { return KL_MODULE_DEFS.filter(m => m.build
 // finished station must never render as locked at its own home.)
 function klModuleUnlocked(mod) {
   if (klModuleIsDone(mod.id)) return true;
+  // THE GARAGE is a single gate: nothing inside opens until EVERY station at
+  // Sweet Waddy's is cleared — then all garage modules unlock together.
+  if (mod.building === 'garage') return klBuildingModules('waddy').every(w => klModuleIsDone(w.id));
   if (!mod.requires) return true;
   const reqs = Array.isArray(mod.requires) ? mod.requires : [mod.requires];
   return reqs.every(r => klModuleIsDone(r));
@@ -12070,6 +12074,10 @@ function klJoinAnd(arr) {
 // Friendly "Clear X & Y to unlock." text from a module's unmet prerequisites,
 // naming the building when a prerequisite lives somewhere else.
 function klModuleLockReason(mod) {
+  if (mod.building === 'garage') {
+    const left = klBuildingModules('waddy').filter(w => !klModuleIsDone(w.id)).length;
+    return left ? 'Finish every station at Sweet Waddy\u2019s to open the Garage.' : '';
+  }
   const reqs = Array.isArray(mod.requires) ? mod.requires : (mod.requires ? [mod.requires] : []);
   const blab = { waddy: 'Sweet Waddy\u2019s', garage: 'the Garage' };
   const unmet = reqs.filter(r => !klModuleIsDone(r)).map(r => {
@@ -12160,8 +12168,13 @@ window.klEnterModule = function(moduleId, force) {
   if (!force && !klModuleUnlocked(mod)) { klToast('🔒 ' + klModuleLockReason(mod)); return; }
   klState.activeSet = mod.building;
   klState.activeModule = moduleId;
-  klState.puzzleIdx = mod.indices[0];
-  klRebuildLayersFor(mod.indices[0]);
+  // Resume where you left off: jump to the first puzzle in this module you haven't
+  // solved yet. If you've cleared them all, land on the last one (replay).
+  const solvedList = klState.solved || [];
+  const firstUnsolved = mod.indices.find(i => !solvedList.includes(i));
+  const resumeIdx = (firstUnsolved !== undefined) ? firstUnsolved : mod.indices[mod.indices.length - 1];
+  klState.puzzleIdx = resumeIdx;
+  klRebuildLayersFor(resumeIdx);
   // First time into the drum basics: find the KICK + SNARE together (one beat).
   // The HI-HAT discovery is NOT here — it fires from klWin AFTER the first
   // kick+snare level is cleared, right before the hi-hat level (puzzle index 1).
@@ -12219,6 +12232,7 @@ function klSetComplete(setId) {
 // with no gear, but scales hard with day-of-week (Fri/Sat peak), gear, and level
 // — so it becomes the upside play once you've built yourself up. Grounded in real
 // busker economics (beginners ~$10–30, pros on prime days $100s).
+const KL_DAYJOB_PAY = 120; // flat wage per day worked — steady, no luck, no scaling
 window.klBusk = function() {
   const base = 10 + Math.floor(Math.random() * 17);   // $10–26 raw
   const dayMult = klBuskDayMult();                      // Fri/Sat peak, Mon floor
@@ -12232,13 +12246,81 @@ window.klBusk = function() {
   klRenderTown();
 };
 window.klDayJob = function() {
-  const pay = 80 + Math.floor(Math.random() * 16); // flat $80–95, no level scaling — it's a crap job
+  const pay = KL_DAYJOB_PAY;
   klState.day++;
   klState.money += pay;
   klSaveProgress();
   klToast('💼 Clocked a shift — steady $' + pay + '  ·  now Day ' + klState.day + ' (' + klDayName() + ')');
   klRenderTown();
 };
+
+// ── MULTI-DAY WORK PLANNER ──────────────────────────────────────────────────
+// "Go to work" opens a planner: pick how many days to clock in a row, see the
+// start→end dates on a mini calendar and the total pay, then confirm. Flat
+// $120/day, so total is simply days × wage.
+let klWorkPlanN = 1;
+window.klOpenWorkPlan = function() { klWorkPlanN = 1; klRenderWorkPlan(); };
+window.klWorkPlanAdjust = function(delta) { klWorkPlanN = Math.max(1, Math.min(14, klWorkPlanN + delta)); klRenderWorkPlan(); };
+window.klWorkPlanCancel = function() { const el = document.getElementById('kt-workplan'); if (el) el.remove(); };
+window.klWorkPlanConfirm = function() { const n = klWorkPlanN; const el = document.getElementById('kt-workplan'); if (el) el.remove(); klWorkDays(n); };
+function klWorkDays(n) {
+  const pay = KL_DAYJOB_PAY * n;
+  klState.day += n;
+  klState.money += pay;
+  klSaveProgress();
+  klToast('💼 Worked ' + n + ' day' + (n > 1 ? 's' : '') + ' — earned $' + pay + '  ·  now Day ' + klState.day + ' (' + klDayName() + ' · ' + klSeasonLabel() + ')');
+  klRenderTown();
+}
+function klRenderWorkPlan() {
+  const old = document.getElementById('kt-workplan'); if (old) old.remove();
+  const n = klWorkPlanN;
+  const startDay = klState.day;
+  const endDay = klState.day + n - 1;          // last day you actually work
+  const wakeDay = klState.day + n;             // the day you wake up after the stretch
+  const total = KL_DAYJOB_PAY * n;
+  // Mini calendar strip of the days you'd work.
+  let strip = '';
+  for (let i = 0; i < n; i++) {
+    const d = startDay + i;
+    const wknd = klIsWeekend(d);
+    strip += '<div style="flex:0 0 auto;min-width:42px;text-align:center;padding:5px 6px;border-radius:9px;background:' +
+      (wknd ? 'rgba(125,211,252,0.18)' : 'rgba(255,255,255,0.06)') + ';border:1px solid rgba(255,255,255,0.1);">' +
+      '<div style="font-size:10px;opacity:0.65;">' + klDayName(d) + '</div>' +
+      '<div style="font-weight:800;font-size:13px;">' + klSeason(d).slice(0,2) + ' ' + klDayOfMonth(d) + '</div>' +
+      '</div>';
+  }
+  // Rent heads-up if the stretch crosses into / past a due date.
+  let rentNote = '';
+  const owed = klRentOwed();
+  if (owed > 0 && wakeDay > klRentEvictDay()) {
+    rentNote = '<div style="margin-top:8px;color:#fca5a5;font-size:12px;font-weight:700;">⚠️ Rent ($' + owed + ') comes due — you\u2019d be evicted on Day ' + klRentEvictDay() + ' before this ends. Pay rent first.</div>';
+  } else if (klRentDueCount(wakeDay) > klState.rentPaidCount && klRentDueCount(wakeDay) > klRentDueCount(startDay)) {
+    rentNote = '<div style="margin-top:8px;color:#ffd97a;font-size:12px;">🏠 Heads up: rent comes due during this stretch — settle it after.</div>';
+  }
+  const el = document.createElement('div');
+  el.id = 'kt-workplan';
+  el.style.cssText = 'position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(8,6,24,0.78);backdrop-filter:blur(3px);';
+  el.innerHTML =
+    '<div style="width:min(380px,90vw);background:linear-gradient(180deg,#1b1640,#15102e);border:1px solid rgba(140,120,255,0.4);border-radius:20px;padding:18px 18px 16px;box-shadow:0 18px 40px rgba(0,0,0,0.5);font-family:\'Barlow\',sans-serif;color:#fff;">' +
+      '<div style="font-family:\'Barlow Condensed\',sans-serif;font-weight:900;font-size:22px;letter-spacing:1px;">💼 DAY JOB</div>' +
+      '<div style="font-size:13px;opacity:0.75;margin-bottom:12px;">$' + KL_DAYJOB_PAY + ' a day. How many days in a row?</div>' +
+      '<div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:12px;">' +
+        '<button onclick="klWorkPlanAdjust(-1)" style="width:42px;height:42px;border-radius:12px;border:none;background:rgba(255,255,255,0.1);color:#fff;font-size:24px;font-weight:800;cursor:pointer;">−</button>' +
+        '<div style="min-width:70px;text-align:center;"><div style="font-size:34px;font-weight:900;line-height:1;">' + n + '</div><div style="font-size:11px;opacity:0.6;">day' + (n > 1 ? 's' : '') + '</div></div>' +
+        '<button onclick="klWorkPlanAdjust(1)" style="width:42px;height:42px;border-radius:12px;border:none;background:rgba(255,255,255,0.1);color:#fff;font-size:24px;font-weight:800;cursor:pointer;">+</button>' +
+      '</div>' +
+      '<div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px;">' + strip + '</div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:2px;"><span style="opacity:0.7;">Start</span><span style="font-weight:700;">Day ' + startDay + ' · ' + klSeasonLabel(startDay) + '</span></div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:13px;"><span style="opacity:0.7;">Back home</span><span style="font-weight:700;">Day ' + wakeDay + ' · ' + klSeasonLabel(wakeDay) + '</span></div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:17px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.12);"><span>You\u2019ll earn</span><span style="font-weight:900;color:#7ad98a;">$' + total + '</span></div>' +
+      rentNote +
+      '<div style="display:flex;gap:10px;margin-top:14px;">' +
+        '<button onclick="klWorkPlanCancel()" style="flex:1;padding:11px;border-radius:12px;border:1px solid rgba(255,255,255,0.18);background:transparent;color:#fff;font-weight:700;font-size:14px;cursor:pointer;">Cancel</button>' +
+        '<button onclick="klWorkPlanConfirm()" style="flex:2;padding:11px;border-radius:12px;border:none;background:linear-gradient(180deg,#7ad98a,#4fae63);color:#0b2415;font-weight:900;font-size:15px;cursor:pointer;">Work ' + n + ' day' + (n > 1 ? 's' : '') + ' → $' + total + '</button>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('kidlab').appendChild(el);
+}
 // === PASSIVE INCOME — END ===
 
 // Lightweight toast over the town.
@@ -12453,19 +12535,23 @@ let klTalkIdx = 0;
 // figure bobs gently behind the counter; eyes blink. Sits over the shop scene.
 const KL_SHOPKEEP_SVG =
 '<svg viewBox="0 0 220 270" class="kt-keeper-svg" xmlns="http://www.w3.org/2000/svg">' +
-  '<defs><linearGradient id="kkVest" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7a5cf5"/><stop offset="1" stop-color="#4a32b8"/></linearGradient></defs>' +
+  '<defs><linearGradient id="kkJacket" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2b2b33"/><stop offset="1" stop-color="#141418"/></linearGradient><linearGradient id="kkVest" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7a1f2b"/><stop offset="1" stop-color="#4a1019"/></linearGradient></defs>' +
   '<g class="kt-keeper-fig">' +
-    '<path d="M40,252 Q40,150 110,150 Q180,150 180,252 Z" fill="#e8e2d6"/>' +          // shirt
-    '<path d="M68,252 Q68,158 110,153 Q152,158 152,252 Z" fill="url(#kkVest)"/>' +     // vest
-    '<path d="M98,156 L110,178 L122,156 Z" fill="#fff"/>' +                            // collar
-    '<path d="M104,168 L94,162 L94,178 Z" fill="#c0392b"/><path d="M116,168 L126,162 L126,178 Z" fill="#c0392b"/><circle cx="110" cy="170" r="4" fill="#8e2a20"/>' + // bow tie
+    '<path d="M40,252 Q40,150 110,150 Q180,150 180,252 Z" fill="url(#kkJacket)"/>' +      // leather jacket
+    '<path d="M68,252 Q68,158 110,153 Q152,158 152,252 Z" fill="url(#kkVest)"/>' +     // band tee
+    '<path d="M92,154 L110,150 L110,200 Z" fill="#15151a"/><path d="M128,154 L110,150 L110,200 Z" fill="#1d1d23"/>' + // open jacket lapels
+    '<path d="M101,152 L110,176 L119,152 Z" fill="#0e0e12"/>' +                          // tee V-neck
+    '<line x1="110" y1="153" x2="110" y2="188" stroke="#c8c8d0" stroke-width="2"/><path d="M104,186 L116,186 L113,198 Q110,202 107,198 Z" fill="#d6d6de"/><circle cx="110" cy="191" r="2.4" fill="#2a2a30"/>' + // chain + guitar-pick pendant
     '<rect x="100" y="130" width="20" height="24" rx="6" fill="#e3b58f"/>' +           // neck
     '<circle cx="64" cy="96" r="9" fill="#e3b58f"/><circle cx="156" cy="96" r="9" fill="#e3b58f"/>' + // ears
     '<circle cx="110" cy="94" r="46" fill="#f0c39d"/>' +                              // head
-    '<path d="M64,82 Q66,46 110,44 Q154,46 156,82 Q140,60 110,60 Q80,60 64,82 Z" fill="#5a3a22"/>' + // hair top
-    '<path d="M64,98 Q58,74 70,62 L74,94 Z" fill="#5a3a22"/><path d="M156,98 Q162,74 150,62 L146,94 Z" fill="#5a3a22"/>' + // hair sides
-    '<rect x="80" y="82" width="22" height="5" rx="2.5" fill="#5a3a22"/><rect x="118" y="82" width="22" height="5" rx="2.5" fill="#5a3a22"/>' + // brows
+    '<path d="M64,82 Q66,46 110,44 Q154,46 156,82 Q140,60 110,60 Q80,60 64,82 Z" fill="#3a2a40"/>' + // hair top (dark)
+    '<path d="M72,52 L80,30 L88,52 Z M92,48 L100,24 L108,50 Z M112,50 L120,24 L128,48 Z M132,52 L140,30 L146,54 Z" fill="#3a2a40"/>' + // spikes
+    '<circle cx="62" cy="106" r="3.4" fill="none" stroke="#d9b44a" stroke-width="2.4"/>' + // gold hoop earring
+    '<path d="M64,98 Q58,74 70,62 L74,94 Z" fill="#3a2a40"/><path d="M156,98 Q162,74 150,62 L146,94 Z" fill="#3a2a40"/>' + // hair sides
+    '<rect x="80" y="82" width="22" height="5" rx="2.5" fill="#3a2a40"/><rect x="118" y="82" width="22" height="5" rx="2.5" fill="#3a2a40"/>' + // brows
     '<g class="kt-keeper-eyes"><circle cx="91" cy="98" r="5.5" fill="#2a1c14"/><circle cx="129" cy="98" r="5.5" fill="#2a1c14"/></g>' + // eyes (blink)
+    '<g><rect x="78" y="91" width="26" height="15" rx="5" fill="#0c0c10"/><rect x="116" y="91" width="26" height="15" rx="5" fill="#0c0c10"/><rect x="104" y="96" width="12" height="3" fill="#0c0c10"/><rect x="82" y="94" width="8" height="3" rx="1.5" fill="rgba(255,255,255,0.25)"/></g>' + // sunglasses
     '<path d="M110,100 L103,114 Q110,118 117,114 Z" fill="#e0a87e"/>' +                // nose
     '<path d="M82,122 Q110,114 138,122 Q124,134 110,128 Q96,134 82,122 Z" fill="#5a3a22"/>' + // mustache
     '<path d="M96,133 Q110,145 124,133" fill="none" stroke="#8a5a3a" stroke-width="3" stroke-linecap="round"/>' + // smile
@@ -12592,7 +12678,7 @@ function klRenderInterior(id) {
       '<div class="kt-shop-divider">RENT · $' + KL_RENT + ' on the 1st of each ' + KL_MONTH_LEN + '-day season</div>' +
       (rentOwed > 0
         ? '<div class="kt-shop-item" style="border-color:rgba(220,38,38,0.6);">' +
-            '<span class="kt-shop-label">🏠 Rent due' + (klState.rentLate ? ' <i style="color:#fca5a5;">(late +$' + KL_RENT_LATEFEE + ')</i>' : '') + '</span>' +
+            '<span class="kt-shop-label">🏠 Rent due</span>' +
             '<button class="kt-int-sub" ' + (klState.money < rentOwed ? 'disabled' : '') + ' onclick="klPayRent()">Pay $' + rentOwed + '</button>' +
             (rentDaysLeft != null ? '<span class="kt-shop-extra">' + Math.max(0, rentDaysLeft) + ' day' + (rentDaysLeft === 1 ? '' : 's') + ' before eviction</span>' : '') +
           '</div>'
@@ -12686,7 +12772,7 @@ window.klPayFine = function(fine) {
   klState.money -= fine;
   klState.bookedDay = null;
   klState.bookedDaysOut = 0;
-  klState.promo = { flyers: 0, ads: 0, radio: 0 };
+  klState.promo = { flyers: 0, ads: 0, radio: 0 }; klState.promoExp = { flyers: 0, ads: 0, radio: 0 };
   klSaveProgress();
   klToast('💸 Paid the $' + fine + ' kill fee. "Don\u2019t do it again."');
   klRenderInterior('venue');
@@ -12698,24 +12784,42 @@ window.klSkipToShow = function() {
 };
 
 // ── THE SHOW: a timed, failable performance of 3 songs you've learned ──
-const klShow = { active: false, songs: [], i: 0, strikes: 0, timerId: null, deadline: 0 };
+const klShow = { active: false, songs: [], i: 0, strikes: 0, timerId: null, deadline: 0, backing: { drums: null, bass: null } };
 
 window.klStartShow = function() {
-  // Set list = 3 fresh SHOW-NIGHT songs (never the practice puzzles). Picked at
-  // random from the dedicated setlist so each show feels different.
-  const pool = [];
-  for (let i = KL_SHOW_START; i <= KL_SHOW_END; i++) pool.push(i);
-  const songs = [];
-  while (songs.length < 3 && pool.length) {
-    songs.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  // Set list = 3 SHOW-NIGHT songs that BUILD A BAND in layers, mirroring the
+  // practice arc: song 1 lays the DRUMS, song 2 adds BASS over that beat, song 3
+  // tops it with a MELODY over drums+bass. We pick one random song from each
+  // category (in that order) so the layered arc is guaranteed but the set still
+  // varies night to night.
+  const drumsSongs = [], bassSongs = [], melodySongs = [];
+  for (let i = KL_SHOW_START; i <= KL_SHOW_END; i++) {
+    const p = KL_PUZZLES[i];
+    if (p.type === 'drums') drumsSongs.push(i);
+    else if (p.type === 'bass') bassSongs.push(i);
+    else melodySongs.push(i);
   }
-  while (songs.length < 3) songs.push(songs[songs.length - 1] || KL_SHOW_START);
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  const all = []; for (let i = KL_SHOW_START; i <= KL_SHOW_END; i++) all.push(i);
+  const songs = [
+    drumsSongs.length ? pick(drumsSongs) : pick(all),
+    bassSongs.length ? pick(bassSongs) : pick(all),
+    melodySongs.length ? pick(melodySongs) : pick(all),
+  ];
   klShow.active = true; klShow.songs = songs; klShow.i = 0; klShow.strikes = 0;
+  klShow.backing = { drums: null, bass: null }; // fills in as each layer is cleared
   klShowNextSong();
 };
+// Apply the accumulated band (cleared layers) so the next song plays OVER them.
+function klShowApplyBacking() {
+  klResetLayers();
+  klState.band = [];
+  if (klShow.backing.drums) { klActivateDrumVoices(['kick','snare','hat']); klState.band.push('drums'); }
+  if (klShow.backing.bass)  { klActivateLayer('bass'); klState.band.push('bass'); }
+}
 function klShowNextSong() {
   klState.puzzleIdx = klShow.songs[klShow.i];
-  klRebuildLayersFor(klState.puzzleIdx);
+  klShowApplyBacking(); // layers from songs already cleared tonight play underneath
   klRenderPuzzle();
   klShowHUD();
   // 60 seconds per song. Running out = a strike.
@@ -12730,9 +12834,11 @@ function klShowNextSong() {
 }
 function klShowHUD() {
   const old = document.getElementById('kt-show-hud'); if (old) old.remove();
+  const cur = KL_PUZZLES[klShow.songs[klShow.i]];
+  const layerTag = cur ? (cur.type === 'drums' ? '🥁 LAY THE BEAT' : cur.type === 'bass' ? '🎸 ADD THE BASS' : '🎶 TOP IT OFF') : '';
   const el = document.createElement('div');
   el.id = 'kt-show-hud'; el.className = 'kt-show-hud';
-  el.innerHTML = '🎤 SONG ' + (klShow.i + 1) + '/3 · ' +
+  el.innerHTML = '🎤 SONG ' + (klShow.i + 1) + '/3 · ' + (layerTag ? layerTag + ' · ' : '') +
     '❌'.repeat(klShow.strikes) + '<span id="kt-show-clock">60s</span>';
   document.getElementById('kidlab').appendChild(el);
 }
@@ -12748,7 +12854,7 @@ window.klShowStrike = function(msg) {
   if (klShow.strikes >= 2) {
     klShowCleanup();
     klState.bookedDay = null;
-    klState.promo = { flyers: 0, ads: 0, radio: 0 };
+    klState.promo = { flyers: 0, ads: 0, radio: 0 }; klState.promoExp = { flyers: 0, ads: 0, radio: 0 };
     klState.day++;
     klState.money += 40; // pity pay
     klSaveProgress();
@@ -12760,6 +12866,14 @@ window.klShowStrike = function(msg) {
 };
 function klShowSongClear() {
   clearInterval(klShow.timerId);
+  // Lock the layer the kid just nailed into the band, so it keeps grooving under
+  // the rest of the set (drums → +bass → +melody).
+  const cleared = KL_PUZZLES[klShow.songs[klShow.i]];
+  if (cleared) {
+    if (cleared.type === 'drums' && cleared.drums) klShow.backing.drums = cleared.drums;
+    else if (cleared.type === 'bass' && cleared.notes) klShow.backing.bass = cleared.notes;
+    // melody is the top line — heard fresh each show, never baked into the backing
+  }
   klShow.i++;
   if (klShow.i < 3) { klShowNextSong(); return; }
   // SHOW COMPLETE — payout = base × Hype × Gear × Level × Day-of-week.
@@ -12782,7 +12896,7 @@ function klShowSongClear() {
   if (klGearCount() > 0) klState.gearCondition = Math.max(0, klState.gearCondition - 15);
   klState.bookedDay = null;
   klState.bookedDaysOut = 0;
-  klState.promo = { flyers: 0, ads: 0, radio: 0 };
+  klState.promo = { flyers: 0, ads: 0, radio: 0 }; klState.promoExp = { flyers: 0, ads: 0, radio: 0 };
   klState.day++;
   klState.xp = (klState.xp || 0) + xpGain; // a clean show is worth real XP
   klSaveProgress();
@@ -12881,9 +12995,11 @@ window.klRepairGear = function() {
 };
 window.klBuy = function(key, price) {
   if (klState.money < price) { klToast('💸 Not enough cash.'); return; }
-  if (key === 'flyers') { if (klState.promo.flyers >= 3) { klToast('Town\u2019s plastered already.'); return; } klState.promo.flyers++; }
-  else if (key === 'ads') { if (klState.promo.ads >= 1) { klToast('Already running.'); return; } klState.promo.ads = 1; }
-  else if (key === 'radio') { if (klState.promo.radio >= 1) { klToast('Already on air.'); return; } klState.promo.radio = 1; }
+  if (!klState.promoExp) klState.promoExp = { flyers: 0, ads: 0, radio: 0 };
+  const exp = klState.day + KL_PROMO_DAYS; // promo wears off after this day
+  if (key === 'flyers') { if (klState.promo.flyers >= 3) { klToast('Town\u2019s plastered already.'); return; } klState.promo.flyers++; klState.promoExp.flyers = exp; }
+  else if (key === 'ads') { if (klState.promo.ads >= 1) { klToast('Already running.'); return; } klState.promo.ads = 1; klState.promoExp.ads = exp; }
+  else if (key === 'radio') { if (klState.promo.radio >= 1) { klToast('Already on air.'); return; } klState.promo.radio = 1; klState.promoExp.radio = exp; }
   else if (key === 'van') { return; } // van handled by klBuyVan (cash/loan)
   else { if (klState.gear.includes(key)) return; klState.gear.push(key); }
   klState.money -= price;
@@ -13182,7 +13298,7 @@ function klSaveProgress() {
       v: 2, puzzleIdx: klState.puzzleIdx, score: klState.score, solved, savedAt: Date.now(),
       // === ECONOMY — START ===
       money: klState.money, xp: klState.xp, day: klState.day, showsPlayed: klState.showsPlayed, bookedDay: klState.bookedDay,
-      promo: klState.promo, gear: klState.gear, gearCondition: klState.gearCondition, van: klState.van, vanLoan: klState.vanLoan, rentPaidCount: klState.rentPaidCount, rentLate: klState.rentLate, bookedDaysOut: klState.bookedDaysOut, waddyDone: klState.waddyDone, garageDone: klState.garageDone, modDone: klState.modDone, xpAwarded: klState.xpAwarded, devUnlock: klState.devUnlock, setPos: klState.setPos,
+      promo: klState.promo, promoExp: klState.promoExp, gear: klState.gear, gearCondition: klState.gearCondition, van: klState.van, vanLoan: klState.vanLoan, rentPaidCount: klState.rentPaidCount, rentNotifiedFor: klState.rentNotifiedFor, rentIntroShown: klState.rentIntroShown, bookedDaysOut: klState.bookedDaysOut, waddyDone: klState.waddyDone, garageDone: klState.garageDone, modDone: klState.modDone, xpAwarded: klState.xpAwarded, devUnlock: klState.devUnlock, setPos: klState.setPos,
       // === ECONOMY — END ===
     }));
   } catch (e) { /* storage full/blocked — play on without saving */ }
@@ -13245,13 +13361,15 @@ const klState = {
   day: 1,                // the calendar — advances when shows/jobs happen; drives day-of-week
   bookedDay: null,       // day a show is booked for (null = nothing booked)
   bookedDaysOut: 0,      // how far out it was booked — feeds the Hype meter
-  promo: { flyers: 0, ads: 0, radio: 0 }, // promotion bought for the NEXT show (resets after)
+  promo: { flyers: 0, ads: 0, radio: 0 }, // promotion bought for the NEXT show
+  promoExp: { flyers: 0, ads: 0, radio: 0 }, // per-type expiry DAY — promo wears off after KL_PROMO_DAYS
   gear: [],              // band equipment owned — each piece boosts show payout
   gearCondition: 100,    // 0–100; wears down each show, repair at the Shop (Oregon-Trail style)
   van: false,            // THE END GOAL of the beta
   vanLoan: false,        // bought the van on a loan (down payment) vs cash
   rentPaidCount: 0,      // how many monthly rents have been settled (1st of each month from month 2 on)
-  rentLate: false,       // rent went past due unpaid — late fee applies, eviction clock running
+  rentNotifiedFor: -1,   // which due-count we've already toasted a RENT DUE notice for
+  rentIntroShown: false, // one-time move-in rent explainer shown yet
   waddyDone: false,      // one-time milestone: Waddy's house cleared (gates the +XP)
   garageDone: false,     // one-time milestone: the Garage cleared (gates the +XP)
   activeSet: null,       // 'waddy' | 'garage' | null — which puzzle set is in play
@@ -13298,55 +13416,55 @@ function klSeason(day) { return KL_SEASONS[klMonthIndex(day) % KL_SEASONS.length
 function klDayOfMonth(day) { return (((day || klState.day) - 1) % KL_MONTH_LEN) + 1; }            // 1..28
 function klSeasonLabel(day) { const s = klSeason(day); return KL_SEASON_EMOJI[s] + ' ' + s + ' ' + klDayOfMonth(day); }
 
-// === RENT — due on the 1st of every month from the SECOND month on (the first
-// month is free move-in). Pay on time and it's auto-deducted. Can't cover it →
-// the rent goes overdue: a one-time late fee is added and you have KL_RENT_GRACE
-// days to pay up (at the Shop) before the landlord evicts you. Eviction = game
-// over. All three knobs are tunable right here. ===
-const KL_RENT = 300;          // monthly rent
-const KL_RENT_LATEFEE = 50;   // one-time penalty once rent is past due
+// === RENT — $2000, due on the 1st of every month/season from the SECOND month
+// on (the first month is free move-in). You PAY IT YOURSELF: a notification fires
+// on the 1st, the HUD shows a clickable RENT DUE pill, and there's a Pay button
+// at the Shop. You get KL_RENT_GRACE days to settle before the landlord evicts
+// you. Eviction = game over. All knobs are tunable right here. ===
+const KL_RENT = 2000;         // monthly rent
 const KL_RENT_GRACE = 7;      // days after the 1st before eviction
 
 function klRentDueCount(day) { return klMonthIndex(day || klState.day); }  // rents that should be settled by now (month 0 free)
 function klRentOwed() {
   const months = klRentDueCount() - klState.rentPaidCount;
-  if (months <= 0) return 0;
-  return months * KL_RENT + (klState.rentLate ? KL_RENT_LATEFEE : 0);
+  return months > 0 ? months * KL_RENT : 0;
 }
 function klNextRentDueDay() { return (klState.rentPaidCount + 1) * KL_MONTH_LEN + 1; } // the 1st of the next unpaid month
-function klRentDaysLeft() { return klRentOwed() > 0 ? (klNextRentDueDay() + KL_RENT_GRACE - klState.day) : null; }
+function klRentEvictDay() { return klNextRentDueDay() + KL_RENT_GRACE; }
+function klRentDaysLeft() { return klRentOwed() > 0 ? (klRentEvictDay() - klState.day) : null; }
 
-// Settle everything currently due (manual button at the Shop / HUD).
+// Settle everything currently due (manual — HUD pill or the Shop button).
 window.klPayRent = function() {
   const owed = klRentOwed();
   if (owed <= 0) return;
-  if (klState.money < owed) { klToast('💸 Not enough to cover rent ($' + owed + ').'); return; }
+  if (klState.money < owed) { klToast('💸 Not enough to cover rent ($' + owed + '). Go earn it — busk, work, or play a show.'); return; }
   klState.money -= owed;
   klState.rentPaidCount = klRentDueCount();
-  klState.rentLate = false;
   klSaveProgress();
-  klToast('🏠 Rent paid: $' + owed);
+  klToast('🏠 Rent paid: $' + owed + '. Next rent on Day ' + klNextRentDueDay() + ' (' + klSeasonLabel(klNextRentDueDay()) + ').');
   klRenderTown();
 };
 
 // Runs after any day advance (called at the top of klRenderTown). Returns true if
-// the player was just evicted, so the caller stops rendering the town.
+// the player was just evicted, so the caller stops rendering the town. Never
+// auto-pays — the player settles rent themselves; this only notifies + evicts.
 function klCheckRent() {
   if (!klState.kid) return false;
-  const owed = klRentOwed();
-  if (owed <= 0) { klState.rentLate = false; return false; }
-  // Affordable and not already late → auto-pay on time, no friction.
-  if (!klState.rentLate && klState.money >= owed) {
-    klState.money -= owed;
-    klState.rentPaidCount = klRentDueCount();
+  // One-time move-in heads-up the first time a new player lands in town.
+  if (!klState.rentIntroShown) {
+    klState.rentIntroShown = true;
     klSaveProgress();
-    klToast('🏠 Rent paid: $' + owed + ' · ' + klSeason());
-    return false;
+    klToast('🏠 New in town: rent is $' + KL_RENT + ', due the 1st of every season. Your first season is free — start earning.');
   }
-  // Can't cover it → overdue: flag late (adds the fee) and run the eviction clock.
-  klState.rentLate = true;
-  klSaveProgress();
-  if (klState.day > klNextRentDueDay() + KL_RENT_GRACE) { klEvicted(); return true; }
+  const due = klRentDueCount();
+  if (klState.rentPaidCount >= due) return false; // nothing owed right now
+  if (klState.day > klRentEvictDay()) { klEvicted(); return true; } // grace expired, unpaid
+  // Notify once per newly-due month — then it's on the player to go pay.
+  if (klState.rentNotifiedFor !== due) {
+    klState.rentNotifiedFor = due;
+    klSaveProgress();
+    klToast('🏠 RENT DUE — $' + klRentOwed() + '. Pay the landlord by Day ' + klRentEvictDay() + ' (' + klSeasonLabel(klRentEvictDay()) + ') or you\u2019re evicted. Tap the rent pill or visit the Shop.');
+  }
   return false;
 }
 
@@ -13365,9 +13483,9 @@ function klEvicted() {
 // shows) but KEEP earned skills — module completion and XP/level carry over.
 window.klRestartRun = function() {
   klState.money = 50; klState.day = 1;
-  klState.rentPaidCount = 0; klState.rentLate = false;
+  klState.rentPaidCount = 0; klState.rentNotifiedFor = -1;
   klState.bookedDay = null; klState.bookedDaysOut = 0;
-  klState.promo = { flyers: 0, ads: 0, radio: 0 };
+  klState.promo = { flyers: 0, ads: 0, radio: 0 }; klState.promoExp = { flyers: 0, ads: 0, radio: 0 };
   klState.gear = []; klState.gearCondition = 100;
   klState.showsPlayed = 0; klState.van = false; klState.vanLoan = false;
   klSaveProgress();
@@ -13387,11 +13505,29 @@ function klBuskDayMult(day) { return KL_BUSK_DAYMULT[klDowIndex(day)]; }
 // HYPE comes ONLY from promotion now. Booking further out doesn't grant hype —
 // it just gives you more days to earn money and promote, and lets you land the
 // show on a high-traffic night (which the day-of-week multiplier rewards).
+const KL_PROMO_DAYS = 14; // promotion wears off this many days after you buy it
+// True if a promo type is bought AND still within its run (not expired).
+function klPromoActive(type) {
+  const e = klState.promoExp || {};
+  return (klState.promo[type] || 0) > 0 && klState.day <= (e[type] || 0);
+}
 function klPromoHype() {
   const p = klState.promo;
-  return p.flyers * 0.10 + p.ads * 0.25 + p.radio * 0.50; // up to +1.05
+  const fly = klPromoActive('flyers') ? p.flyers : 0;
+  const ad  = klPromoActive('ads')    ? p.ads    : 0;
+  const rad = klPromoActive('radio')  ? p.radio  : 0;
+  return fly * 0.10 + ad * 0.25 + rad * 0.50; // up to +1.05
 }
 function klHypeMult() { return 1 + klPromoHype(); }
+// Clear out any promo whose run has ended (called as days advance). Notifies once.
+function klExpirePromo() {
+  if (!klState.promoExp) { klState.promoExp = { flyers: 0, ads: 0, radio: 0 }; return; }
+  const p = klState.promo, e = klState.promoExp, worn = [];
+  ['flyers', 'ads', 'radio'].forEach(t => {
+    if ((p[t] || 0) > 0 && klState.day > (e[t] || 0)) { p[t] = 0; e[t] = 0; worn.push(t); }
+  });
+  if (worn.length) { klSaveProgress(); klToast('📉 Promo wore off (' + worn.join(', ') + '). Buy fresh hype before your next show.'); }
+}
 // Bar fill 0–1 against max promo hype (+1.05 over base).
 function klHypeFill() { return Math.max(0, Math.min(1, (klHypeMult() - 1) / 1.05)); }
 
@@ -13534,6 +13670,7 @@ function klRenderPlayerSelect() {
         '<div class="kl-panel-players">' + players.map(btn).join('') + addTile + '</div>' +
         '<div class="kl-bt-note">🔊 Use your device\u2019s built-in speakers. Bluetooth headphones &amp; speakers add a delay that throws off the rhythm games — please turn them off first.</div>' +
         '<button class="kl-tools-link" onclick="klOpenTools()">📖 Book of Knowledge</button>' +
+        '<button class="kl-tools-link" onclick="klToggleFullscreen()">⛶ Fullscreen</button>' +
         // === KANTEON RENAME — START ===
         '<div class="kl-company-credit">a Velion game</div>' +
         // === KANTEON RENAME — END ===
@@ -13543,6 +13680,15 @@ function klRenderPlayerSelect() {
     '</div>';
 }
 window.klRenderPlayerSelect = klRenderPlayerSelect; // inline onclick handlers need it global
+// Fullscreen toggle (desktop browsers; iOS uses Add-to-Home-Screen for fullscreen).
+window.klToggleFullscreen = function() {
+  const d = document, el = d.documentElement;
+  const isFs = d.fullscreenElement || d.webkitFullscreenElement;
+  try {
+    if (!isFs) { (el.requestFullscreen || el.webkitRequestFullscreen || (() => {})).call(el); }
+    else { (d.exitFullscreen || d.webkitExitFullscreen || (() => {})).call(d); }
+  } catch (e) { klToast && klToast('Fullscreen isn\u2019t available here — on iPad/iPhone, use Share → Add to Home Screen.'); }
+};
 
 // ── ADD / MANAGE PLAYERS (Netflix-style) ──────────────────────────────────
 window.klShowAddPlayer = function() {
@@ -13604,13 +13750,15 @@ window.klPickKid = function(kidId) {
     klState.day = save.day || 1;
     klState.bookedDay = (save.bookedDay !== undefined) ? save.bookedDay : null;
     klState.promo = save.promo || { flyers: 0, ads: 0, radio: 0 };
+    klState.promoExp = save.promoExp || { flyers: 0, ads: 0, radio: 0 };
     klState.gear = save.gear || [];
     klState.gearCondition = (save.gearCondition !== undefined) ? save.gearCondition : 100;
     klState.bookedDaysOut = save.bookedDaysOut || 0;
     klState.van = !!save.van;
     klState.vanLoan = !!save.vanLoan;
     klState.rentPaidCount = save.rentPaidCount || 0;
-    klState.rentLate = !!save.rentLate;
+    klState.rentNotifiedFor = (save.rentNotifiedFor !== undefined) ? save.rentNotifiedFor : -1;
+    klState.rentIntroShown = !!save.rentIntroShown;
     klState.waddyDone = !!save.waddyDone;
     klState.garageDone = !!save.garageDone;
     // Per-module completion. Migrate older saves: a fully-cleared building (or a
@@ -14781,8 +14929,8 @@ window.klDevReset = function() {
   if (klState.kid) { try { localStorage.removeItem(klSaveKey(klState.kid.id)); } catch (e) {} }
   klState.puzzleIdx = 0; klState.score = 0; klState.solved = [];
   klState.money = 50; klState.xp = 0; klState.xpAwarded = {}; klState.day = 1; klState.showsPlayed = 0; klState.bookedDay = null; klState.bookedDaysOut = 0;
-  klState.promo = { flyers: 0, ads: 0, radio: 0 };
-  klState.gear = []; klState.gearCondition = 100; klState.van = false; klState.vanLoan = false; klState.rentPaidCount = 0; klState.rentLate = false; klState.waddyDone = false; klState.garageDone = false;
+  klState.promo = { flyers: 0, ads: 0, radio: 0 }; klState.promoExp = { flyers: 0, ads: 0, radio: 0 };
+  klState.gear = []; klState.gearCondition = 100; klState.van = false; klState.vanLoan = false; klState.rentPaidCount = 0; klState.rentNotifiedFor = -1; klState.rentIntroShown = false; klState.waddyDone = false; klState.garageDone = false;
   klState.activeSet = null; klState.activeModule = null; klState.modDone = {}; klState.devUnlock = {}; klState.setPos = { waddy: 0, garage: 13 };
   klRebuildLayersFor(0);
   klToast('♻ Clean slate — fresh save.');
@@ -14983,13 +15131,16 @@ function klRenderBuildPuzzle(p) {
   klState.buildHold = false;
   klState.buildSide = 'target';
   klBuildDroneStop();
-  // Rows = the full diatonic octave, highest pitch on top (like a keyboard standing up).
-  const rows = [0, 1, 2, 3, 4, 5, 6, 7];
+  // Rows = the diatonic octave PLUS the 9th (high D) on top, highest pitch up top
+  // (like a keyboard standing on end). Home-row keys A–L select each step.
+  const rows = [0, 1, 2, 3, 4, 5, 6, 7, 8];
   let gridHtml = '<div class="kl-build-grid" id="kl-build-grid">';
   rows.slice().reverse().forEach(d => {
-    gridHtml += '<button class="kl-build-row" id="kl-brow-' + d + '" onclick="klBuildToggle(' + d + ')" title="scale-step ' + (d + 1) + '">' +
+    const keyLtr = (KL_HOMEROW[d] || '').replace('Key', '');
+    gridHtml += '<button class="kl-build-row" id="kl-brow-' + d + '" onclick="klBuildToggle(' + d + ')" title="scale-step ' + (d + 1) + ' · key ' + keyLtr + '">' +
       '<span class="kl-build-step">' + (d + 1) + '</span>' +
       '<span class="kl-build-note">' + KL_DEG_NAME[d] + '</span>' +
+      (keyLtr ? '<kbd class="kl-kbd kl-build-key">' + keyLtr + '</kbd>' : '') +
     '</button>';
   });
   gridHtml += '</div>';
@@ -15012,6 +15163,15 @@ function klRenderBuildPuzzle(p) {
     '<div class="kl-bandmate" id="kl-bandmate">&nbsp;</div>';
   // Hear the goal once on load — this IS the onboarding.
   setTimeout(() => klBuildPlay('target'), 450);
+  // Home row A–L toggles each scale step (A=1 … L=9). Bound once.
+  if (!window.__klBuildKeyBound) {
+    window.addEventListener('keydown', (e) => {
+      if (!document.getElementById('kl-build-grid')) return;
+      const i = KL_HOMEROW.indexOf(e.code);
+      if (i !== -1) { e.preventDefault(); if (!e.repeat) klBuildToggle(i); }
+    });
+    window.__klBuildKeyBound = true;
+  }
 }
 window.klBuildToggle = function(deg) {
   if (klState.buildSolved) return;
@@ -15139,13 +15299,18 @@ function klTapClick(time, gain, isMetro) {
   const ctx = getAudio();
   const o = ctx.createOscillator(), g = ctx.createGain();
   o.type = isMetro ? 'sine' : 'triangle';
-  o.frequency.setValueAtTime(isMetro ? 1700 : 880, time);
-  if (!isMetro) o.frequency.exponentialRampToValueAtTime(440, time + 0.06);
-  g.gain.setValueAtTime(0.0001, time);
-  g.gain.exponentialRampToValueAtTime(Math.max(0.001, gain * (isMetro ? 0.12 : 0.34)), time + 0.004);
-  g.gain.exponentialRampToValueAtTime(0.0001, time + (isMetro ? 0.05 : 0.14));
+  o.frequency.setValueAtTime(isMetro ? 1700 : 1050, time);
+  if (!isMetro) o.frequency.exponentialRampToValueAtTime(420, time + 0.07);
+  const peak = Math.max(0.001, gain * (isMetro ? 0.12 : 0.55)); // taps ~60% louder than before
+  if (isMetro) {
+    g.gain.setValueAtTime(0.0001, time);
+    g.gain.exponentialRampToValueAtTime(peak, time + 0.004);
+  } else {
+    g.gain.setValueAtTime(peak, time); // INSTANT attack — no 4ms ramp, so the tap reads as immediate
+  }
+  g.gain.exponentialRampToValueAtTime(0.0001, time + (isMetro ? 0.05 : 0.16));
   o.connect(g); g.connect(ctx.destination);
-  o.start(time); o.stop(time + 0.18);
+  o.start(time); o.stop(time + 0.2);
 }
 // Audio-clock-driven playhead sweep across the step slots. Lights the current
 // step; pulses any onset step in `onsets` as it passes. Used for TARGET / YOURS
@@ -15366,7 +15531,7 @@ window.klEarPick = function(i) {
 const KL_HOMEROW = ['KeyA','KeyS','KeyD','KeyF','KeyG','KeyH','KeyJ','KeyK','KeyL'];
 let klGroove = { events: [], onsets: [], sub: 1, bpm: 84, beat: 0, barDur: 0, barBeats: 4, ts: [4, 4],
   startTs: 0, nextBeat: 0, metroId: null, rafId: null, recording: false,
-  recStart: 0, taps: [], solved: false, busy: false };
+  recStart: 0, taps: [], held: {}, solved: false, busy: false };
 
 // A short percussive click — reuse the tap-module click (metro = high/quiet tick,
 // onset/tap = lower punch). klTapClick already exists from the RHYTHM TAP module.
@@ -15476,6 +15641,7 @@ window.klGrooveRecord = function() {
   const t0 = klGrooveCountIn();
   klGroove.recStart = t0;
   klGroove.taps = [];
+  klGroove.held = {};
   klGrooveStatus('Count in… get ready!');
   const pad = document.getElementById('kl-groove-pad');
   setTimeout(() => {
@@ -15491,36 +15657,80 @@ window.klGrooveRecord = function() {
     klGrooveGrade();
   }, Math.max(0, (t0 + klGroove.barDur + 0.22 - ctx.currentTime) * 1000));
 };
-window.klGrooveTap = function() {
-  // Tap SOUND is back: on built-in audio (the supported setup) the click is
-  // effectively instant, so hearing your own hit is helpful feedback. (Single
-  // voice for now — a drum click; multi-pitch will swap this for a real pitch.)
+// A tap is now a press-and-release: keyDOWN starts the note (click + onset),
+// keyUP ends it. We measure how long you HELD it so long notes (half+) require an
+// actual hold, not a quick blip. `id` distinguishes simultaneous keys (and the pad).
+window.klGrooveTapDown = function(id) {
+  id = id || 'pad';
   const ctx = getAudio();
   klTapClick(ctx.currentTime + 0.004, 0.5, false);
   const pad = document.getElementById('kl-groove-pad');
   if (pad) { pad.classList.add('hit'); setTimeout(() => pad.classList.remove('hit'), 110); }
   if (!klGroove.recording) return;
+  if (klGroove.held[id]) return; // already down (ignore auto-repeat / double-fire)
   const tapTime = ctx.currentTime - (klRhythmOffsetMs / 1000);
   const beatPos = (tapTime - klGroove.recStart) / klGroove.beat;
   if (beatPos < -0.25 || beatPos > klGroove.barBeats + 0.25) return;
-  klGroove.taps.push(beatPos);
+  const tap = { onset: beatPos, downT: ctx.currentTime, dur: null };
+  klGroove.held[id] = tap;
+  klGroove.taps.push(tap);
 };
+window.klGrooveTapUp = function(id) {
+  id = id || 'pad';
+  const tap = klGroove.held[id];
+  if (!tap) return;
+  const ctx = getAudio();
+  tap.dur = (ctx.currentTime - tap.downT) / klGroove.beat; // held length, in beats
+  delete klGroove.held[id];
+};
+// Back-compat shim (anything still calling klGrooveTap fires a press+quick release).
+window.klGrooveTap = function() { window.klGrooveTapDown('pad'); window.klGrooveTapUp('pad'); };
+// Snap a held length (beats) to the nearest standard note value, so a quick blip
+// can never read as a long note.
+function klGrooveSnapDur(beats) {
+  if (beats == null) return 0.5;
+  if (beats < 0.75) return 0.5;   // eighth
+  if (beats < 1.5) return 1;      // quarter
+  if (beats < 2.5) return 2;      // half
+  if (beats < 3.5) return 3;      // dotted half
+  return 4;                       // whole
+}
 function klGrooveGrade() {
   if (!document.getElementById('kl-groove') || klGroove.solved) return;
+  // Close any note still being held when the window closed.
+  const ctx = getAudio();
+  Object.keys(klGroove.held).forEach(id => { const t = klGroove.held[id]; if (t && t.dur == null) t.dur = (ctx.currentTime - t.downT) / klGroove.beat; delete klGroove.held[id]; });
   const sub = klGroove.sub;
-  const q = new Set();
-  klGroove.taps.forEach(b => { let s = Math.round(b / sub) * sub; s = Math.max(0, Math.min(klGroove.barBeats - sub, s)); q.add(+s.toFixed(3)); });
+  // Quantize tap onsets to the grid; keep the best (longest) hold per onset slot.
+  const tapByStep = new Map();
+  klGroove.taps.forEach(t => {
+    let s = Math.round(t.onset / sub) * sub; s = Math.max(0, Math.min(klGroove.barBeats - sub, s));
+    s = +s.toFixed(3);
+    const prev = tapByStep.get(s);
+    if (!prev || (t.dur || 0) > (prev.dur || 0)) tapByStep.set(s, t);
+  });
   const target = new Set(klGroove.onsets.map(b => +b.toFixed(3)));
-  const match = q.size === target.size && [...target].every(x => q.has(x));
-  if (match) {
+  const q = new Set(tapByStep.keys());
+  const onsetMatch = q.size === target.size && [...target].every(x => q.has(x));
+  // LONG-NOTE HOLD CHECK: any target note that's a half or longer must have been
+  // HELD long enough. Short notes (eighths/quarters) only need the right onset.
+  let heldOk = true, heldMiss = false;
+  if (onsetMatch) {
+    klGroove.events.forEach(e => {
+      if (e.rest || e.d < 2) return;            // only police long notes
+      const onset = +e.onset.toFixed(3);
+      const tap = tapByStep.get(onset);
+      if (!tap || klGrooveSnapDur(tap.dur) < 2) { heldOk = false; heldMiss = true; }
+    });
+  }
+  if (onsetMatch && heldOk) {
     klGroove.solved = true;
     klGrooveStatus('Perfect rhythm! 🥁');
     klConfetti();
     setTimeout(() => klWin(), 800);
   } else {
-    const miss = target.size - [...target].filter(x => q.has(x)).length;
-    const extra = q.size - [...q].filter(x => target.has(x)).length;
-    klGrooveStatus(miss || extra ? 'Close — listen again and feel the beat.' : 'Try again!');
+    if (onsetMatch && heldMiss) klGrooveStatus('Hold the long notes — keep the key down! 🎵');
+    else klGrooveStatus('Close — listen again and feel the beat.');
     setTimeout(() => klGroovePlay(), 500);
   }
 }
@@ -15629,7 +15839,7 @@ function klRenderGroovePuzzle(p) {
       '<button class="kl-listen" id="kl-groove-listen" onclick="klGroovePlay()">🔊 LISTEN<kbd class="kl-kbd">space</kbd></button>' +
       '<button class="kl-mine" id="kl-groove-record" onclick="klGrooveRecord()">🥁 PLAY IT</button>' +
     '</div>' +
-    '<button class="kl-tap-pad" id="kl-groove-pad" onpointerdown="klGrooveTap()">TAP<kbd class="kl-kbd">home row (A–L)</kbd></button>' +
+    '<button class="kl-tap-pad" id="kl-groove-pad" onpointerdown="klGrooveTapDown(\'pad\')" onpointerup="klGrooveTapUp(\'pad\')" onpointercancel="klGrooveTapUp(\'pad\')" onpointerleave="klGrooveTapUp(\'pad\')">TAP &amp; HOLD<kbd class="kl-kbd">home row (A–L)</kbd></button>' +
     '<div class="kl-bandmate" id="kl-bandmate">&nbsp;</div>';
   // Keys (bound once): SPACE = LISTEN (reference); a home-row key = TAP the rhythm.
   // Separating them frees you to hear the example and perform without a conflict.
@@ -15639,7 +15849,10 @@ function klRenderGroovePuzzle(p) {
     window.addEventListener('keydown', (e) => {
       if (!document.getElementById('kl-groove')) return;
       if (e.code === 'Space') { e.preventDefault(); if (!klGroove.recording) klGroovePlay(); return; }
-      if (KL_HOMEROW.indexOf(e.code) !== -1) { e.preventDefault(); if (!e.repeat) klGrooveTap(); }
+      if (KL_HOMEROW.indexOf(e.code) !== -1) { e.preventDefault(); if (!e.repeat) klGrooveTapDown(e.code); }
+    });
+    window.addEventListener('keyup', (e) => {
+      if (KL_HOMEROW.indexOf(e.code) !== -1) klGrooveTapUp(e.code);
     });
     window.__klGrooveKeyBound = true;
   }
@@ -16029,7 +16242,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-59'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-64'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
@@ -16206,6 +16419,20 @@ function klDotLayerPuzzle(dot, type) {
 // so far (gathered from all the dot's drum puzzles) plus bass once solved. What
 // loops is always exactly what the kid transcribed.
 function klDotGroove(t0, ctx, beat, dest) {
+  // SHOW NIGHT: the backing is the band built up tonight (cleared layers), not the
+  // current dot — show songs each have a unique dot, so they accumulate here.
+  if (klShow.active) {
+    const b = klShow.backing;
+    if (b && b.drums) {
+      (b.drums.kick  || []).forEach(x => klKick(t0 + x * beat, dest, ctx, 0.40));
+      (b.drums.snare || []).forEach(x => klSnare(t0 + x * beat, dest, ctx, 0.26));
+      (b.drums.hat   || []).forEach(x => klHat(t0 + x * beat, dest, ctx, (x % 1 === 0) ? 0.05 : 0.035));
+    }
+    if (b && b.bass) {
+      b.bass.forEach(n => klBass(t0 + n.start * beat, dest, ctx, KL_SCALE[n.pitch] - 24, beat * n.dur * 0.9, 0.16));
+    }
+    return;
+  }
   const dot = klDotOf(klState.puzzleIdx);
   const live = klActiveLayers.drumVoices;
 
@@ -16841,9 +17068,18 @@ window.klExit = function() {
   if (typeof klBuildDroneStop === 'function') klBuildDroneStop();
   if (typeof klGrooveStop === 'function') klGrooveStop();
   if (klDrumPlayheadRAF) { cancelAnimationFrame(klDrumPlayheadRAF); klDrumPlayheadRAF = null; }
-  // === KANTEON TOWN — START ===
-  klRenderTown(); // back to the hometown directory (the town's own ← leaves to player-select)
-  // === KANTEON TOWN — END ===
+  // Back from a puzzle returns you to the BUILDING you came from (its station
+  // select), not all the way to town — so you can hop straight into the next
+  // station. A show in progress bails to the venue; if we somehow don't know the
+  // building, fall back to town.
+  const interiors = ['waddy', 'garage', 'venue', 'shop', 'hater'];
+  if (typeof klShow !== 'undefined' && klShow.active) { klShowCleanup(); klRenderInterior('venue'); return; }
+  const mod = klActiveModuleDef();
+  const building = (mod && mod.building) || (interiors.includes(klState.activeSet) ? klState.activeSet : null) || (interiors.includes(klState.devRoom) ? klState.devRoom : null);
+  klState.activeModule = null;
+  klState.activeSet = null;
+  if (building) klRenderInterior(building);
+  else klRenderTown();
 };
 
 // ── Keyboard shortcuts (laptop ergonomics; iPad uses touch) ──
