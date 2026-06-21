@@ -3684,6 +3684,15 @@
     position: absolute; top: 14px; right: 14px; z-index: 5;
     display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end;
   }
+  .kl-fs-btn {
+    padding: 0; width: 30px; height: 30px; border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.18); background: rgba(20,16,40,0.5);
+    color: rgba(255,255,255,0.85); font-size: 15px; line-height: 1; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background 0.12s, color 0.12s;
+  }
+  .kl-fs-btn:hover { background: rgba(48,38,84,0.85); color: #fff; }
+  .kl-fs-btn:active { transform: scale(0.94); }
   .kt-hud-item {
     font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 15px;
     color: #fff; background: rgba(20,12,30,0.55); border: 1px solid rgba(255,255,255,0.2);
@@ -3857,10 +3866,11 @@
   .kl-av-arrow { width: 30px; height: 30px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.2);
     background: rgba(255,255,255,0.08); color: #fff; font-size: 13px; cursor: pointer; }
   .kl-av-arrow:hover { background: rgba(255,255,255,0.18); }
-  .kl-av-dice { width: 100%; padding: 11px; border-radius: 12px; border: 1px solid rgba(252,211,77,0.5);
-    background: rgba(252,211,77,0.14); color: #ffe08a; font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 800; font-size: 16px; letter-spacing: 0.5px; cursor: pointer; margin-bottom: 12px; }
-  .kl-av-dice:hover { background: rgba(252,211,77,0.22); }
+  .kl-av-dice { width: 56px; height: 44px; margin: 0 auto 12px; display: block; padding: 0;
+    border-radius: 12px; border: 1px solid rgba(252,211,77,0.5);
+    background: rgba(252,211,77,0.14); font-size: 24px; line-height: 1; cursor: pointer; }
+  .kl-av-dice:hover { background: rgba(252,211,77,0.24); }
+  .kl-av-dice:active { transform: scale(0.94); }
   .kl-av-actions { display: flex; gap: 10px; }
   .kl-av-cancel { flex: 1; padding: 11px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.18);
     background: transparent; color: #fff; font-weight: 700; font-size: 14px; cursor: pointer; }
@@ -12581,7 +12591,9 @@ function klHudMarkup() {
   else if (lvl < klShownLevel) klShownLevel = lvl;
   const xpInto = klXpIntoLevel(), xpFor = klXpForLevel();
   const pct = Math.max(0, Math.min(100, Math.round(xpInto / Math.max(1, xpFor) * 100)));
+  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
   return '<div class="kt-hud">' +
+    '<button class="kl-fs-btn" id="kl-fs-btn" onclick="klToggleFullscreen()" title="Fullscreen (press F)" aria-label="Toggle fullscreen">' + (isFs ? '🗗' : '⛶') + '</button>' +
     '<span class="kt-hud-item">💵 $' + klState.money + '</span>' +
     '<span class="kt-hud-item kt-hud-level' + (leveled ? ' leveled' : '') + '">⭐ Lv.' + lvl +
       '<span class="kt-xpbar"><span class="kt-xpbar-fill" style="width:' + pct + '%"></span></span>' +
@@ -13309,7 +13321,7 @@ function klIsMelodyPuzzle(p) { return !!(p && p.notes && !p.type); }
 const KL_MELODY_INSTRUMENT = ['guitar', 'keys', 'vocals', 'guitar', 'keys'];
 function klDotMelodyInstrument(dot) { return KL_MELODY_INSTRUMENT[dot] || 'guitar'; }
 function klMelodyFigSVG(inst) {
-  return inst === 'keys' ? KL_KEYS_SVG : inst === 'vocals' ? KL_VOCALIST_SVG : KL_GUITARIST_SVG;
+  return inst === 'keys' ? klKeysSVG() : inst === 'vocals' ? klVocalistSVG() : klGuitaristSVG();
 }
 // Map a Kid-Lab instrument to its characterful playTone timbre (Kid-Lab-only names).
 function klInstTimbre(inst) {
@@ -13380,6 +13392,8 @@ const KL_AVATARS = ['🦄','🚀','🌸','🐉','🎸','🥁','🎤','🎧','⭐
 const AV_SKIN    = ['#f6cfa6', '#ecb98c', '#d39a6e', '#b07a4e', '#8a5a36', '#5e3a22'];
 const AV_HAIRCOL = ['#241f1c', '#5a3b22', '#8a5a2b', '#caa24a', '#e6cf90', '#b53224', '#9b59b6', '#2c52b0', '#cfd3d6'];
 const AV_SHIRT   = ['#e74c3c', '#e67e22', '#f1c40f', '#27ae60', '#16a085', '#2980b9', '#8e44ad', '#34495e', '#dfe3ea'];
+const AV_PANTS   = ['#2c3a72', '#3b4a8c', '#37474f', '#5d4037', '#283593', '#455a64', '#6d4c41', '#212121', '#7b1fa2'];
+const AV_SHOES   = ['#2a2a35', '#3e2723', '#c0392b', '#ecf0f1', '#1565c0', '#f1c40f', '#37474f', '#6d4c41'];
 const AV_HAIR    = ['bald', 'buzz', 'short', 'spiky', 'curly', 'long', 'mohawk', 'ponytail'];
 const AV_ACC     = ['none', 'shades', 'cap', 'beanie', 'headphones'];
 const AV_HAIR_LABEL = { bald: 'Bald', buzz: 'Buzz', short: 'Short', spiky: 'Spiky', curly: 'Curly', long: 'Long', mohawk: 'Mohawk', ponytail: 'Ponytail' };
@@ -13389,15 +13403,19 @@ const AV_CATS = [
   { key: 'hair',      label: 'Hair',       type: 'style', len: AV_HAIR.length },
   { key: 'hairColor', label: 'Hair Color', type: 'color', len: AV_HAIRCOL.length },
   { key: 'shirt',     label: 'Shirt',      type: 'color', len: AV_SHIRT.length },
+  { key: 'pants',     label: 'Pants',      type: 'color', len: AV_PANTS.length },
+  { key: 'shoes',     label: 'Shoes',      type: 'color', len: AV_SHOES.length },
   { key: 'accessory', label: 'Accessory',  type: 'style', len: AV_ACC.length }
 ];
-function klAvatarDefault() { return { skin: 0, hair: 2, hairColor: 1, shirt: 5, accessory: 0 }; }
+function klAvatarDefault() { return { skin: 0, hair: 2, hairColor: 1, shirt: 5, pants: 0, shoes: 0, accessory: 0 }; }
 function klAvatarRandom() {
   return {
     skin: Math.floor(Math.random() * AV_SKIN.length),
     hair: Math.floor(Math.random() * AV_HAIR.length),
     hairColor: Math.floor(Math.random() * AV_HAIRCOL.length),
     shirt: Math.floor(Math.random() * AV_SHIRT.length),
+    pants: Math.floor(Math.random() * AV_PANTS.length),
+    shoes: Math.floor(Math.random() * AV_SHOES.length),
     accessory: Math.floor(Math.random() * AV_ACC.length)
   };
 }
@@ -13431,24 +13449,17 @@ function klAvAccessory(acc) {
   }
   return '';
 }
-function klAvatarSVG(cfg, size) {
-  cfg = cfg || klAvatarDefault();
-  size = size || 120;
+// Head + hair + face + accessory, authored around head-centre (50,42) r22. Shared
+// by the full-body avatar (scaled onto the shoulders).
+function klAvHeadGroup(cfg) {
   const sk = AV_SKIN[(cfg.skin || 0) % AV_SKIN.length];
   const hc = AV_HAIRCOL[(cfg.hairColor || 0) % AV_HAIRCOL.length];
-  const sh = AV_SHIRT[(cfg.shirt || 0) % AV_SHIRT.length];
   const hair = AV_HAIR[(cfg.hair || 0) % AV_HAIR.length];
   const acc = AV_ACC[(cfg.accessory || 0) % AV_ACC.length];
-  return '<svg viewBox="0 0 100 100" width="' + size + '" height="' + size + '" xmlns="http://www.w3.org/2000/svg">' +
-    klAvHairBack(hair, hc) +
-    // shoulders / shirt
-    '<path d="M16 100 Q16 73 50 73 Q84 73 84 100 Z" fill="' + sh + '"/>' +
-    '<path d="M42 74 Q50 82 58 74 L58 73 L42 73 Z" fill="rgba(0,0,0,0.12)"/>' +
-    // neck + ears + head
-    '<rect x="44" y="59" width="12" height="16" rx="4" fill="' + sk + '"/>' +
+  return klAvHairBack(hair, hc) +
+    '<rect x="44" y="59" width="12" height="14" rx="4" fill="' + sk + '"/>' +
     '<circle cx="27" cy="44" r="5" fill="' + sk + '"/><circle cx="73" cy="44" r="5" fill="' + sk + '"/>' +
     '<circle cx="50" cy="42" r="22" fill="' + sk + '"/>' +
-    // brows + eyes + smile
     '<g fill="#2b2330">' +
       '<rect x="38" y="37" width="8" height="2" rx="1" fill="' + hc + '"/><rect x="54" y="37" width="8" height="2" rx="1" fill="' + hc + '"/>' +
       '<circle cx="42" cy="43" r="2.7"/><circle cx="58" cy="43" r="2.7"/>' +
@@ -13456,7 +13467,34 @@ function klAvatarSVG(cfg, size) {
     '</g>' +
     '<path d="M43 51 Q50 57 57 51" stroke="#2b2330" stroke-width="2.2" fill="none" stroke-linecap="round"/>' +
     klAvHairTop(hair, hc) +
-    klAvAccessory(acc) +
+    klAvAccessory(acc);
+}
+// Full-body avatar, compact enough to sit in a square (tiles, house, creator).
+function klAvatarSVG(cfg, size) {
+  cfg = cfg || klAvatarDefault();
+  size = size || 120;
+  const sk = AV_SKIN[(cfg.skin || 0) % AV_SKIN.length];
+  const sh = AV_SHIRT[(cfg.shirt || 0) % AV_SHIRT.length];
+  const pa = AV_PANTS[(cfg.pants || 0) % AV_PANTS.length];
+  const shoe = AV_SHOES[(cfg.shoes || 0) % AV_SHOES.length];
+  return '<svg viewBox="0 0 100 100" width="' + size + '" height="' + size + '" xmlns="http://www.w3.org/2000/svg">' +
+    '<ellipse cx="50" cy="96" rx="24" ry="3.5" fill="rgba(0,0,0,0.18)"/>' +
+    // hips + legs (pants)
+    '<path d="M37 60 L63 60 L62 72 L38 72 Z" fill="' + pa + '"/>' +
+    '<rect x="40" y="70" width="8" height="21" rx="2" fill="' + pa + '"/>' +
+    '<rect x="52" y="70" width="8" height="21" rx="2" fill="' + pa + '"/>' +
+    // shoes
+    '<path d="M36 90 Q36 95 41 95 L49 95 L49 90 Z" fill="' + shoe + '"/>' +
+    '<path d="M64 90 Q64 95 59 95 L51 95 L51 90 Z" fill="' + shoe + '"/>' +
+    // torso (shirt)
+    '<path d="M36 42 L64 42 Q66 42 65 46 L63 63 Q50 67 37 63 L35 46 Q34 42 36 42 Z" fill="' + sh + '"/>' +
+    // arms + hands
+    '<path d="M37 45 L31 59 L30 66" fill="none" stroke="' + sh + '" stroke-width="6.5" stroke-linecap="round"/>' +
+    '<circle cx="30" cy="66.5" r="3.6" fill="' + sk + '"/>' +
+    '<path d="M63 45 L69 59 L70 66" fill="none" stroke="' + sh + '" stroke-width="6.5" stroke-linecap="round"/>' +
+    '<circle cx="70" cy="66.5" r="3.6" fill="' + sk + '"/>' +
+    // head, scaled onto the shoulders
+    '<g transform="translate(50,21) scale(0.59) translate(-50,-42)">' + klAvHeadGroup(cfg) + '</g>' +
   '</svg>';
 }
 // ── Style-creator overlay ───────────────────────────────────────────────────
@@ -13494,7 +13532,8 @@ function klAvCatValueLabel(cat) {
     if (cat.key === 'accessory') return AV_ACC_LABEL[AV_ACC[idx]];
   }
   // color: show a swatch + number
-  const pal = cat.key === 'skin' ? AV_SKIN : cat.key === 'hairColor' ? AV_HAIRCOL : AV_SHIRT;
+  const pal = cat.key === 'skin' ? AV_SKIN : cat.key === 'hairColor' ? AV_HAIRCOL
+    : cat.key === 'pants' ? AV_PANTS : cat.key === 'shoes' ? AV_SHOES : AV_SHIRT;
   return '<span style="display:inline-block;width:18px;height:18px;border-radius:5px;vertical-align:middle;border:1px solid rgba(255,255,255,0.4);background:' + pal[idx] + ';"></span>';
 }
 function klRenderAvatarMaker() {
@@ -13518,7 +13557,7 @@ function klRenderAvatarMaker() {
       '<div class="kl-av-title">' + (create ? '🎸 CREATE YOUR CHARACTER' : '🎨 STYLE YOUR LOOK') + '</div>' +
       '<div class="kl-av-preview">' + klAvatarSVG(klAvatarDraft, 150) + '</div>' +
       '<div class="kl-av-rows">' + rows + '</div>' +
-      '<button class="kl-av-dice" onclick="klAvatarRoll()">🎲 Roll the dice</button>' +
+      '<button class="kl-av-dice" onclick="klAvatarRoll()" title="Randomize" aria-label="Roll the dice">🎲</button>' +
       '<div class="kl-av-actions">' +
         (create ? '' : '<button class="kl-av-cancel" onclick="klAvatarCancel()">Cancel</button>') +
         '<button class="kl-av-go" onclick="klAvatarConfirm()">' + (create ? 'Start Playing ▶' : '💾 Save Look') + '</button>' +
@@ -14552,11 +14591,52 @@ const KL_VOCALIST_SVG =
     // mic
     '<rect x="147" y="36" width="6" height="20" rx="3" fill="#3a3a4a"/>' +
     '<circle cx="150" cy="32" r="7" fill="#5a5a6a"/>' +
-    '<circle cx="150" cy="32" r="4" fill="#2a2a35"/>' +
+    '<circle cx="150" cy="32" r="4" fill="#1f1f29"/>' +
     // left arm gesturing out
     '<path d="M106 60 L90 84 L86 98" fill="none" stroke="#e25ba0" stroke-width="8" stroke-linecap="round"/>' +
     '<circle cx="86" cy="98" r="4.5" fill="#d39b72"/>' +
   '</svg>';
+
+// ── AVATAR-DRIVEN PERFORMERS ────────────────────────────────────────────────
+// Each performer IS the player on that instrument, so they wear the look you built
+// in the character creator. We recolor the stock sprite's skin / hair / shirt /
+// pants / shoes from klState.avatar. Shirt is per-instrument in the template, so
+// each sprite passes its own shirt colors to be swapped for the player's shirt.
+function klShade(hex, amt) {
+  hex = (hex || '#000000').replace('#', '');
+  if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+  let r = parseInt(hex.slice(0, 2), 16), g = parseInt(hex.slice(2, 4), 16), b = parseInt(hex.slice(4, 6), 16);
+  const f = amt < 0 ? (1 + amt) : 1, add = amt > 0 ? amt * 255 : 0;
+  r = Math.max(0, Math.min(255, Math.round(r * f + add)));
+  g = Math.max(0, Math.min(255, Math.round(g * f + add)));
+  b = Math.max(0, Math.min(255, Math.round(b * f + add)));
+  return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+function klPerformerColors(av) {
+  av = av || klState.avatar || klAvatarDefault();
+  return {
+    sk: AV_SKIN[(av.skin || 0) % AV_SKIN.length],
+    hc: AV_HAIRCOL[(av.hairColor || 0) % AV_HAIRCOL.length],
+    sh: AV_SHIRT[(av.shirt || 0) % AV_SHIRT.length],
+    pa: AV_PANTS[(av.pants || 0) % AV_PANTS.length],
+    shoe: AV_SHOES[(av.shoes || 0) % AV_SHOES.length]
+  };
+}
+function klRecolorPerformer(svg, av, shirtColors) {
+  const c = klPerformerColors(av);
+  let out = svg
+    .split('#e8b48c').join(c.sk).split('#d39b72').join(c.sk).split('#d9a06b').join(c.sk)
+    .split('#4a3527').join(c.hc).split('#3a2a1f').join(c.hc).split('#3a2527').join(c.hc)
+    .split('#2c3a72').join(c.pa).split('#3b4a8c').join(klShade(c.pa, -0.14))
+    .split('#2a2a35').join(c.shoe);
+  (shirtColors || []).forEach((col, i) => { out = out.split(col).join(i === 0 ? c.sh : klShade(c.sh, -0.16)); });
+  return out;
+}
+function klDrummerSVG(av)   { return klRecolorPerformer(KL_DRUMMER_SVG,   av, ['#2ec5c5', '#1f9c9c']); }
+function klBassistSVG(av)   { return klRecolorPerformer(KL_BASSIST_SVG,   av, ['#a78bfa', '#9170e0', '#8a6bd8']); }
+function klGuitaristSVG(av) { return klRecolorPerformer(KL_GUITARIST_SVG, av, ['#4ade80', '#3bbf6e']); }
+function klKeysSVG(av)      { return klRecolorPerformer(KL_KEYS_SVG,      av, ['#fbbf24', '#e0a91f']); }
+function klVocalistSVG(av)  { return klRecolorPerformer(KL_VOCALIST_SVG,  av, ['#f472b6', '#e25ba0']); }
 
 // PIECE 1: render the persistent bottom band stage from klState.band. Visual only.
 // Reuses the drummer kit art but strips element ids so it can't collide with the
@@ -14564,11 +14644,11 @@ const KL_VOCALIST_SVG =
 function klBandStage() {
   if (!klState.band || klState.band.length === 0) return '';
   const docked = {
-    drums: { svg: KL_DRUMMER_SVG.replace(/ id="kl-dr-[a-z-]+"/g, ''), label: 'Drums' },
-    bass:  { svg: KL_BASSIST_SVG.replace(/ id="kl-bs-[a-z-]+"/g, ''), label: 'Bass' },
-    guitar: { svg: KL_GUITARIST_SVG, label: 'Guitar' },
-    keys:   { svg: KL_KEYS_SVG, label: 'Keys' },
-    vocals: { svg: KL_VOCALIST_SVG, label: 'Vocals' },
+    drums: { svg: klDrummerSVG().replace(/ id="kl-dr-[a-z-]+"/g, ''), label: 'Drums' },
+    bass:  { svg: klBassistSVG().replace(/ id="kl-bs-[a-z-]+"/g, ''), label: 'Bass' },
+    guitar: { svg: klGuitaristSVG(), label: 'Guitar' },
+    keys:   { svg: klKeysSVG(), label: 'Keys' },
+    vocals: { svg: klVocalistSVG(), label: 'Vocals' },
   };
   let html = '';
   klState.band.forEach(inst => {
@@ -14637,7 +14717,7 @@ function klRenderDrumPuzzle(p) {
       '<button class="kl-mine" id="kl-mine-btn" onclick="klDrumPlayMine()">▶ MINE<kbd class="kl-kbd">⌘ space</kbd></button>' +
     '</div>' +
     '<div class="kl-grid-wrap" id="kl-grid-wrap">' + gridHtml + '</div>' +
-    '<div class="kl-drummer" id="kl-drummer">' + KL_DRUMMER_SVG + '</div>' +
+    '<div class="kl-drummer" id="kl-drummer">' + klDrummerSVG() + '</div>' +
     '<div class="kl-bandmate" id="kl-bandmate">&nbsp;</div>' +
     '<button class="kl-check" id="kl-check-btn" onclick="klDrumCheck()">CHECK ✓</button>';
 
@@ -15248,6 +15328,7 @@ function klDevBarMarkup() {
 
   // ── TOOLS ──
   s += lbl('tools', '🛠 TOOLS');
+  s += btn("klDevWinLevel()", '🏁 Complete Level', 'instantly clear the CURRENT puzzle and advance to the next', 'good');
   s += btn("klToggleDrummerAnim()", 'DRUMMER ' + (klDrummerAnim ? 'ON' : 'OFF'), 'toggle drummer animation (sync test)', '', 'kl-drummer-toggle');
   s += btn("klToggleSoundPanel()", '🎛 Sound', 'live soundbank tuner');
   s += btn("klToggleComposePanel()", '🎼 Compose', 'piano-roll composer');
@@ -15447,6 +15528,27 @@ document.addEventListener('keydown', (e) => {
   if (!klIsDevAvailable()) return;
   e.preventDefault();
   klToggleDevBar();
+});
+// Fullscreen hotkey: F. Guarded so it never collides with the home-row (A–L) keys
+// used in Chord/Groove/Ear labs — those set klState.activeModule, where F is off.
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'f' && e.key !== 'F') return;
+  const tag = (e.target && e.target.tagName) || '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
+  if (klState.activeModule) return;            // in a lab → F is a play key, not fullscreen
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  e.preventDefault();
+  klToggleFullscreen();
+});
+// Keep the on-screen icon in sync with the actual fullscreen state.
+['fullscreenchange', 'webkitfullscreenchange'].forEach(function(ev) {
+  document.addEventListener(ev, function() {
+    const btn = document.getElementById('kl-fs-btn');
+    if (!btn) return;
+    const fs = document.fullscreenElement || document.webkitFullscreenElement;
+    btn.textContent = fs ? '🗗' : '⛶';
+    btn.title = fs ? 'Exit fullscreen (press F)' : 'Fullscreen (press F)';
+  });
 });
 window.klDevCutscene = function(key) {
   if (!klIsDev()) return;
@@ -16383,7 +16485,7 @@ function klRenderPuzzle() {
       '<button class="kl-mine" id="kl-mine-btn" onclick="klPlayMine()">▶ MINE<kbd class="kl-kbd">⌘ space</kbd></button>' +
     '</div>' +
     '<div class="kl-grid-wrap" id="kl-grid-wrap">' + gridHtml + '</div>' +
-    (p.type === 'bass' ? '<div class="kl-bassist" id="kl-bassist">' + KL_BASSIST_SVG + '</div>' : '') +
+    (p.type === 'bass' ? '<div class="kl-bassist" id="kl-bassist">' + klBassistSVG() + '</div>' : '') +
     (klIsMelodyPuzzle(p) ? '<div class="kl-melodist" id="kl-melodist">' + klMelodyFigSVG(klDotMelodyInstrument(p.dot)) + '</div>' : '') +
     '<div class="kl-bandmate" id="kl-bandmate">&nbsp;</div>' +
     paletteHtml +
@@ -16637,7 +16739,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-73'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-75'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
@@ -17197,6 +17299,15 @@ window.klCheck = function() {
   }
 };
 
+// DEV: complete the current puzzle/level instantly and advance, exactly as if the
+// player had solved it. Stops any running clock first so the advance is clean.
+window.klDevWinLevel = function() {
+  if (!klIsDevAvailable()) return;
+  if (klShow.active) { klWin(); return; }
+  if (typeof klStopClock === 'function') klStopClock();
+  if (typeof klStopBeatBar === 'function') klStopBeatBar();
+  klWin();
+};
 function klWin() {
   // === ECONOMY: SHOW MODE — a cleared song during a show goes to the show flow,
   // not the normal celebration/advance (and doesn't count as new progress).
