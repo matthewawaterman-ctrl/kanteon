@@ -4573,6 +4573,12 @@
     filter: drop-shadow(0 0 5px rgba(252,211,77,0.9));
     animation: klAnatPulse 1.1s ease-in-out infinite; }
   @keyframes klAnatPulse { 0%, 100% { opacity: 0.55; stroke-width: 3; } 50% { opacity: 1; stroke-width: 5.5; } }
+  .kl-anat-hot { fill: rgba(255,255,255,0.05); stroke: rgba(255,255,255,0.32); stroke-width: 2;
+    stroke-dasharray: 4 4; cursor: pointer; transition: fill 0.12s, stroke 0.12s; }
+  .kl-anat-hot:hover { fill: rgba(252,211,77,0.2); stroke: rgba(252,211,77,0.85); }
+  .kl-anat-hot:active { fill: rgba(252,211,77,0.34); }
+  .kl-anat-hot.correct { fill: rgba(74,222,128,0.34); stroke: #4ade80; stroke-dasharray: none; }
+  .kl-anat-hot.wrong { fill: rgba(239,68,68,0.28); stroke: #ef4444; stroke-dasharray: none; }
   .kl-ear-choice {
     flex: 1 1 40%; min-width: 130px; min-height: 60px; padding: 10px 18px; border-radius: 14px; cursor: pointer;
     font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 19px; letter-spacing: 1px;
@@ -13361,18 +13367,19 @@ const KL_ANATOMY_ART = {
   }
 };
 const KL_ANATOMY_DEFS = [
-  { id: 501, inst: 'drumkit', part: 'Kick',       choices: ['Kick', 'Snare'] },
-  { id: 502, inst: 'drumkit', part: 'Snare',      choices: ['Kick', 'Snare'] },
-  { id: 503, inst: 'drumkit', part: 'Hi-Hat',     choices: ['Kick', 'Snare', 'Hi-Hat'] },
-  { id: 504, inst: 'drumkit', part: 'Tom',        choices: ['Snare', 'Hi-Hat', 'Tom'] },
-  { id: 505, inst: 'drumkit', part: 'Crash',      choices: ['Hi-Hat', 'Tom', 'Crash'] },
-  { id: 506, inst: 'drumkit', part: 'Floor Tom',  choices: ['Kick', 'Tom', 'Crash', 'Floor Tom'] },
-  { id: 507, inst: 'guitar',  part: 'Body',        choices: ['Body', 'Neck'] },
-  { id: 508, inst: 'guitar',  part: 'Neck',        choices: ['Body', 'Neck'] },
-  { id: 509, inst: 'guitar',  part: 'Headstock',   choices: ['Body', 'Neck', 'Headstock'] },
-  { id: 510, inst: 'guitar',  part: 'Sound Hole',  choices: ['Neck', 'Headstock', 'Sound Hole'] },
-  { id: 511, inst: 'guitar',  part: 'Bridge',      choices: ['Sound Hole', 'Neck', 'Bridge'] },
-  { id: 512, inst: 'guitar',  part: 'Tuning Pegs', choices: ['Headstock', 'Bridge', 'Sound Hole', 'Tuning Pegs'] }
+  // mode 'name' = a part glows, pick its name. mode 'find' = tap the named part.
+  { id: 501, inst: 'drumkit', mode: 'name', part: 'Kick',       choices: ['Kick', 'Snare'] },
+  { id: 502, inst: 'drumkit', mode: 'find', part: 'Snare',      choices: ['Kick', 'Snare'] },
+  { id: 503, inst: 'drumkit', mode: 'name', part: 'Hi-Hat',     choices: ['Kick', 'Snare', 'Hi-Hat'] },
+  { id: 504, inst: 'drumkit', mode: 'find', part: 'Tom',        choices: ['Snare', 'Hi-Hat', 'Tom'] },
+  { id: 505, inst: 'drumkit', mode: 'name', part: 'Crash',      choices: ['Hi-Hat', 'Tom', 'Crash'] },
+  { id: 506, inst: 'drumkit', mode: 'find', part: 'Floor Tom',  choices: ['Kick', 'Tom', 'Crash', 'Floor Tom'] },
+  { id: 507, inst: 'guitar',  mode: 'find', part: 'Body',        choices: ['Body', 'Neck'] },
+  { id: 508, inst: 'guitar',  mode: 'name', part: 'Neck',        choices: ['Body', 'Neck'] },
+  { id: 509, inst: 'guitar',  mode: 'find', part: 'Headstock',   choices: ['Body', 'Neck', 'Headstock'] },
+  { id: 510, inst: 'guitar',  mode: 'name', part: 'Sound Hole',  choices: ['Neck', 'Headstock', 'Sound Hole'] },
+  { id: 511, inst: 'guitar',  mode: 'find', part: 'Bridge',      choices: ['Sound Hole', 'Neck', 'Bridge'] },
+  { id: 512, inst: 'guitar',  mode: 'name', part: 'Tuning Pegs', choices: ['Headstock', 'Bridge', 'Sound Hole', 'Tuning Pegs'] }
 ];
 const KL_ANATOMY_START = KL_PUZZLES.length;
 KL_ANATOMY_DEFS.forEach((ad, i) => KL_PUZZLES.push({ id: ad.id, type: 'anatomy', dot: 120 + i, adef: ad }));
@@ -13387,16 +13394,17 @@ KL_ANATOMY_DEFS.forEach((ad, i) => KL_PUZZLES.push({ id: ad.id, type: 'anatomy',
 // from the audio context. Starts with one clear contrast and widens.
 // ═══════════════════════════════════════════════════════════════════════════
 const KL_LISTEN_DEFS = [
-  { id: 601, kind: 'dyn',   loud: true,   answer: 'Loud',       choices: ['Loud', 'Soft'] },
-  { id: 602, kind: 'dyn',   loud: false,  answer: 'Soft',       choices: ['Loud', 'Soft'] },
-  { id: 603, kind: 'reg',   hz: 880,      answer: 'High',       choices: ['High', 'Low'] },
-  { id: 604, kind: 'reg',   hz: 174,      answer: 'Low',        choices: ['High', 'Low'] },
-  { id: 605, kind: 'tempo', fast: true,   answer: 'Fast',       choices: ['Fast', 'Slow'] },
-  { id: 606, kind: 'tempo', fast: false,  answer: 'Slow',       choices: ['Fast', 'Slow'] },
-  { id: 607, kind: 'dir',   up: true,     answer: 'Going Up',   choices: ['Going Up', 'Going Down'] },
-  { id: 608, kind: 'dir',   up: false,    answer: 'Going Down', choices: ['Going Up', 'Going Down'] },
-  { id: 609, kind: 'art',   legato: false, answer: 'Choppy',    choices: ['Smooth', 'Choppy'] },
-  { id: 610, kind: 'art',   legato: true,  answer: 'Smooth',    choices: ['Smooth', 'Choppy'] }
+  // Every magnitude question is DIRECTIONAL — the change happens inside the clip,
+  // so the clip is its own reference (no isolated "is this loud?" with nothing to
+  // compare to). q = the question shown under the title.
+  { id: 601, kind: 'vol',   up: true,    q: 'does it get LOUDER or QUIETER?',  answer: 'Louder',     choices: ['Louder', 'Quieter'] },
+  { id: 602, kind: 'vol',   up: false,   q: 'does it get LOUDER or QUIETER?',  answer: 'Quieter',    choices: ['Louder', 'Quieter'] },
+  { id: 603, kind: 'pitch', up: true,    q: 'does the pitch go UP or DOWN?',   answer: 'Up',         choices: ['Up', 'Down'] },
+  { id: 604, kind: 'pitch', up: false,   q: 'does the pitch go UP or DOWN?',   answer: 'Down',       choices: ['Up', 'Down'] },
+  { id: 605, kind: 'tempo', up: true,    q: 'does it SPEED UP or SLOW DOWN?',  answer: 'Speeds Up',  choices: ['Speeds Up', 'Slows Down'] },
+  { id: 606, kind: 'tempo', up: false,   q: 'does it SPEED UP or SLOW DOWN?',  answer: 'Slows Down', choices: ['Speeds Up', 'Slows Down'] },
+  { id: 607, kind: 'art',   legato: true,  q: 'is it SMOOTH or CHOPPY?',       answer: 'Smooth',     choices: ['Smooth', 'Choppy'] },
+  { id: 608, kind: 'art',   legato: false, q: 'is it SMOOTH or CHOPPY?',       answer: 'Choppy',     choices: ['Smooth', 'Choppy'] }
 ];
 const KL_LISTEN_START = KL_PUZZLES.length;
 KL_LISTEN_DEFS.forEach((ld, i) => KL_PUZZLES.push({ id: ld.id, type: 'listen', dot: 140 + i, ldef: ld }));
@@ -16119,6 +16127,23 @@ function klRenderAnatomyPuzzle(p) {
   const ad = p.adef;
   klState.anatomySolved = false;
   const art = KL_ANATOMY_ART[ad.inst];
+  const top = (klPuzzleBuilding() ? '<div class="kl-room-bg kt-bg-' + klPuzzleBuilding() + '">' + klSceneArt(klPuzzleBuilding()) + '</div>' : '') +
+    '<div class="kl-puzzle-top"><button class="kl-back" onclick="klExit()">←</button></div>';
+  if (ad.mode === 'find') {
+    // TAP THE PART: clickable hotspots on the choice parts; the prompt names the target.
+    const hots = ad.choices.map((name, i) => {
+      const pos = art && art.parts[name];
+      return pos ? '<circle id="kl-hot-' + i + '" cx="' + pos.cx + '" cy="' + pos.cy + '" r="16" class="kl-anat-hot" onclick="klAnatomyFind(\'' + name + '\',' + i + ')"/>' : '';
+    }).join('');
+    const diagram = (art ? art.svg : '').replace('</svg>', hots + '</svg>');
+    wrap.innerHTML = top +
+      '<div class="kl-drumtitle">👆 Find the Part</div>' +
+      '<div class="kl-build-hint">tap the <b>' + ad.part + '</b></div>' +
+      '<div class="kl-anat-stage">' + diagram + '</div>' +
+      '<div class="kl-bandmate" id="kl-bandmate">&nbsp;</div>';
+    return;
+  }
+  // NAME THE PART: one part glows; pick its name from the choices.
   const pos = art && art.parts[ad.part];
   const choices = ad.choices.slice();
   for (let i = choices.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = choices[i]; choices[i] = choices[j]; choices[j] = t; }
@@ -16126,15 +16151,27 @@ function klRenderAnatomyPuzzle(p) {
   const btns = choices.map((c, i) => '<button class="kl-ear-choice" id="kl-anat-' + i + '" onclick="klAnatomyPick(' + i + ')">' + c + '</button>').join('');
   const ring = pos ? '<circle cx="' + pos.cx + '" cy="' + pos.cy + '" r="13" class="kl-anat-ring"/>' : '';
   const diagram = (art ? art.svg : '').replace('</svg>', ring + '</svg>');
-  wrap.innerHTML =
-    (klPuzzleBuilding() ? '<div class="kl-room-bg kt-bg-' + klPuzzleBuilding() + '">' + klSceneArt(klPuzzleBuilding()) + '</div>' : '') +
-    '<div class="kl-puzzle-top"><button class="kl-back" onclick="klExit()">←</button></div>' +
+  wrap.innerHTML = top +
     '<div class="kl-drumtitle">🔎 Name That Part</div>' +
     '<div class="kl-build-hint">what part is glowing?</div>' +
     '<div class="kl-anat-stage">' + diagram + '</div>' +
     '<div class="kl-ear-choices">' + btns + '</div>' +
     '<div class="kl-bandmate" id="kl-bandmate">&nbsp;</div>';
 }
+window.klAnatomyFind = function(name, i) {
+  if (klState.anatomySolved) return;
+  const p = KL_PUZZLES[klState.puzzleIdx];
+  if (name === p.adef.part) {
+    klState.anatomySolved = true;
+    const hot = document.getElementById('kl-hot-' + i); if (hot) hot.classList.add('correct');
+    klConfetti();
+    setTimeout(() => klWin(), 720);
+  } else {
+    const hot = document.getElementById('kl-hot-' + i);
+    if (hot) { hot.classList.add('wrong'); setTimeout(() => hot.classList.remove('wrong'), 550); }
+    const bm = document.getElementById('kl-bandmate'); if (bm) bm.textContent = 'Not there — try again!';
+  }
+};
 window.klAnatomyPick = function(i) {
   if (klState.anatomySolved) return;
   const p = KL_PUZZLES[klState.puzzleIdx];
@@ -16164,13 +16201,22 @@ function klListenPlay(ld) {
     g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
     o.start(start); o.stop(start + dur + 0.04);
   };
-  if (ld.kind === 'dyn') { tone(440, t0, 0.6, ld.loud ? 0.5 : 0.085, 'triangle'); }
-  else if (ld.kind === 'reg') { tone(ld.hz, t0, 0.6, 0.32, 'triangle'); }
-  else if (ld.kind === 'tempo') { const gap = ld.fast ? 0.14 : 0.5; for (let i = 0; i < 4; i++) tone(440, t0 + i * gap, 0.11, 0.32, 'triangle'); }
-  else if (ld.kind === 'dir') { const ns = ld.up ? [392, 523, 659] : [659, 523, 392]; ns.forEach((f, i) => tone(f, t0 + i * 0.22, 0.2, 0.32, 'triangle')); }
-  else if (ld.kind === 'art') {
-    if (ld.legato) { tone(440, t0, 0.85, 0.32, 'triangle'); }
-    else { for (let i = 0; i < 4; i++) tone(440, t0 + i * 0.18, 0.055, 0.34, 'triangle'); }
+  if (ld.kind === 'vol') {
+    // crescendo / decrescendo — same pitch, stepping gain so the change is the cue
+    const gains = ld.up ? [0.05, 0.12, 0.2, 0.32, 0.5] : [0.5, 0.32, 0.2, 0.12, 0.05];
+    gains.forEach((g, i) => tone(392, t0 + i * 0.26, 0.22, g, 'triangle'));
+  } else if (ld.kind === 'pitch') {
+    // a run of notes climbing or falling
+    const ns = ld.up ? [294, 349, 392, 466, 523] : [523, 466, 392, 349, 294];
+    ns.forEach((f, i) => tone(f, t0 + i * 0.22, 0.2, 0.3, 'triangle'));
+  } else if (ld.kind === 'tempo') {
+    // accelerando / ritardando — same pitch, gaps shrink or grow
+    const gaps = ld.up ? [0.5, 0.4, 0.3, 0.22, 0.16] : [0.16, 0.22, 0.32, 0.44, 0.56];
+    let t = t0; tone(440, t, 0.1, 0.3, 'triangle');
+    gaps.forEach(g => { t += g; tone(440, t, 0.1, 0.3, 'triangle'); });
+  } else if (ld.kind === 'art') {
+    if (ld.legato) { tone(440, t0, 0.9, 0.3, 'triangle'); }
+    else { for (let i = 0; i < 5; i++) tone(440, t0 + i * 0.17, 0.05, 0.32, 'triangle'); }
   }
 }
 function klRenderListenPuzzle(p) {
@@ -16187,7 +16233,7 @@ function klRenderListenPuzzle(p) {
     (klPuzzleBuilding() ? '<div class="kl-room-bg kt-bg-' + klPuzzleBuilding() + '">' + klSceneArt(klPuzzleBuilding()) + '</div>' : '') +
     '<div class="kl-puzzle-top"><button class="kl-back" onclick="klExit()">←</button></div>' +
     '<div class="kl-drumtitle">🔊 What Do You Hear?</div>' +
-    '<div class="kl-build-hint">listen, then pick what you hear</div>' +
+    '<div class="kl-build-hint">' + (ld.q || 'listen, then pick what you hear') + '</div>' +
     '<div class="kl-listen-row"><button class="kl-listen" id="kl-lst-listen" onclick="klListenReplay()">🔊 LISTEN</button></div>' +
     '<div class="kl-ear-choices">' + btns + '</div>' +
     '<div class="kl-bandmate" id="kl-bandmate">&nbsp;</div>';
@@ -16932,7 +16978,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-76'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-77'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
