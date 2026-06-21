@@ -3557,9 +3557,9 @@
     transition: background 0.15s;
   }
   .kl-tools-link:hover { background: rgba(0,0,0,0.42); }
+  .kl-build-stamp { margin-top: 10px; font-family: 'VT323', monospace; font-size: 13px; color: rgba(255,255,255,0.3); letter-spacing: 1px; }
   .kl-bt-note {
-    max-width: 360px; margin: 16px auto 2px; padding: 9px 14px;
-    background: rgba(250,204,21,0.1); border: 1px solid rgba(250,204,21,0.42);
+    max-width: 360px; margin: 16px auto 2px; padding: 9px 14px;    background: rgba(250,204,21,0.1); border: 1px solid rgba(250,204,21,0.42);
     border-radius: 12px; color: #fde68a;
     font-family: 'Barlow Condensed', sans-serif; font-weight: 600;
     font-size: 13.5px; line-height: 1.35; letter-spacing: 0.3px; text-align: center;
@@ -3675,6 +3675,24 @@
     background: rgba(26,18,44,0.92); border: 1.5px solid rgba(255,255,255,0.18);
     border-radius: 22px; padding: 26px 22px;
     box-shadow: 0 18px 50px rgba(0,0,0,0.5);
+  }
+  /* ── MUSIC SHOP: shopkeeper + content side by side ── */
+  .kt-shop-stage {
+    position: relative; z-index: 2; display: flex; align-items: flex-end;
+    justify-content: center; gap: 14px; width: min(900px, 96vw); max-height: 92vh;
+  }
+  .kt-keeper { flex: 0 0 auto; width: min(240px, 30vw); align-self: flex-end;
+    filter: drop-shadow(0 12px 22px rgba(0,0,0,0.45)); }
+  .kt-keeper-svg { width: 100%; height: auto; display: block; }
+  .kt-keeper-fig { animation: kkBob 3.4s ease-in-out infinite; }
+  @keyframes kkBob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+  .kt-keeper-eyes { transform-box: fill-box; transform-origin: center; animation: kkBlink 4.8s infinite; }
+  @keyframes kkBlink { 0%,93%,100% { transform: scaleY(1); } 96% { transform: scaleY(0.08); } }
+  .kt-shop-card { width: auto; flex: 1 1 440px; max-width: 460px; max-height: 90vh; overflow-y: auto; }
+  @media (max-width: 720px) {
+    .kt-shop-stage { flex-direction: column; align-items: center; gap: 4px; }
+    .kt-keeper { width: 132px; }
+    .kt-shop-card { flex: none; width: min(440px, 92vw); }
   }
   .kt-int-art { font-size: 56px; line-height: 1; }
   .kt-int-title {
@@ -11987,14 +12005,7 @@ function klRenderTown() {
   wrap.innerHTML =
     '<div class="kl-stage kt-stage">' +
       '<div class="kl-scene">' + KL_TOWN_SVG + '</div>' +
-      '<div class="kt-hud">' +
-        '<span class="kt-hud-item">💵 $' + klState.money + '</span>' +
-        '<span class="kt-hud-item">⭐ Lv.' + klLevel() + ' · ' + klXpIntoLevel() + '/' + klXpForLevel() + '</span>' +
-        '<span class="kt-hud-item">📅 Day ' + klState.day + ' · ' + klDayName() + (klIsWeekend() ? ' 🎉' : '') + '</span>' +
-        (klState.bookedDay ? '<span class="kt-hud-item kt-hud-show">🎤 Day ' + klState.bookedDay + ' · ' + klDayName(klState.bookedDay) + (klHypeMult() > 1 ? ' · 🔥×' + klHypeMult().toFixed(2) : '') + '</span>' : '') +
-        (klState.van ? '<span class="kt-hud-item">🚐</span>' : '') +
-        (showHint ? '<span class="kt-hud-item kt-hud-show">' + showHint + '</span>' : '') +
-      '</div>' +
+      klHudMarkup() +
       '<div class="kt-town-title-top">HOMETOWN</div>' +
       '<div class="kt-hustle">' +
         '<button class="kt-hustle-btn busk" onclick="klBusk()">' +
@@ -12435,6 +12446,45 @@ const KL_HATER_LINES = [
 ];
 let klTalkIdx = 0;
 
+// Music-shop owner — simple standing artwork (idle bob + occasional blink). The
+// figure bobs gently behind the counter; eyes blink. Sits over the shop scene.
+const KL_SHOPKEEP_SVG =
+'<svg viewBox="0 0 220 270" class="kt-keeper-svg" xmlns="http://www.w3.org/2000/svg">' +
+  '<defs><linearGradient id="kkVest" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7a5cf5"/><stop offset="1" stop-color="#4a32b8"/></linearGradient></defs>' +
+  '<g class="kt-keeper-fig">' +
+    '<path d="M40,252 Q40,150 110,150 Q180,150 180,252 Z" fill="#e8e2d6"/>' +          // shirt
+    '<path d="M68,252 Q68,158 110,153 Q152,158 152,252 Z" fill="url(#kkVest)"/>' +     // vest
+    '<path d="M98,156 L110,178 L122,156 Z" fill="#fff"/>' +                            // collar
+    '<path d="M104,168 L94,162 L94,178 Z" fill="#c0392b"/><path d="M116,168 L126,162 L126,178 Z" fill="#c0392b"/><circle cx="110" cy="170" r="4" fill="#8e2a20"/>' + // bow tie
+    '<rect x="100" y="130" width="20" height="24" rx="6" fill="#e3b58f"/>' +           // neck
+    '<circle cx="64" cy="96" r="9" fill="#e3b58f"/><circle cx="156" cy="96" r="9" fill="#e3b58f"/>' + // ears
+    '<circle cx="110" cy="94" r="46" fill="#f0c39d"/>' +                              // head
+    '<path d="M64,82 Q66,46 110,44 Q154,46 156,82 Q140,60 110,60 Q80,60 64,82 Z" fill="#5a3a22"/>' + // hair top
+    '<path d="M64,98 Q58,74 70,62 L74,94 Z" fill="#5a3a22"/><path d="M156,98 Q162,74 150,62 L146,94 Z" fill="#5a3a22"/>' + // hair sides
+    '<rect x="80" y="82" width="22" height="5" rx="2.5" fill="#5a3a22"/><rect x="118" y="82" width="22" height="5" rx="2.5" fill="#5a3a22"/>' + // brows
+    '<g class="kt-keeper-eyes"><circle cx="91" cy="98" r="5.5" fill="#2a1c14"/><circle cx="129" cy="98" r="5.5" fill="#2a1c14"/></g>' + // eyes (blink)
+    '<path d="M110,100 L103,114 Q110,118 117,114 Z" fill="#e0a87e"/>' +                // nose
+    '<path d="M82,122 Q110,114 138,122 Q124,134 110,128 Q96,134 82,122 Z" fill="#5a3a22"/>' + // mustache
+    '<path d="M96,133 Q110,145 124,133" fill="none" stroke="#8a5a3a" stroke-width="3" stroke-linecap="round"/>' + // smile
+  '</g>' +
+  '<rect x="0" y="224" width="220" height="46" fill="#3a2a1c"/><rect x="0" y="224" width="220" height="7" fill="#54402a"/>' + // counter (in front)
+'</svg>';
+
+// The persistent game HUD (money / level+XP / day / show+hype) — one source of
+// truth so it can appear identically in town AND inside every building.
+function klHudMarkup() {
+  const showHint = klState.bookedDay
+    ? (klState.day >= klState.bookedDay ? '🎤 SHOW NIGHT — get to the venue!' : '🎤 show booked · day ' + klState.bookedDay)
+    : '';
+  return '<div class="kt-hud">' +
+    '<span class="kt-hud-item">💵 $' + klState.money + '</span>' +
+    '<span class="kt-hud-item">⭐ Lv.' + klLevel() + ' · ' + klXpIntoLevel() + '/' + klXpForLevel() + '</span>' +
+    '<span class="kt-hud-item">📅 Day ' + klState.day + ' · ' + klDayName() + (klIsWeekend() ? ' 🎉' : '') + '</span>' +
+    (klState.bookedDay ? '<span class="kt-hud-item kt-hud-show">🎤 Day ' + klState.bookedDay + ' · ' + klDayName(klState.bookedDay) + (klHypeMult() > 1 ? ' · 🔥×' + klHypeMult().toFixed(2) : '') + '</span>' : '') +
+    (klState.van ? '<span class="kt-hud-item">🚐</span>' : '') +
+    (showHint ? '<span class="kt-hud-item kt-hud-show">' + showHint + '</span>' : '') +
+  '</div>';
+}
 function klRenderInterior(id) {
   klState.devRoom = id; // remembered so dev unlock toggles can re-render this room live
   document.getElementById('kidlab').classList.remove('kl-playing');
@@ -12561,13 +12611,33 @@ function klRenderInterior(id) {
       '<p class="kt-int-line kt-npc-line" id="kt-npc-line">' + KL_HATER_LINES[klTalkIdx % KL_HATER_LINES.length] + '</p>' +
       '<button class="kt-int-sub" onclick="klTalkTo(\'hater\')">💬 Keep talking</button>';
   }
+  // The SHOP gets a reorganized layout: shopkeeper standing to one side, the
+  // content panel beside it, scene showing through. Other interiors use the
+  // shared centered card. (First step toward reworking each building this way.)
+  if (id === 'shop') {
+    wrap.innerHTML =
+      '<div class="kl-stage kt-interior kt-bg-shop">' +
+        '<div class="kt-scene-art">' + klSceneArt('shop') + '</div>' +
+        klHudMarkup() +
+        '<div class="kt-shop-stage">' +
+          '<div class="kt-keeper">' + KL_SHOPKEEP_SVG + '</div>' +
+          '<div class="kt-int-card kt-shop-card">' +
+            '<div class="kt-int-title">' + title + '</div>' +
+            body +
+            '<button class="kt-int-leave" onclick="klRenderTown()">← Back outside</button>' +
+          '</div>' +
+        '</div>' +
+        (klIsDevAvailable() ? klDevBar() : '') +
+      '</div>';
+    return;
+  }
   wrap.innerHTML =
     '<div class="kl-stage kt-interior kt-bg-' + id + '">' +
       '<div class="kt-scene-art">' + klSceneArt(id) + '</div>' +
+      klHudMarkup() +
       '<div class="kt-int-card">' +
         '<div class="kt-int-art">' + art + '</div>' +
         '<div class="kt-int-title">' + title + '</div>' +
-        '<div class="kt-hud kt-hud-inline"><span class="kt-hud-item">💵 $' + klState.money + '</span><span class="kt-hud-item">📅 Day ' + klState.day + ' · ' + klDayName() + (klIsWeekend() ? ' 🎉' : '') + '</span></div>' +
         body +
         '<button class="kt-int-leave" onclick="klRenderTown()">← Back outside</button>' +
       '</div>' +
@@ -13359,6 +13429,7 @@ function klRenderPlayerSelect() {
         // === KANTEON RENAME — START ===
         '<div class="kl-company-credit">a Velion game</div>' +
         // === KANTEON RENAME — END ===
+        '<div class="kl-build-stamp">build ' + KL_BUILD_TAG + '</div>' +
       '</div>' +
       (klIsDevAvailable() ? klDevBar() : '') +
     '</div>';
@@ -15848,7 +15919,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-56'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-58'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
