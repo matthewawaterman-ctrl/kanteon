@@ -4579,6 +4579,26 @@
   .kl-anat-hot:active { fill: rgba(252,211,77,0.34); }
   .kl-anat-hot.correct { fill: rgba(74,222,128,0.34); stroke: #4ade80; stroke-dasharray: none; }
   .kl-anat-hot.wrong { fill: rgba(239,68,68,0.28); stroke: #ef4444; stroke-dasharray: none; }
+  /* ── SHARED CALENDAR (venue booking + day-job planner) ── */
+  .kl-cal { width: min(320px, 96%); margin: 8px auto 4px; }
+  .kl-cal-scroll { max-height: 46vh; overflow-y: auto; padding-right: 2px; }
+  .kl-cal-season { margin-bottom: 12px; }
+  .kl-cal-seasonhdr { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 14px;
+    letter-spacing: 0.6px; text-align: center; margin-bottom: 5px; opacity: 0.9; }
+  .kl-cal-dow { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-bottom: 3px; }
+  .kl-cal-dow span { text-align: center; font-size: 10px; opacity: 0.45; font-weight: 700; }
+  .kl-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .kl-cal-day { aspect-ratio: 1; border-radius: 7px; border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.05); color: #fff; font-family: 'Barlow', sans-serif; font-weight: 700;
+    font-size: 12px; cursor: pointer; position: relative; padding: 0;
+    display: flex; align-items: center; justify-content: center; }
+  .kl-cal-day:hover:not(.off) { background: rgba(255,255,255,0.16); }
+  .kl-cal-day.off { opacity: 0.2; cursor: default; }
+  .kl-cal-day.today { outline: 2px solid rgba(255,255,255,0.5); outline-offset: -2px; }
+  .kl-cal-day.hot:not(.off) { background: rgba(245,158,11,0.16); border-color: rgba(245,158,11,0.5); }
+  .kl-cal-book .kl-cal-day.sel { background: linear-gradient(180deg,#a78bfa,#7c4ddb); border-color: #a78bfa; }
+  .kl-cal-work .kl-cal-day.sel { background: linear-gradient(180deg,#7ad98a,#4fae63); border-color: #7ad98a; color: #0b2415; }
+  .kl-cal-fire { position: absolute; top: 0; right: 1px; font-size: 8px; line-height: 1; }
   .kl-ear-choice {
     flex: 1 1 40%; min-width: 130px; min-height: 60px; padding: 10px 18px; border-radius: 14px; cursor: pointer;
     font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 19px; letter-spacing: 1px;
@@ -12291,6 +12311,8 @@ window.klDayJob = function() {
 let klWorkPlanN = 1;
 window.klOpenWorkPlan = function() { klWorkPlanN = 1; klRenderWorkPlan(); };
 window.klWorkPlanAdjust = function(delta) { klWorkPlanN = Math.max(1, Math.min(14, klWorkPlanN + delta)); klRenderWorkPlan(); };
+// Calendar: tap a day to set the run (today → that day, up to 14 days).
+window.klWorkPickDay = function(day) { klWorkPlanN = Math.max(1, Math.min(14, day - klState.day + 1)); klRenderWorkPlan(); };
 window.klWorkPlanCancel = function() { const el = document.getElementById('kt-workplan'); if (el) el.remove(); };
 window.klWorkPlanConfirm = function() { const n = klWorkPlanN; const el = document.getElementById('kt-workplan'); if (el) el.remove(); klWorkDays(n); };
 function klWorkDays(n) {
@@ -12308,17 +12330,12 @@ function klRenderWorkPlan() {
   const endDay = klState.day + n - 1;          // last day you actually work
   const wakeDay = klState.day + n;             // the day you wake up after the stretch
   const total = KL_DAYJOB_PAY * n;
-  // Mini calendar strip of the days you'd work.
-  let strip = '';
-  for (let i = 0; i < n; i++) {
-    const d = startDay + i;
-    const wknd = klIsWeekend(d);
-    strip += '<div style="flex:0 0 auto;min-width:42px;text-align:center;padding:5px 6px;border-radius:9px;background:' +
-      (wknd ? 'rgba(125,211,252,0.18)' : 'rgba(255,255,255,0.06)') + ';border:1px solid rgba(255,255,255,0.1);">' +
-      '<div style="font-size:10px;opacity:0.65;">' + klDayName(d) + '</div>' +
-      '<div style="font-weight:800;font-size:13px;">' + klSeason(d).slice(0,2) + ' ' + klDayOfMonth(d) + '</div>' +
-      '</div>';
-  }
+  // Calendar: today is the start; tap a day to set the end of the run (max 14).
+  const maxRun = 14;
+  const enableTo = startDay + maxRun - 1;
+  const fsStart = startDay - klDayOfMonth(startDay) + 1;
+  const seasons = Math.ceil((enableTo - fsStart + 1) / 28);
+  const cal = klCalendarGrid({ fromDay: fsStart, seasons: seasons, enableFrom: startDay, enableTo: enableTo, selStart: startDay, selEnd: endDay, today: startDay, hotWeekends: false, onPick: 'klWorkPickDay', theme: 'work' });
   // Rent heads-up if the stretch crosses into / past a due date.
   let rentNote = '';
   const owed = klRentOwed();
@@ -12331,18 +12348,12 @@ function klRenderWorkPlan() {
   el.id = 'kt-workplan';
   el.style.cssText = 'position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(8,6,24,0.78);backdrop-filter:blur(3px);';
   el.innerHTML =
-    '<div style="width:min(380px,90vw);background:linear-gradient(180deg,#1b1640,#15102e);border:1px solid rgba(140,120,255,0.4);border-radius:20px;padding:18px 18px 16px;box-shadow:0 18px 40px rgba(0,0,0,0.5);font-family:\'Barlow\',sans-serif;color:#fff;">' +
+    '<div style="width:min(360px,92vw);max-height:96%;overflow-y:auto;background:linear-gradient(180deg,#1b1640,#15102e);border:1px solid rgba(140,120,255,0.4);border-radius:20px;padding:18px 18px 16px;box-shadow:0 18px 40px rgba(0,0,0,0.5);font-family:\'Barlow\',sans-serif;color:#fff;">' +
       '<div style="font-family:\'Barlow Condensed\',sans-serif;font-weight:900;font-size:22px;letter-spacing:1px;">💼 DAY JOB</div>' +
-      '<div style="font-size:13px;opacity:0.75;margin-bottom:12px;">$' + KL_DAYJOB_PAY + ' a day. How many days in a row?</div>' +
-      '<div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:12px;">' +
-        '<button onclick="klWorkPlanAdjust(-1)" style="width:42px;height:42px;border-radius:12px;border:none;background:rgba(255,255,255,0.1);color:#fff;font-size:24px;font-weight:800;cursor:pointer;">−</button>' +
-        '<div style="min-width:70px;text-align:center;"><div style="font-size:34px;font-weight:900;line-height:1;">' + n + '</div><div style="font-size:11px;opacity:0.6;">day' + (n > 1 ? 's' : '') + '</div></div>' +
-        '<button onclick="klWorkPlanAdjust(1)" style="width:42px;height:42px;border-radius:12px;border:none;background:rgba(255,255,255,0.1);color:#fff;font-size:24px;font-weight:800;cursor:pointer;">+</button>' +
-      '</div>' +
-      '<div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px;">' + strip + '</div>' +
-      '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:2px;"><span style="opacity:0.7;">Start</span><span style="font-weight:700;">Day ' + startDay + ' · ' + klSeasonLabel(startDay) + '</span></div>' +
-      '<div style="display:flex;justify-content:space-between;font-size:13px;"><span style="opacity:0.7;">Back home</span><span style="font-weight:700;">Day ' + wakeDay + ' · ' + klSeasonLabel(wakeDay) + '</span></div>' +
-      '<div style="display:flex;justify-content:space-between;font-size:17px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.12);"><span>You\u2019ll earn</span><span style="font-weight:900;color:#7ad98a;">$' + total + '</span></div>' +
+      '<div style="font-size:13px;opacity:0.78;margin-bottom:6px;">$' + KL_DAYJOB_PAY + ' a day. Tap a day to work from today through then — <b>' + n + ' day' + (n > 1 ? 's' : '') + '</b>.</div>' +
+      cal +
+      '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:2px;margin-top:4px;"><span style="opacity:0.7;">Back home</span><span style="font-weight:700;">Day ' + wakeDay + ' · ' + klSeasonLabel(wakeDay) + '</span></div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:17px;margin-top:6px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.12);"><span>You\u2019ll earn</span><span style="font-weight:900;color:#7ad98a;">$' + total + '</span></div>' +
       rentNote +
       '<div style="display:flex;gap:10px;margin-top:14px;">' +
         '<button onclick="klWorkPlanCancel()" style="flex:1;padding:11px;border-radius:12px;border:1px solid rgba(255,255,255,0.18);background:transparent;color:#fff;font-weight:700;font-size:14px;cursor:pointer;">Cancel</button>' +
@@ -12659,16 +12670,14 @@ function klRenderInterior(id) {
         '<button class="kl-listen kt-int-btn" ' + (klState.money < fine ? 'disabled' : '') + ' onclick="klPayFine(' + fine + ')">💸 Pay $' + fine + ' fine</button>' +
         (klState.money < fine ? '<p class="kt-int-note">Not enough cash — go earn it.</p>' : '');
     } else if (!klState.bookedDay) {
+      const today = klState.day;
+      const fsStart = today - klDayOfMonth(today) + 1;   // dom 1 of the current season
+      const enableTo = today + 56;                        // two full seasons ahead
+      const seasons = Math.ceil((enableTo - fsStart + 1) / 28);
       body =
-        '<p class="kt-int-line">"Twenty-five holds a date. Book it on a Friday or Saturday if you want a crowd."</p>' +
+        '<p class="kt-int-line">"Twenty-five holds a date. Book a Friday or Saturday (🔥) if you want a crowd — you can hold a night up to two seasons out."</p>' +
         '<p class="kt-int-note">Booking costs $25 · pick a night:</p>' +
-        '<div class="kt-int-row">' +
-          [2, 4, 7].map(d => {
-            const dn = klDayName(klState.day + d);
-            const hot = klShowDayMult(klState.day + d) >= 1.3;
-            return '<button class="kt-int-sub" onclick="klBookShow(' + d + ')">Day ' + (klState.day + d) + '<br><span style="font-size:11px;opacity:0.75;">' + dn + (hot ? ' 🔥' : '') + '</span></button>';
-          }).join('') +
-        '</div>';
+        klCalendarGrid({ fromDay: fsStart, seasons: seasons, enableFrom: today + 1, enableTo: enableTo, selStart: 0, selEnd: 0, today: today, hotWeekends: true, onPick: 'klBookShowDay', theme: 'book' });
     } else if (klState.day < klState.bookedDay) {
       const fill = Math.round(klHypeFill() * 100);
       const dn = klDayName(klState.bookedDay);
@@ -12839,14 +12848,49 @@ window.klTalkTo = function(who) {
 };
 
 // ── VENUE / CALENDAR ──
-window.klBookShow = function(daysOut) {
+// Shared month/season CALENDAR. A season is 28 days = 4 weeks, and every season
+// starts on a Monday, so each renders as a clean 7×4 grid (no leading blanks).
+// Used by venue booking and the day-job planner.
+//   o = { fromDay, seasons, enableFrom, enableTo, selStart, selEnd, today,
+//         hotWeekends, onPick (fn name, called with the absolute day), theme }
+function klCalendarGrid(o) {
+  const dow = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  let html = '<div class="kl-cal ' + (o.theme === 'work' ? 'kl-cal-work' : 'kl-cal-book') + '"><div class="kl-cal-scroll">';
+  for (let s = 0; s < o.seasons; s++) {
+    const seasonStart = o.fromDay + s * 28;
+    html += '<div class="kl-cal-season">' +
+      '<div class="kl-cal-seasonhdr">' + KL_SEASON_EMOJI[klSeason(seasonStart)] + ' ' + klSeason(seasonStart) + '</div>' +
+      '<div class="kl-cal-dow">' + dow.map(d => '<span>' + d + '</span>').join('') + '</div>' +
+      '<div class="kl-cal-grid">';
+    for (let dom = 1; dom <= 28; dom++) {
+      const day = seasonStart + (dom - 1);
+      const enabled = day >= o.enableFrom && day <= o.enableTo;
+      const inSel = o.selStart && day >= o.selStart && day <= o.selEnd;
+      const isToday = day === o.today;
+      const hot = o.hotWeekends && klShowDayMult(day) >= 1.3;
+      const cls = ['kl-cal-day'];
+      if (!enabled) cls.push('off');
+      if (inSel) cls.push('sel');
+      if (isToday) cls.push('today');
+      if (hot && enabled && !inSel) cls.push('hot');
+      html += '<button class="' + cls.join(' ') + '" ' + (enabled ? ('onclick="' + o.onPick + '(' + day + ')"') : 'disabled') + '>' +
+        dom + (hot && enabled ? '<span class="kl-cal-fire">🔥</span>' : '') + '</button>';
+    }
+    html += '</div></div>';
+  }
+  return html + '</div></div>';
+}
+// Book a show on an ABSOLUTE day (from the calendar).
+window.klBookShowDay = function(day) {
   if (klState.money < 25) { klToast('💸 Not enough cash to book. ($25)'); return; }
+  if (day <= klState.day) return;
   klState.money -= 25;
-  klState.bookedDay = klState.day + daysOut;
-  klState.bookedDaysOut = daysOut;
+  klState.bookedDay = day;
+  klState.bookedDaysOut = day - klState.day;
   klSaveProgress();
   klRenderInterior('venue');
 };
+window.klBookShow = function(daysOut) { klBookShowDay(klState.day + daysOut); }; // back-compat
 window.klPayFine = function(fine) {
   if (klState.money < fine) { klToast('💸 Can\u2019t afford the $' + fine + ' fine yet.'); return; }
   klState.money -= fine;
@@ -17012,7 +17056,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-78'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-79'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
