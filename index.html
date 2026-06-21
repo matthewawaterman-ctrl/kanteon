@@ -3838,6 +3838,40 @@
   }
   .kt-song-title { font-family: 'Barlow', sans-serif; font-weight: 700; font-size: 15.5px; color: #fff; }
   .kt-song-vibe { font-family: 'Barlow', sans-serif; font-size: 13.5px; color: rgba(252,211,77,0.92); white-space: nowrap; }
+  /* ── STYLE / CHARACTER CREATOR ── */
+  .kl-av-overlay { position: absolute; inset: 0; z-index: 60; display: flex; align-items: center;
+    justify-content: center; background: rgba(8,6,24,0.82); backdrop-filter: blur(3px); padding: 12px; }
+  .kl-av-card { width: min(380px, 94vw); max-height: 96%; overflow-y: auto; background: linear-gradient(180deg,#1b1640,#15102e);
+    border: 1px solid rgba(140,120,255,0.4); border-radius: 20px; padding: 16px 16px 18px;
+    box-shadow: 0 18px 40px rgba(0,0,0,0.5); font-family: 'Barlow', sans-serif; color: #fff; text-align: center; }
+  .kl-av-title { font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 22px; letter-spacing: 1px; }
+  .kl-av-preview { margin: 8px auto 12px; width: 150px; height: 150px; border-radius: 18px;
+    background: radial-gradient(ellipse at 50% 38%, rgba(120,200,255,0.18), rgba(255,255,255,0.04) 70%);
+    display: flex; align-items: center; justify-content: center; }
+  .kl-av-rows { display: flex; flex-direction: column; gap: 7px; margin-bottom: 12px; }
+  .kl-av-row { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: rgba(0,0,0,0.22); border-radius: 12px; padding: 7px 12px; }
+  .kl-av-label { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 15px; letter-spacing: 0.6px; }
+  .kl-av-stepper { display: flex; align-items: center; gap: 12px; }
+  .kl-av-val { min-width: 64px; font-weight: 700; font-size: 14px; }
+  .kl-av-arrow { width: 30px; height: 30px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.08); color: #fff; font-size: 13px; cursor: pointer; }
+  .kl-av-arrow:hover { background: rgba(255,255,255,0.18); }
+  .kl-av-dice { width: 100%; padding: 11px; border-radius: 12px; border: 1px solid rgba(252,211,77,0.5);
+    background: rgba(252,211,77,0.14); color: #ffe08a; font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800; font-size: 16px; letter-spacing: 0.5px; cursor: pointer; margin-bottom: 12px; }
+  .kl-av-dice:hover { background: rgba(252,211,77,0.22); }
+  .kl-av-actions { display: flex; gap: 10px; }
+  .kl-av-cancel { flex: 1; padding: 11px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.18);
+    background: transparent; color: #fff; font-weight: 700; font-size: 14px; cursor: pointer; }
+  .kl-av-go { flex: 2; padding: 12px; border-radius: 12px; border: none;
+    background: linear-gradient(180deg,#a78bfa,#7c4ddb); color: #fff; font-weight: 900; font-size: 15px; cursor: pointer; }
+  .kt-char-panel { display: flex; align-items: center; gap: 14px; background: rgba(0,0,0,0.2);
+    border-radius: 14px; padding: 10px 14px; margin: 4px 0 10px; }
+  .kt-char-art { width: 76px; height: 76px; flex: 0 0 auto; border-radius: 12px;
+    background: radial-gradient(ellipse at 50% 38%, rgba(120,200,255,0.16), rgba(255,255,255,0.03) 70%);
+    display: flex; align-items: center; justify-content: center; }
+  .kt-char-panel .kt-int-sub { flex: 1 1 auto; }
   /* ── DEV SOUND PANEL ── */
   .kl-sndpanel {
     position: fixed; top: 12px; left: 12px; z-index: 1000;
@@ -12575,9 +12609,13 @@ function klRenderInterior(id) {
   } else if (id === 'garage') {
     title = 'THE GARAGE'; art = '🎸';
     const stations = klBuildingModules('garage').map(klStationMarkup).join('');
+    const garageOpen = klBuildingModules('waddy').every(w => klModuleIsDone(w.id));
+    const bridges =
+      klBridgeStationMarkup('🎸', 'INSTRUMENT ANATOMY', 'Know your gear — the parts of every instrument.', 'instrument_anatomy', garageOpen) +
+      klBridgeStationMarkup('🔊', 'ACTIVE LISTENING', 'Name what you hear in the mix.', 'active_listening', garageOpen);
     body =
       '<p class="kt-int-line">Your turf. Cables everywhere. Jam Session opens once you\u2019ve nailed Drums, Bass &amp; Melody at Waddy\u2019s — the rest unlocks as you level up each skill.</p>' +
-      '<div class="kl-station-grid">' + stations + '</div>';
+      '<div class="kl-station-grid">' + stations + bridges + '</div>';
   } else if (id === 'venue') {
     title = 'THE VENUE'; art = '🎤';
     if (!(klState.waddyDone && klState.garageDone)) {
@@ -12723,6 +12761,10 @@ function klRenderInterior(id) {
       : '<p class="kt-int-note">No songs yet \u2014 write songs to build a Song Bank. Better songs multiply your busking and show pay.</p>';
     body =
       '<p class="kt-int-line">Home base. Pay the landlord here, and write songs \u2014 your Song Bank multiplies what you earn busking and playing shows.</p>' +
+      '<div class="kt-char-panel">' +
+        '<div class="kt-char-art">' + klAvatarSVG(klState.avatar || klAvatarDefault(), 76) + '</div>' +
+        '<button class="kt-int-sub" onclick="klOpenAvatar(\'edit\', function(){ klRenderInterior(\'home\'); })">🎨 Style Your Look</button>' +
+      '</div>' +
       rentBlock +
       '<div class="kt-shop-divider">SONGWRITING</div>' +
       '<button class="kt-int-sub" style="width:100%;" onclick="klOpenSongwriter()">✍️ Write a Song <i style="font-style:normal;opacity:0.65;">· takes 1 day</i></button>' +
@@ -13313,7 +13355,7 @@ function klSaveProgress() {
       v: 2, puzzleIdx: klState.puzzleIdx, score: klState.score, solved, savedAt: Date.now(),
       // === ECONOMY — START ===
       money: klState.money, xp: klState.xp, day: klState.day, showsPlayed: klState.showsPlayed, bookedDay: klState.bookedDay,
-      promo: klState.promo, promoExp: klState.promoExp, songs: klState.songs, gear: klState.gear, gearCondition: klState.gearCondition, van: klState.van, vanLoan: klState.vanLoan, rentPaidCount: klState.rentPaidCount, rentNotifiedFor: klState.rentNotifiedFor, rentIntroShown: klState.rentIntroShown, bookedDaysOut: klState.bookedDaysOut, waddyDone: klState.waddyDone, garageDone: klState.garageDone, modDone: klState.modDone, xpAwarded: klState.xpAwarded, devUnlock: klState.devUnlock, setPos: klState.setPos,
+      promo: klState.promo, promoExp: klState.promoExp, songs: klState.songs, gear: klState.gear, gearCondition: klState.gearCondition, van: klState.van, vanLoan: klState.vanLoan, rentPaidCount: klState.rentPaidCount, rentNotifiedFor: klState.rentNotifiedFor, rentIntroShown: klState.rentIntroShown, bookedDaysOut: klState.bookedDaysOut, waddyDone: klState.waddyDone, garageDone: klState.garageDone, modDone: klState.modDone, xpAwarded: klState.xpAwarded, devUnlock: klState.devUnlock, setPos: klState.setPos, avatar: klState.avatar,
       // === ECONOMY — END ===
     }));
   } catch (e) { /* storage full/blocked — play on without saving */ }
@@ -13328,6 +13370,190 @@ function klLoadProgress(kidId) {
 const KL_MATT = { id: 'matt', name: 'Matt', emoji: '🎹', cls: 'kl-p-matt', owner: true };
 // emoji choices offered when creating a new player
 const KL_AVATARS = ['🦄','🚀','🌸','🐉','🎸','🥁','🎤','🎧','⭐','🦊','🐙','🦖','🎺','🪐','👾','🐢'];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CHARACTER / STYLE CREATOR  (b31-73)
+// A parametric SVG avatar for the main character. Built at the start of a new
+// game (with a dice-roll randomizer) and re-editable any time at My House.
+// Stored per-player (persists for real profiles; guest is transient).
+// ═══════════════════════════════════════════════════════════════════════════
+const AV_SKIN    = ['#f6cfa6', '#ecb98c', '#d39a6e', '#b07a4e', '#8a5a36', '#5e3a22'];
+const AV_HAIRCOL = ['#241f1c', '#5a3b22', '#8a5a2b', '#caa24a', '#e6cf90', '#b53224', '#9b59b6', '#2c52b0', '#cfd3d6'];
+const AV_SHIRT   = ['#e74c3c', '#e67e22', '#f1c40f', '#27ae60', '#16a085', '#2980b9', '#8e44ad', '#34495e', '#dfe3ea'];
+const AV_HAIR    = ['bald', 'buzz', 'short', 'spiky', 'curly', 'long', 'mohawk', 'ponytail'];
+const AV_ACC     = ['none', 'shades', 'cap', 'beanie', 'headphones'];
+const AV_HAIR_LABEL = { bald: 'Bald', buzz: 'Buzz', short: 'Short', spiky: 'Spiky', curly: 'Curly', long: 'Long', mohawk: 'Mohawk', ponytail: 'Ponytail' };
+const AV_ACC_LABEL  = { none: 'None', shades: 'Shades', cap: 'Cap', beanie: 'Beanie', headphones: 'Headphones' };
+const AV_CATS = [
+  { key: 'skin',      label: 'Skin',       type: 'color', len: AV_SKIN.length },
+  { key: 'hair',      label: 'Hair',       type: 'style', len: AV_HAIR.length },
+  { key: 'hairColor', label: 'Hair Color', type: 'color', len: AV_HAIRCOL.length },
+  { key: 'shirt',     label: 'Shirt',      type: 'color', len: AV_SHIRT.length },
+  { key: 'accessory', label: 'Accessory',  type: 'style', len: AV_ACC.length }
+];
+function klAvatarDefault() { return { skin: 0, hair: 2, hairColor: 1, shirt: 5, accessory: 0 }; }
+function klAvatarRandom() {
+  return {
+    skin: Math.floor(Math.random() * AV_SKIN.length),
+    hair: Math.floor(Math.random() * AV_HAIR.length),
+    hairColor: Math.floor(Math.random() * AV_HAIRCOL.length),
+    shirt: Math.floor(Math.random() * AV_SHIRT.length),
+    accessory: Math.floor(Math.random() * AV_ACC.length)
+  };
+}
+// Hair drawn OVER the top of the head (per style).
+function klAvHairTop(style, hc) {
+  switch (style) {
+    case 'bald':  return '';
+    case 'buzz':  return '<path d="M29 39 Q50 21 71 39 Q60 31 50 31 Q40 31 29 39 Z" fill="' + hc + '" opacity="0.92"/>';
+    case 'short': return '<path d="M27 45 Q25 17 50 16 Q75 17 73 45 Q70 30 50 28 Q30 30 27 45 Z" fill="' + hc + '"/>';
+    case 'spiky': return '<path d="M28 41 Q50 24 72 41 L66 22 L59 35 L52 19 L45 35 L38 21 L33 35 Z" fill="' + hc + '"/>';
+    case 'curly': return '<g fill="' + hc + '"><circle cx="34" cy="28" r="9"/><circle cx="44" cy="23" r="9"/><circle cx="56" cy="23" r="9"/><circle cx="66" cy="28" r="9"/><circle cx="50" cy="22" r="9"/></g>';
+    case 'long':  return '<path d="M26 46 Q24 16 50 15 Q76 16 74 46 Q71 30 50 28 Q29 30 26 46 Z" fill="' + hc + '"/>';
+    case 'mohawk':return '<path d="M44 8 L56 8 L54 34 L46 34 Z" fill="' + hc + '"/>';
+    case 'ponytail': return '<path d="M27 44 Q26 18 50 17 Q74 18 73 44 Q70 30 50 28 Q30 30 27 44 Z" fill="' + hc + '"/>';
+  }
+  return '';
+}
+// Hair drawn BEHIND the head/shoulders (long sides, ponytail tail).
+function klAvHairBack(style, hc) {
+  if (style === 'long') return '<path d="M24 40 Q20 74 30 82 L40 80 Q31 58 33 42 Z" fill="' + hc + '"/><path d="M76 40 Q80 74 70 82 L60 80 Q69 58 67 42 Z" fill="' + hc + '"/>';
+  if (style === 'ponytail') return '<path d="M70 34 Q90 40 86 60 Q82 50 72 47 Z" fill="' + hc + '"/>';
+  return '';
+}
+function klAvAccessory(acc) {
+  switch (acc) {
+    case 'none':  return '';
+    case 'shades':return '<g fill="#15151c"><rect x="36" y="38" width="12" height="9" rx="4"/><rect x="52" y="38" width="12" height="9" rx="4"/><rect x="47" y="41" width="6" height="2.5"/></g>';
+    case 'cap':   return '<path d="M26 38 Q50 16 74 38 Q50 31 26 38 Z" fill="#c0392b"/><path d="M24 38 Q10 41 9 46 Q28 41 26 39 Z" fill="#a52f23"/><circle cx="50" cy="22" r="2.4" fill="#7d231a"/>';
+    case 'beanie':return '<path d="M26 39 Q50 14 74 39 Q74 30 50 27 Q26 30 26 39 Z" fill="#16a085"/><rect x="25" y="35" width="50" height="8" rx="4" fill="#0e6e5c"/>';
+    case 'headphones': return '<path d="M27 41 Q50 11 73 41" stroke="#222" stroke-width="4.5" fill="none"/><rect x="21" y="38" width="10" height="15" rx="4.5" fill="#222"/><rect x="69" y="38" width="10" height="15" rx="4.5" fill="#222"/>';
+  }
+  return '';
+}
+function klAvatarSVG(cfg, size) {
+  cfg = cfg || klAvatarDefault();
+  size = size || 120;
+  const sk = AV_SKIN[(cfg.skin || 0) % AV_SKIN.length];
+  const hc = AV_HAIRCOL[(cfg.hairColor || 0) % AV_HAIRCOL.length];
+  const sh = AV_SHIRT[(cfg.shirt || 0) % AV_SHIRT.length];
+  const hair = AV_HAIR[(cfg.hair || 0) % AV_HAIR.length];
+  const acc = AV_ACC[(cfg.accessory || 0) % AV_ACC.length];
+  return '<svg viewBox="0 0 100 100" width="' + size + '" height="' + size + '" xmlns="http://www.w3.org/2000/svg">' +
+    klAvHairBack(hair, hc) +
+    // shoulders / shirt
+    '<path d="M16 100 Q16 73 50 73 Q84 73 84 100 Z" fill="' + sh + '"/>' +
+    '<path d="M42 74 Q50 82 58 74 L58 73 L42 73 Z" fill="rgba(0,0,0,0.12)"/>' +
+    // neck + ears + head
+    '<rect x="44" y="59" width="12" height="16" rx="4" fill="' + sk + '"/>' +
+    '<circle cx="27" cy="44" r="5" fill="' + sk + '"/><circle cx="73" cy="44" r="5" fill="' + sk + '"/>' +
+    '<circle cx="50" cy="42" r="22" fill="' + sk + '"/>' +
+    // brows + eyes + smile
+    '<g fill="#2b2330">' +
+      '<rect x="38" y="37" width="8" height="2" rx="1" fill="' + hc + '"/><rect x="54" y="37" width="8" height="2" rx="1" fill="' + hc + '"/>' +
+      '<circle cx="42" cy="43" r="2.7"/><circle cx="58" cy="43" r="2.7"/>' +
+      '<circle cx="43" cy="42.2" r="0.9" fill="#fff"/><circle cx="59" cy="42.2" r="0.9" fill="#fff"/>' +
+    '</g>' +
+    '<path d="M43 51 Q50 57 57 51" stroke="#2b2330" stroke-width="2.2" fill="none" stroke-linecap="round"/>' +
+    klAvHairTop(hair, hc) +
+    klAvAccessory(acc) +
+  '</svg>';
+}
+// ── Style-creator overlay ───────────────────────────────────────────────────
+let klAvatarDraft = null, klAvatarMode = 'edit', klAvatarOnDone = null;
+window.klOpenAvatar = function(mode, onDone) {
+  klAvatarMode = mode || 'edit';
+  klAvatarOnDone = onDone || null;
+  klAvatarDraft = Object.assign({}, klState.avatar || klAvatarDefault());
+  klRenderAvatarMaker();
+};
+window.klAvatarCancel = function() {
+  const el = document.getElementById('kt-avatar'); if (el) el.remove();
+  // In CREATE mode there's no cancel — confirm is required. (Button hidden there.)
+};
+window.klAvatarRoll = function() { klAvatarDraft = klAvatarRandom(); klRenderAvatarMaker(); };
+window.klAvatarCycle = function(catKey, dir) {
+  const cat = AV_CATS.find(c => c.key === catKey); if (!cat) return;
+  const cur = klAvatarDraft[catKey] || 0;
+  klAvatarDraft[catKey] = (cur + dir + cat.len) % cat.len;
+  klRenderAvatarMaker();
+};
+window.klAvatarConfirm = function() {
+  klState.avatar = Object.assign({}, klAvatarDraft);
+  if (klState.kid) klState.kid.avatar = klState.avatar;
+  if (!klState.guest && klState.kid) klSetPlayerAvatar(klState.kid.id, klState.avatar);
+  klSaveProgress();
+  const cb = klAvatarOnDone;
+  const el = document.getElementById('kt-avatar'); if (el) el.remove();
+  if (typeof cb === 'function') cb();
+};
+function klAvCatValueLabel(cat) {
+  const idx = klAvatarDraft[cat.key] || 0;
+  if (cat.type === 'style') {
+    if (cat.key === 'hair') return AV_HAIR_LABEL[AV_HAIR[idx]];
+    if (cat.key === 'accessory') return AV_ACC_LABEL[AV_ACC[idx]];
+  }
+  // color: show a swatch + number
+  const pal = cat.key === 'skin' ? AV_SKIN : cat.key === 'hairColor' ? AV_HAIRCOL : AV_SHIRT;
+  return '<span style="display:inline-block;width:18px;height:18px;border-radius:5px;vertical-align:middle;border:1px solid rgba(255,255,255,0.4);background:' + pal[idx] + ';"></span>';
+}
+function klRenderAvatarMaker() {
+  const old = document.getElementById('kt-avatar'); if (old) old.remove();
+  const create = (klAvatarMode === 'create');
+  const rows = AV_CATS.map(function(cat) {
+    return '<div class="kl-av-row">' +
+      '<span class="kl-av-label">' + cat.label + '</span>' +
+      '<div class="kl-av-stepper">' +
+        '<button class="kl-av-arrow" onclick="klAvatarCycle(\'' + cat.key + '\',-1)">◀</button>' +
+        '<span class="kl-av-val">' + klAvCatValueLabel(cat) + '</span>' +
+        '<button class="kl-av-arrow" onclick="klAvatarCycle(\'' + cat.key + '\',1)">▶</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  const el = document.createElement('div');
+  el.id = 'kt-avatar';
+  el.className = 'kl-av-overlay';
+  el.innerHTML =
+    '<div class="kl-av-card">' +
+      '<div class="kl-av-title">' + (create ? '🎸 CREATE YOUR CHARACTER' : '🎨 STYLE YOUR LOOK') + '</div>' +
+      '<div class="kl-av-preview">' + klAvatarSVG(klAvatarDraft, 150) + '</div>' +
+      '<div class="kl-av-rows">' + rows + '</div>' +
+      '<button class="kl-av-dice" onclick="klAvatarRoll()">🎲 Roll the dice</button>' +
+      '<div class="kl-av-actions">' +
+        (create ? '' : '<button class="kl-av-cancel" onclick="klAvatarCancel()">Cancel</button>') +
+        '<button class="kl-av-go" onclick="klAvatarConfirm()">' + (create ? 'Start Playing ▶' : '💾 Save Look') + '</button>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('kidlab').appendChild(el);
+}
+// Persist the avatar onto the player's record so the picker tile shows it.
+function klSetPlayerAvatar(id, avatar) {
+  if (id === 'matt' || id === 'guest') return;
+  try {
+    const list = klLoadPlayers().filter(p => p.id !== 'matt');
+    const p = list.find(x => x.id === id);
+    if (p) { p.avatar = avatar; klSavePlayers(list); }
+  } catch (e) {}
+}
+// ── GARAGE BRIDGES — Anatomy + Active Listening live at the Garage ───────────
+// These reuse the full Book-of-Knowledge modules. Launching sets a flag; when the
+// module exits (its "back" → Book home), showScreen() routes back to the Garage.
+function klBridgeStationMarkup(obj, name, desc, bookKey, unlocked) {
+  if (!unlocked) {
+    return '<div class="kl-station locked"><span class="kl-station-obj">🔒</span>' +
+      '<span class="kl-station-txt"><span class="kl-station-name">' + name + '</span>' +
+      '<span class="kl-station-desc">Finish every station at Sweet Waddy\u2019s to open the Garage.</span></span></div>';
+  }
+  return '<button class="kl-station" onclick="klEnterGarageBridge(\'' + bookKey + '\')">' +
+    '<span class="kl-station-obj">' + obj + '</span>' +
+    '<span class="kl-station-txt"><span class="kl-station-name">' + name + '</span>' +
+    '<span class="kl-station-desc">' + desc + '</span></span></button>';
+}
+window.klEnterGarageBridge = function(bookKey) {
+  window.klGarageBridge = true;
+  klState.activeSet = 'garage';
+  if (typeof selectModule === 'function') selectModule(bookKey);
+};
 
 function klLoadPlayers() {
   try {
@@ -13361,6 +13587,7 @@ function klGetPlayer(id) { return klLoadPlayers().find(p => p.id === id); }
 const klState = {
   kid: null,
   guest: false,          // GUEST mode: throwaway session, nothing persists
+  avatar: null,          // main-character look {skin,hair,hairColor,shirt,accessory}
   puzzleIdx: 0,
   score: 0,              // silent instrumentation only — never celebrated
   selectedBlock: null,   // {pitch, dur}
@@ -13753,7 +13980,7 @@ function klRenderPlayerSelect() {
   const btn = k =>
     '<button class="kl-player ' + (k.cls || 'kl-p-custom') + '" onclick="klPickKid(\'' + k.id + '\')"' +
       (k.id !== 'matt' ? ' oncontextmenu="event.preventDefault();klConfirmDeletePlayer(\'' + k.id + '\')"' : '') + '>' +
-      '<div class="kl-player-emoji">' + k.emoji + '</div>' +
+      '<div class="kl-player-emoji">' + (k.avatar ? klAvatarSVG(k.avatar, 46) : k.emoji) + '</div>' +
       '<div class="kl-player-name">' + k.name + '</div>' +
     '</button>';
   const addTile =
@@ -13860,6 +14087,7 @@ window.klPickKid = function(kidId) {
     klState.promo = save.promo || { flyers: 0, ads: 0, radio: 0 };
     klState.promoExp = save.promoExp || { flyers: 0, ads: 0, radio: 0 };
     klState.songs = save.songs || [];
+    klState.avatar = save.avatar || klAvatarDefault();
     klState.gear = save.gear || [];
     klState.gearCondition = (save.gearCondition !== undefined) ? save.gearCondition : 100;
     klState.bookedDaysOut = save.bookedDaysOut || 0;
@@ -13894,13 +14122,14 @@ window.klPickKid = function(kidId) {
   klState.puzzleIdx = 0;
   klState.score = 0;
   klState.solved = [];
+  klState.avatar = klAvatarDefault();
   // === SAVE/LOAD — END ===
   klLogSessionStart();
   getAudio(); // unlock audio on this user gesture
   // === KANTEON TOWN — START ===
-  // Play the opening intro, then land in the hometown directory. Buildings lead
-  // to the content (Sweet Waddy = all puzzles, garage/venue/shop = soon, neighbor = story).
-  klPlayCutscene('intro', () => klRenderTown());
+  // Build your character first (with a dice-roll randomizer), THEN play the opening
+  // intro and land in the hometown directory.
+  klOpenAvatar('create', () => klPlayCutscene('intro', () => klRenderTown()));
   // === KANTEON TOWN — END ===
 };
 
@@ -13912,7 +14141,7 @@ window.klPickGuest = function() {
   klResetFreshState();
   klLogSessionStart();
   getAudio(); // unlock audio on this user gesture
-  klPlayCutscene('intro', () => klRenderTown());
+  klOpenAvatar('create', () => klPlayCutscene('intro', () => klRenderTown()));
 };
 
 // Play a list of cutscenes back-to-back, then call onDone. Each advances on the
@@ -15083,6 +15312,7 @@ window.klDevJump = function(idx) {
 // Reset ALL run + progression state to a brand-new game (skills included). Shared
 // by the DEV reset and GUEST mode so they can never drift.
 function klResetFreshState() {
+  klState.avatar = klAvatarDefault();
   klState.puzzleIdx = 0; klState.score = 0; klState.solved = [];
   klState.money = 50; klState.xp = 0; klState.xpAwarded = {}; klState.day = 1; klState.showsPlayed = 0; klState.bookedDay = null; klState.bookedDaysOut = 0;
   klState.promo = { flyers: 0, ads: 0, radio: 0 }; klState.promoExp = { flyers: 0, ads: 0, radio: 0 };
@@ -16407,7 +16637,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-72'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-73'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
@@ -17340,6 +17570,17 @@ window.klExportSessions = function() {
 // === KIDLAB — END ===
 
 window.showScreen = function(id) {
+  // GARAGE BRIDGE: when a Book module (Anatomy / Active Listening) was launched
+  // from inside the Garage, leaving it (back to the Book home) instead drops the
+  // player back at the Garage in the main story — the Book never shows.
+  if (window.klGarageBridge && id === 'home') {
+    window.klGarageBridge = false;
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('kidlab').classList.add('active');
+    if (typeof klRenderInterior === 'function') klRenderInterior('garage');
+    window.scrollTo(0, 0);
+    return;
+  }
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
