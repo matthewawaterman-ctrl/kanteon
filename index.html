@@ -3992,6 +3992,10 @@
   .kl-panel-players .kl-player-add {
     background: rgba(255,255,255,0.05); border: 2px dashed rgba(255,255,255,0.3);
   }
+  .kl-panel-players .kl-player-guest {
+    background: rgba(72,174,190,0.10); border: 2px dashed rgba(72,174,190,0.5);
+  }
+  .kl-panel-players .kl-player-guest .kl-player-emoji { opacity: 0.9; }
   .kl-panel .kl-tools-link { align-self: flex-start; margin-top: 4px; }
   /* ── ONE-SCREEN LANDING with hero scene (no scroll) ── */
   .kl-landing {
@@ -13375,7 +13379,7 @@ const KL_PLAYERS_KEY = 'kanteon_players';
 // town/building mapping. Saved on every win; loaded when the kid is picked.
 function klSaveKey(kidId) { return 'kanteon_save_' + kidId; }
 function klSaveProgress() {
-  if (!klState.kid) return;
+  if (!klState.kid || klState.guest) return; // GUEST plays a throwaway session — never persists
   try {
     const prev = klLoadProgress(klState.kid.id) || { solved: [] };
     const solved = Array.from(new Set([...(prev.solved || []), ...(klState.solved || [])]));
@@ -13431,6 +13435,7 @@ function klGetPlayer(id) { return klLoadPlayers().find(p => p.id === id); }
 
 const klState = {
   kid: null,
+  guest: false,          // GUEST mode: throwaway session, nothing persists
   puzzleIdx: 0,
   score: 0,              // silent instrumentation only — never celebrated
   selectedBlock: null,   // {pitch, dur}
@@ -13829,6 +13834,11 @@ function klRenderPlayerSelect() {
       '<div class="kl-player-emoji">＋</div>' +
       '<div class="kl-player-name">Add</div>' +
     '</button>';
+  const guestTile =
+    '<button class="kl-player kl-player-guest" onclick="klPickGuest()" title="Play a fresh session — nothing is saved">' +
+      '<div class="kl-player-emoji">🎭</div>' +
+      '<div class="kl-player-name">Guest</div>' +
+    '</button>';
   wrap.innerHTML =
     '<div class="kl-stage">' +
       '<div class="kl-scene">' + KL_HERO_SVG + '</div>' +
@@ -13837,7 +13847,7 @@ function klRenderPlayerSelect() {
       // === TITLE: KANTEON LOGO — END ===
       '<div class="kl-panel">' +
         '<div class="kl-panel-title">Who\'s playing?</div>' +
-        '<div class="kl-panel-players">' + players.map(btn).join('') + addTile + '</div>' +
+        '<div class="kl-panel-players">' + players.map(btn).join('') + addTile + guestTile + '</div>' +
         '<div class="kl-bt-note">🔊 Use your device\u2019s built-in speakers. Bluetooth headphones &amp; speakers add a delay that throws off the rhythm games — please turn them off first.</div>' +
         '<button class="kl-tools-link" onclick="klOpenTools()">📖 Book of Knowledge</button>' +
         '<button class="kl-tools-link" onclick="klToggleFullscreen()">⛶ Fullscreen</button>' +
@@ -13903,6 +13913,7 @@ window.klConfirmDeletePlayer = function(id) {
 };
 
 window.klPickKid = function(kidId) {
+  klState.guest = false; // a real profile saves normally
   klState.kid = klGetPlayer(kidId);
   if (!klState.kid) return;
   // === SAVE/LOAD — START ===
@@ -13964,6 +13975,17 @@ window.klPickKid = function(kidId) {
   // to the content (Sweet Waddy = all puzzles, garage/venue/shop = soon, neighbor = story).
   klPlayCutscene('intro', () => klRenderTown());
   // === KANTEON TOWN — END ===
+};
+
+// GUEST — a throwaway session. Starts completely fresh every time and never
+// touches localStorage (no save, not added to the profile list).
+window.klPickGuest = function() {
+  klState.guest = true;
+  klState.kid = { id: 'guest', name: 'Guest', emoji: '🎭', cls: 'kl-p-custom' };
+  klResetFreshState();
+  klLogSessionStart();
+  getAudio(); // unlock audio on this user gesture
+  klPlayCutscene('intro', () => klRenderTown());
 };
 
 // Play a list of cutscenes back-to-back, then call onDone. Each advances on the
@@ -15131,15 +15153,21 @@ window.klDevJump = function(idx) {
 
 // DEV: wipe the current player's save and reset all economy/progress to a clean
 // slate, then drop back into a fresh town. The "start clean every time" switch.
-window.klDevReset = function() {
-  if (!klIsDevAvailable()) return;
-  if (klState.kid) { try { localStorage.removeItem(klSaveKey(klState.kid.id)); } catch (e) {} }
+// Reset ALL run + progression state to a brand-new game (skills included). Shared
+// by the DEV reset and GUEST mode so they can never drift.
+function klResetFreshState() {
   klState.puzzleIdx = 0; klState.score = 0; klState.solved = [];
   klState.money = 50; klState.xp = 0; klState.xpAwarded = {}; klState.day = 1; klState.showsPlayed = 0; klState.bookedDay = null; klState.bookedDaysOut = 0;
   klState.promo = { flyers: 0, ads: 0, radio: 0 }; klState.promoExp = { flyers: 0, ads: 0, radio: 0 };
+  klState.songs = [];
   klState.gear = []; klState.gearCondition = 100; klState.van = false; klState.vanLoan = false; klState.rentPaidCount = 0; klState.rentNotifiedFor = -1; klState.rentIntroShown = false; klState.waddyDone = false; klState.garageDone = false;
   klState.activeSet = null; klState.activeModule = null; klState.modDone = {}; klState.devUnlock = {}; klState.setPos = { waddy: 0, garage: 13 };
   klRebuildLayersFor(0);
+}
+window.klDevReset = function() {
+  if (!klIsDevAvailable()) return;
+  if (klState.kid) { try { localStorage.removeItem(klSaveKey(klState.kid.id)); } catch (e) {} }
+  klResetFreshState();
   klToast('♻ Clean slate — fresh save.');
   klRenderTown();
 };
@@ -16452,7 +16480,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-69'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-70'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
@@ -17346,7 +17374,7 @@ function klLogSessionStart() {
   klState.sessionStart = Date.now();
 }
 function klLogSessionEnd() {
-  if (!klState.kid || !klState.sessionStart) return;
+  if (!klState.kid || !klState.sessionStart || klState.guest) return;
   const entry = {
     kid: klState.kid.id,
     openTs: klState.sessionStart,
