@@ -12957,7 +12957,7 @@ KL_BUILD_DEFS.forEach((b, i) => {
 (function registerBuildStations() {
   const waddyIdx = [], garageIdx = [];
   KL_BUILD_DEFS.forEach((b, i) => { (b.building === 'waddy' ? waddyIdx : garageIdx).push(KL_BUILD_START + i); });
-  KL_MODULE_DEFS.push({ id: 'waddy:build',  building: 'waddy',  obj: '🧱', name: 'BUILD',     desc: 'Stack notes into intervals.',     indices: waddyIdx, requires: ['waddy:drums', 'waddy:bass', 'waddy:melody'] });
+  KL_MODULE_DEFS.push({ id: 'waddy:build',  building: 'waddy',  obj: '🧱', name: 'CHORD LAB', desc: 'Stack notes into intervals.',     indices: waddyIdx, requires: ['waddy:drums', 'waddy:bass', 'waddy:melody'] });
   KL_MODULE_DEFS.push({ id: 'garage:build', building: 'garage', obj: '🧱', name: 'CHORD LAB', desc: 'Build full chords from theory.', indices: garageIdx, requires: ['waddy:build'] });
 })();
 
@@ -12983,7 +12983,7 @@ KL_TAP_DEFS.forEach((td, i) => {
 });
 (function registerTapStations() {
   const waddyIdx = KL_TAP_DEFS.map((td, i) => KL_TAP_START + i);
-  KL_MODULE_DEFS.push({ id: 'waddy:tap', building: 'waddy', obj: '🪘', name: 'RHYTHM TAP', desc: 'Read & play rhythms from notation.', indices: waddyIdx, requires: ['waddy:drums', 'waddy:bass', 'waddy:melody'] });
+  KL_MODULE_DEFS.push({ id: 'waddy:tap', building: 'waddy', obj: '🥁', name: 'GROOVE LAB', desc: 'Read & play rhythms from notation.', indices: waddyIdx, requires: ['waddy:drums', 'waddy:bass', 'waddy:melody'] });
 })();
 
 // ── GROOVE LAB (b31-47) ─────────────────────────────────────────────────────
@@ -12996,7 +12996,6 @@ KL_TAP_DEFS.forEach((td, i) => {
 //   events: { d: duration in beats (1=quarter, 0.5=eighth, 2=half), rest:true=silent }
 //   sub:    smallest subdivision in beats (the quantize grid)
 const KL_GROOVE_DEFS = [
-  { id: 311, name: 'FOUR ON THE FLOOR', hint: 'four steady quarter notes',     sub: 1,   events: [{d:1},{d:1},{d:1},{d:1}] },
   { id: 312, name: 'HALF NOTES',        hint: 'two long half notes',           sub: 1,   events: [{d:2},{d:2}] },
   { id: 313, name: 'TAKE A REST',       hint: 'rest on beat 3 — stay silent',  sub: 1,   events: [{d:1},{d:1},{d:1,rest:true},{d:1}] },
   { id: 314, name: 'STEADY EIGHTHS',    hint: 'eight even eighth notes',       sub: 0.5, events: [{d:0.5},{d:0.5},{d:0.5},{d:0.5},{d:0.5},{d:0.5},{d:0.5},{d:0.5}] },
@@ -13039,7 +13038,7 @@ KL_EAR_DEFS.forEach((ed, i) => {
 (function registerEarStations() {
   const waddyIdx = [], garageIdx = [];
   KL_EAR_DEFS.forEach((ed, i) => { (ed.building === 'waddy' ? waddyIdx : garageIdx).push(KL_EAR_START + i); });
-  KL_MODULE_DEFS.push({ id: 'waddy:ear',  building: 'waddy',  obj: '👂', name: 'NAME IT', desc: 'Hear it — then name the sound.', indices: waddyIdx, requires: ['waddy:build', 'waddy:tap'] });
+  KL_MODULE_DEFS.push({ id: 'waddy:ear',  building: 'waddy',  obj: '👂', name: 'EAR LAB', desc: 'Hear it — then name the sound.', indices: waddyIdx, requires: ['waddy:build', 'waddy:tap'] });
   KL_MODULE_DEFS.push({ id: 'garage:ear', building: 'garage', obj: '👂', name: 'EAR LAB', desc: 'Name chords by ear.',           indices: garageIdx, requires: ['waddy:ear'] });
 })();
 // Melody puzzles carry no type/layer field; identify them as "has notes, no type".
@@ -15186,7 +15185,7 @@ window.klEarPick = function(i) {
 const KL_HOMEROW = ['KeyA','KeyS','KeyD','KeyF','KeyG','KeyH','KeyJ','KeyK','KeyL'];
 let klGroove = { events: [], onsets: [], sub: 1, bpm: 84, beat: 0, barDur: 0, barBeats: 4, ts: [4, 4],
   startTs: 0, nextBeat: 0, metroId: null, rafId: null, recording: false,
-  recStart: 0, taps: [], solved: false };
+  recStart: 0, taps: [], solved: false, busy: false };
 
 // A short percussive click — reuse the tap-module click (metro = high/quiet tick,
 // onset/tap = lower punch). klTapClick already exists from the RHYTHM TAP module.
@@ -15231,7 +15230,7 @@ function klGrooveStartMetro() {
 function klGrooveStop() {
   if (klGroove.metroId) { clearInterval(klGroove.metroId); klGroove.metroId = null; }
   if (klGroove.rafId) { cancelAnimationFrame(klGroove.rafId); klGroove.rafId = null; }
-  klGroove.recording = false;
+  klGroove.recording = false; klGroove.busy = false;
 }
 // Re-anchor the metronome to NOW and return the downbeat exactly ONE BAR out — a
 // tight count-in of barBeats beats. Also schedules the drummer + 1-2-3-4 visual.
@@ -15276,7 +15275,8 @@ function klGrooveStatus(txt) { const bm = document.getElementById('kl-bandmate')
 // LISTEN — one-bar count-in (drummer + 1-2-3-4), then sound each played note and
 // light every written note + rest in time.
 window.klGroovePlay = function() {
-  if (klGroove.recording || klGroove.solved) return;
+  if (klGroove.recording || klGroove.solved || klGroove.busy) return; // no overlapping playback
+  klGroove.busy = true;
   const t0 = klGrooveCountIn();
   klGroove.onsets.forEach(b => klTapClick(t0 + b * klGroove.beat, 0.6, false));
   klGrooveLightSync(t0);
@@ -15285,10 +15285,12 @@ window.klGroovePlay = function() {
   setTimeout(() => klGrooveStatus('Listen 🎵'), Math.max(0, (t0 - ctx.currentTime) * 1000));
   const lb = document.getElementById('kl-groove-listen');
   if (lb) { lb.classList.add('playing'); setTimeout(() => lb.classList.remove('playing'), (t0 - ctx.currentTime + klGroove.barDur) * 1000); }
+  setTimeout(() => { klGroove.busy = false; }, Math.max(0, (t0 + klGroove.barDur + 0.12 - ctx.currentTime) * 1000));
 };
 // PLAY IT — one-bar count-in, then a one-bar record window. Home-row taps.
 window.klGrooveRecord = function() {
-  if (klGroove.recording || klGroove.solved) return;
+  if (klGroove.recording || klGroove.solved || klGroove.busy) return;
+  klGroove.busy = true;
   const ctx = getAudio();
   const t0 = klGrooveCountIn();
   klGroove.recStart = t0;
@@ -15303,20 +15305,20 @@ window.klGrooveRecord = function() {
   }, Math.max(0, (t0 - ctx.currentTime) * 1000));
   setTimeout(() => {
     klGroove.recording = false;
+    klGroove.busy = false; // clear before grading (a miss re-plays the example)
     if (pad) pad.classList.remove('live');
     klGrooveGrade();
   }, Math.max(0, (t0 + klGroove.barDur + 0.22 - ctx.currentTime) * 1000));
 };
 window.klGrooveTap = function() {
-  // No tap SOUND — a graded rhythm task shouldn't make the kid chase their own
-  // delayed click. Feedback is VISUAL (instant, latency-free); the metronome is
-  // the timing anchor and calibration handles the offset.
+  // Tap SOUND is back: on built-in audio (the supported setup) the click is
+  // effectively instant, so hearing your own hit is helpful feedback. (Single
+  // voice for now — a drum click; multi-pitch will swap this for a real pitch.)
+  const ctx = getAudio();
+  klTapClick(ctx.currentTime + 0.004, 0.5, false);
   const pad = document.getElementById('kl-groove-pad');
   if (pad) { pad.classList.add('hit'); setTimeout(() => pad.classList.remove('hit'), 110); }
   if (!klGroove.recording) return;
-  // Subtract the calibrated round-trip offset (output + input latency) so a tap
-  // that REGISTERS late but was FELT on the beat lands on the right subdivision.
-  const ctx = getAudio();
   const tapTime = ctx.currentTime - (klRhythmOffsetMs / 1000);
   const beatPos = (tapTime - klGroove.recStart) / klGroove.beat;
   if (beatPos < -0.25 || beatPos > klGroove.barBeats + 0.25) return;
@@ -15422,6 +15424,7 @@ function klRenderGroovePuzzle(p) {
   klGroove.barBeats = klGroove.ts[0];
   klGroove.solved = false;
   klGroove.recording = false;
+  klGroove.busy = false;
   const dots = [];
   for (let d = 0; d < klGroove.barBeats; d++) dots.push('<span class="kl-groove-beat"></span>');
   wrap.innerHTML =
@@ -15845,7 +15848,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-55'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-56'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
