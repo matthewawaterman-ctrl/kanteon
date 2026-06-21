@@ -3794,6 +3794,18 @@
       radial-gradient(circle at 50% 18%, rgba(255,244,200,0.10) 0%, transparent 36%),
       linear-gradient(180deg, #4a463a 0%, #57523f 60%, #3c382e 88%, #2c2922 100%);
   }
+  .kt-bg-home { /* cozy lamplit room: warm purple, soft glow */
+    background:
+      radial-gradient(ellipse at 50% 24%, rgba(255,210,140,0.16) 0%, transparent 44%),
+      linear-gradient(180deg, #2a2142 0%, #342a52 58%, #221b38 88%, #18132a 100%);
+  }
+  .kt-song-row {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    padding: 7px 12px; margin: 4px 0; border-radius: 11px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+  }
+  .kt-song-title { font-family: 'Barlow', sans-serif; font-weight: 700; font-size: 14px; color: #fff; }
+  .kt-song-vibe { font-family: 'Barlow', sans-serif; font-size: 12px; color: rgba(252,211,77,0.85); white-space: nowrap; }
   /* ── DEV SOUND PANEL ── */
   .kl-sndpanel {
     position: fixed; top: 12px; left: 12px; z-index: 1000;
@@ -12003,6 +12015,18 @@ const KL_TOWN_SVG =
       '<rect x="368" y="344" width="10" height="10" rx="1" fill="#caa84a" opacity="0.5"/>' +
       '<text x="358" y="390" text-anchor="middle" class="kt-bld-name">NEIGHBOR</text>' +
     '</g>' +
+    // 🏠 YOUR PLACE — the player's house, up front on the street (foreground)
+    '<g class="kt-bld" onclick="klEnterBuilding(\'home\')">' +
+      '<rect x="20" y="470" width="104" height="100" rx="4" fill="#6a5a8a"/>' +              // wall
+      '<path d="M10 474 L72 422 L134 474 Z" fill="#8a6fb8"/>' +                              // roof
+      '<rect x="98" y="438" width="14" height="26" fill="#5a4a78"/>' +                       // chimney
+      '<rect x="34" y="490" width="22" height="22" rx="2" fill="#ffe08a" opacity="0.92"/>' + // window L (lit)
+      '<rect x="88" y="490" width="22" height="22" rx="2" fill="#ffe08a" opacity="0.92"/>' + // window R (lit)
+      '<rect x="60" y="528" width="26" height="42" rx="3" fill="#3a2f55"/>' +                // door
+      '<circle cx="80" cy="550" r="2.4" fill="#ffd97a"/>' +                                  // knob
+      '<text x="72" y="459" text-anchor="middle" font-size="16">🎵</text>' +                // note
+      '<text x="72" y="590" text-anchor="middle" class="kt-bld-name">YOUR PLACE</text>' +
+    '</g>' +
     // === ECONOMY: BUILDINGS ON THE HORIZON — END ===
   '</svg>';
 
@@ -12152,6 +12176,7 @@ function klMarkModuleDone(id, silent) {
 window.klEnterBuilding = function(id) {
   getAudio();
   if (id === 'master') klRenderInterior('waddy');
+  else if (id === 'home') klRenderInterior('home');
   else if (id === 'garage') klRenderInterior('garage');
   else if (id === 'venue') klRenderInterior('venue');
   else if (id === 'shop') klRenderInterior('shop');
@@ -12743,6 +12768,32 @@ function klRenderInterior(id) {
     body =
       '<p class="kt-int-line kt-npc-line" id="kt-npc-line">' + KL_HATER_LINES[klTalkIdx % KL_HATER_LINES.length] + '</p>' +
       '<button class="kt-int-sub" onclick="klTalkTo(\'hater\')">💬 Keep talking</button>';
+  } else if (id === 'home') {
+    title = 'YOUR PLACE'; art = '🏠';
+    const rentOwed = klRentOwed();
+    const rentDaysLeft = klRentDaysLeft();
+    const nextRentDay = klNextRentDueDay();
+    const rentBlock =
+      '<div class="kt-shop-divider">RENT · $' + KL_RENT + ' on the 1st of each season</div>' +
+      (rentOwed > 0
+        ? '<div class="kt-shop-item" style="border-color:rgba(220,38,38,0.6);">' +
+            '<span class="kt-shop-label">🏠 Rent due</span>' +
+            '<button class="kt-int-sub" ' + (klState.money < rentOwed ? 'disabled' : '') + ' onclick="klPayRent()">Pay $' + rentOwed + '</button>' +
+            (rentDaysLeft != null ? '<span class="kt-shop-extra">' + Math.max(0, rentDaysLeft) + ' day' + (rentDaysLeft === 1 ? '' : 's') + ' before eviction</span>' : '') +
+          '</div>'
+        : '<div style="padding:4px 4px 6px;font-family:\'Barlow\',sans-serif;font-size:13.5px;color:rgba(232,224,255,0.85);">Paid up. Next rent on Day ' + nextRentDay + ' (' + klSeason(nextRentDay) + ').</div>');
+    const songs = klState.songs || [];
+    const songHypePct = Math.round(klSongHype() * 100);
+    const catalog = songs.length
+      ? '<div class="kt-shop-divider">YOUR CATALOG · +' + songHypePct + '% show hype' + (klSongHype() >= KL_SONG_HYPE_CAP ? ' (maxed)' : '') + '</div>' +
+        songs.slice().reverse().map(sg => '<div class="kt-song-row"><span class="kt-song-title">🎵 ' + sg.title + '</span><span class="kt-song-vibe">' + sg.vibe + ' · +' + Math.round((sg.hype || 0) * 100) + '%</span></div>').join('')
+      : '<p class="kt-int-note">No songs yet — writing songs builds lasting hype for every show.</p>';
+    body =
+      '<p class="kt-int-line">Home base. Pay the landlord here, and write songs — your catalog hypes every crowd you play to.</p>' +
+      rentBlock +
+      '<div class="kt-shop-divider">SONGWRITING</div>' +
+      '<button class="kt-int-sub" style="width:100%;" onclick="klOpenSongwriter()">✍️ Write a Song <i style="font-style:normal;opacity:0.65;">· takes 1 day</i></button>' +
+      catalog;
   }
   // The SHOP gets a reorganized layout: shopkeeper standing to one side, the
   // content panel beside it, scene showing through. Other interiors use the
@@ -13327,7 +13378,7 @@ function klSaveProgress() {
       v: 2, puzzleIdx: klState.puzzleIdx, score: klState.score, solved, savedAt: Date.now(),
       // === ECONOMY — START ===
       money: klState.money, xp: klState.xp, day: klState.day, showsPlayed: klState.showsPlayed, bookedDay: klState.bookedDay,
-      promo: klState.promo, promoExp: klState.promoExp, gear: klState.gear, gearCondition: klState.gearCondition, van: klState.van, vanLoan: klState.vanLoan, rentPaidCount: klState.rentPaidCount, rentNotifiedFor: klState.rentNotifiedFor, rentIntroShown: klState.rentIntroShown, bookedDaysOut: klState.bookedDaysOut, waddyDone: klState.waddyDone, garageDone: klState.garageDone, modDone: klState.modDone, xpAwarded: klState.xpAwarded, devUnlock: klState.devUnlock, setPos: klState.setPos,
+      promo: klState.promo, promoExp: klState.promoExp, songs: klState.songs, gear: klState.gear, gearCondition: klState.gearCondition, van: klState.van, vanLoan: klState.vanLoan, rentPaidCount: klState.rentPaidCount, rentNotifiedFor: klState.rentNotifiedFor, rentIntroShown: klState.rentIntroShown, bookedDaysOut: klState.bookedDaysOut, waddyDone: klState.waddyDone, garageDone: klState.garageDone, modDone: klState.modDone, xpAwarded: klState.xpAwarded, devUnlock: klState.devUnlock, setPos: klState.setPos,
       // === ECONOMY — END ===
     }));
   } catch (e) { /* storage full/blocked — play on without saving */ }
@@ -13392,6 +13443,7 @@ const klState = {
   bookedDaysOut: 0,      // how far out it was booked — feeds the Hype meter
   promo: { flyers: 0, ads: 0, radio: 0 }, // promotion bought for the NEXT show
   promoExp: { flyers: 0, ads: 0, radio: 0 }, // per-type expiry DAY — promo wears off after KL_PROMO_DAYS
+  songs: [],             // written songs {title, vibe, hype, day} — your catalog, durable show hype
   gear: [],              // band equipment owned — each piece boosts show payout
   gearCondition: 100,    // 0–100; wears down each show, repair at the Shop (Oregon-Trail style)
   van: false,            // THE END GOAL of the beta
@@ -13547,7 +13599,87 @@ function klPromoHype() {
   const rad = klPromoActive('radio')  ? p.radio  : 0;
   return fly * 0.10 + ad * 0.25 + rad * 0.50; // up to +1.05
 }
-function klHypeMult() { return 1 + klPromoHype(); }
+function klHypeMult() { return 1 + klPromoHype() + klSongHype(); }
+// SONG HYPE — your written catalog is durable hype on every show (unlike promo,
+// which is consumable per-show). Sum of each song's hype, capped so it ramps then
+// plateaus; later songs can decay / be performed individually as this grows.
+const KL_SONG_HYPE_CAP = 0.40; // songs contribute at most +40% hype
+function klSongHype() {
+  const songs = klState.songs || [];
+  const sum = songs.reduce((a, s) => a + (s.hype || 0), 0);
+  return Math.min(KL_SONG_HYPE_CAP, sum);
+}
+// ── SONGWRITING (v1) ────────────────────────────────────────────────────────
+// Write a song at home: pick a vibe, get a generated title, spend a day. Each
+// song adds durable hype to every show (capped). Grows later: lyrics, recording,
+// performing specific songs, decay, royalties, etc.
+const KL_SONG_ADJ = ['Neon', 'Midnight', 'Electric', 'Broken', 'Golden', 'Cosmic', 'Velvet', 'Wild', 'Static', 'Crimson', 'Paper', 'Hollow', 'Silver', 'Restless'];
+const KL_SONG_NOUN = ['Highway', 'Heartbeat', 'Thunder', 'Mirage', 'Echoes', 'Dynamite', 'Skyline', 'Riot', 'Daydream', 'Supernova', 'Ghosts', 'Wires', 'Avenue', 'Comet'];
+const KL_SONG_VIBES = [
+  { key: 'chill',  label: 'Chill',  emoji: '🌙', hype: 0.08 },
+  { key: 'anthem', label: 'Anthem', emoji: '🔥', hype: 0.12 },
+  { key: 'banger', label: 'Banger', emoji: '⚡', hype: 0.15 },
+];
+let klSongDraft = { title: '', vibe: 'anthem' };
+function klSongRandTitle() {
+  const a = KL_SONG_ADJ[Math.floor(Math.random() * KL_SONG_ADJ.length)];
+  const n = KL_SONG_NOUN[Math.floor(Math.random() * KL_SONG_NOUN.length)];
+  return a + ' ' + n;
+}
+function klSongVibeDef(key) { return KL_SONG_VIBES.find(v => v.key === key) || KL_SONG_VIBES[1]; }
+// A better musician writes catchier songs — small level bonus on top of the vibe.
+function klSongHypeFor(vibeKey) { return klSongVibeDef(vibeKey).hype + Math.min(0.05, Math.max(0, (klLevel() - 1) * 0.01)); }
+window.klOpenSongwriter = function() { klSongDraft = { title: klSongRandTitle(), vibe: 'anthem' }; klRenderSongwriter(); };
+window.klSongReroll = function() { klSongDraft.title = klSongRandTitle(); klRenderSongwriter(); };
+window.klSongPickVibe = function(key) { klSongDraft.vibe = key; klRenderSongwriter(); };
+window.klSongCancel = function() { const el = document.getElementById('kt-songwriter'); if (el) el.remove(); };
+window.klSongConfirm = function() {
+  const v = klSongVibeDef(klSongDraft.vibe);
+  const hype = +klSongHypeFor(klSongDraft.vibe).toFixed(3);
+  if (!klState.songs) klState.songs = [];
+  klState.songs.push({ title: klSongDraft.title, vibe: v.emoji + ' ' + v.label, hype: hype, day: klState.day });
+  klState.day++; // writing takes a day
+  klSaveProgress();
+  const el = document.getElementById('kt-songwriter'); if (el) el.remove();
+  klNotify('🎵', 'New song written!', '\u201C' + klSongDraft.title + '\u201D — a ' + v.label.toLowerCase() + ' track. +' + Math.round(hype * 100) + '% hype on every show now. Keep building your catalog.');
+  klRenderInterior('home'); // re-render (flushes the new-song cutscene)
+};
+function klRenderSongwriter() {
+  const old = document.getElementById('kt-songwriter'); if (old) old.remove();
+  const d = klSongDraft;
+  const vibeBtns = KL_SONG_VIBES.map(v => {
+    const on = d.vibe === v.key;
+    return '<button onclick="klSongPickVibe(\'' + v.key + '\')" style="flex:1;padding:10px 6px;border-radius:12px;cursor:pointer;font-family:\'Barlow Condensed\',sans-serif;font-weight:800;font-size:14px;' +
+      'border:1.5px solid ' + (on ? 'rgba(252,211,77,0.9)' : 'rgba(255,255,255,0.18)') + ';' +
+      'background:' + (on ? 'rgba(252,211,77,0.18)' : 'rgba(255,255,255,0.06)') + ';color:#fff;">' +
+      '<div style="font-size:22px;line-height:1;">' + v.emoji + '</div>' + v.label +
+      '<div style="font-size:11px;opacity:0.7;font-weight:600;">+' + Math.round(v.hype * 100) + '%</div></button>';
+  }).join('');
+  const total = Math.round(klSongHypeFor(d.vibe) * 100);
+  const capped = (klSongHype() >= KL_SONG_HYPE_CAP);
+  const el = document.createElement('div');
+  el.id = 'kt-songwriter';
+  el.style.cssText = 'position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(8,6,24,0.78);backdrop-filter:blur(3px);';
+  el.innerHTML =
+    '<div style="width:min(400px,92vw);background:linear-gradient(180deg,#1b1640,#15102e);border:1px solid rgba(140,120,255,0.4);border-radius:20px;padding:18px;box-shadow:0 18px 40px rgba(0,0,0,0.5);font-family:\'Barlow\',sans-serif;color:#fff;">' +
+      '<div style="font-family:\'Barlow Condensed\',sans-serif;font-weight:900;font-size:22px;letter-spacing:1px;">✍️ WRITE A SONG</div>' +
+      '<div style="font-size:13px;opacity:0.75;margin-bottom:12px;">Lay down a new track for your catalog. Takes one day.</div>' +
+      '<div style="display:flex;align-items:center;gap:10px;background:rgba(0,0,0,0.25);border-radius:12px;padding:10px 12px;margin-bottom:12px;">' +
+        '<span style="font-size:20px;">🎵</span>' +
+        '<span style="flex:1;font-family:\'Barlow Condensed\',sans-serif;font-weight:800;font-size:19px;">\u201C' + d.title + '\u201D</span>' +
+        '<button onclick="klSongReroll()" title="New title" style="border:none;background:rgba(255,255,255,0.12);color:#fff;border-radius:10px;padding:6px 10px;cursor:pointer;font-size:15px;">🎲</button>' +
+      '</div>' +
+      '<div style="font-size:12px;opacity:0.7;margin-bottom:6px;">VIBE</div>' +
+      '<div style="display:flex;gap:8px;margin-bottom:12px;">' + vibeBtns + '</div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:15px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.12);"><span>Hype it adds</span><span style="font-weight:900;color:#fcd34d;">+' + total + '%</span></div>' +
+      (capped ? '<div style="margin-top:6px;color:#ffd97a;font-size:12px;">Your catalog hype is already maxed (+' + Math.round(KL_SONG_HYPE_CAP * 100) + '%) — but more songs never hurt.</div>' : '') +
+      '<div style="display:flex;gap:10px;margin-top:14px;">' +
+        '<button onclick="klSongCancel()" style="flex:1;padding:11px;border-radius:12px;border:1px solid rgba(255,255,255,0.18);background:transparent;color:#fff;font-weight:700;font-size:14px;cursor:pointer;">Cancel</button>' +
+        '<button onclick="klSongConfirm()" style="flex:2;padding:11px;border-radius:12px;border:none;background:linear-gradient(180deg,#a78bfa,#7c4ddb);color:#fff;font-weight:900;font-size:15px;cursor:pointer;">Write it · 1 day</button>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('kidlab').appendChild(el);
+}
 // Clear out any promo whose run has ended (called as days advance). Notifies once.
 function klExpirePromo() {
   if (!klState.promoExp) { klState.promoExp = { flyers: 0, ads: 0, radio: 0 }; return; }
@@ -13558,7 +13690,7 @@ function klExpirePromo() {
   if (worn.length) { klSaveProgress(); klNotify('📉', 'Promo wore off', 'Your ' + worn.join(', ') + ' ' + (worn.length > 1 ? 'have' : 'has') + ' run their course. Buy fresh hype at the Shop before your next show, or the crowd stays small.'); }
 }
 // Bar fill 0–1 against max promo hype (+1.05 over base).
-function klHypeFill() { return Math.max(0, Math.min(1, (klHypeMult() - 1) / 1.05)); }
+function klHypeFill() { return Math.max(0, Math.min(1, (klHypeMult() - 1) / (1.05 + KL_SONG_HYPE_CAP))); }
 
 // GEAR: each owned piece adds a permanent payout boost, SCALED by condition.
 // Worn gear pays less (never penalizes below base); repair at the Shop to restore.
@@ -13780,6 +13912,7 @@ window.klPickKid = function(kidId) {
     klState.bookedDay = (save.bookedDay !== undefined) ? save.bookedDay : null;
     klState.promo = save.promo || { flyers: 0, ads: 0, radio: 0 };
     klState.promoExp = save.promoExp || { flyers: 0, ads: 0, radio: 0 };
+    klState.songs = save.songs || [];
     klState.gear = save.gear || [];
     klState.gearCondition = (save.gearCondition !== undefined) ? save.gearCondition : 100;
     klState.bookedDaysOut = save.bookedDaysOut || 0;
@@ -16310,7 +16443,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-66'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-67'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
