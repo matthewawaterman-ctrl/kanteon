@@ -3658,6 +3658,19 @@
     padding: 5px 11px; border-radius: 999px;
   }
   .kt-hud-show { color: #ffd97a; }
+  .kt-hud-level { display: inline-flex; align-items: center; gap: 7px; }
+  .kt-xpbar { width: 48px; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.16); overflow: hidden; }
+  .kt-xpbar-fill { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #fcd34d, #fbbf24); transition: width 0.4s ease; }
+  .kt-xp-num { font-size: 11.5px; opacity: 0.72; font-weight: 700; }
+  .kt-hud-level.leveled { animation: ktLevelPop 0.9s ease; }
+  .kt-hud-level.leveled .kt-xpbar-fill { animation: ktXpFlash 0.9s ease; }
+  @keyframes ktLevelPop {
+    0% { transform: scale(1); }
+    28% { transform: scale(1.16); text-shadow: 0 0 16px rgba(252,211,77,0.95); }
+    55% { transform: scale(0.98); }
+    100% { transform: scale(1); text-shadow: none; }
+  }
+  @keyframes ktXpFlash { 0%,100% { filter: none; } 40% { filter: brightness(1.9) drop-shadow(0 0 8px #fcd34d); } }
   .kt-hud-rent { color: #fff; background: rgba(220,38,38,0.85); border-color: rgba(255,160,160,0.6); cursor: pointer; font-weight: 800; }
   .kt-hud-rent:hover { background: rgba(220,38,38,1); }
   .kt-hud-inline { position: static; justify-content: center; margin: 4px 0 10px; }
@@ -3723,13 +3736,14 @@
     background: rgba(255,255,255,0.06); border-radius: 12px; padding: 8px 12px;
   }
   .kt-shop-item.owned { opacity: 0.6; }
-  .kt-shop-label { font-family: 'Barlow', sans-serif; font-size: 14px; color: #fff; }
-  .kt-shop-label i { font-style: normal; color: #8ef0c8; font-size: 12px; }
+  .kt-shop-label { font-family: 'Barlow', sans-serif; font-size: 15px; color: #fff; }
+  .kt-shop-label i { font-style: normal; color: #9ff4d2; font-size: 12.5px; }
   .kt-shop-own { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 12px; color: #8ef0c8; }
-  .kt-shop-extra { font-family: 'Barlow', sans-serif; font-size: 12px; color: rgba(255,217,122,0.8); }
+  .kt-shop-extra { font-family: 'Barlow', sans-serif; font-size: 12.5px; color: rgba(255,221,140,0.95); }
   .kt-shop-divider {
-    font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 11px;
-    letter-spacing: 2px; color: rgba(220,210,255,0.5); margin: 8px 0 0; text-align: left;
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 13.5px;
+    letter-spacing: 1.2px; color: rgba(232,224,255,0.82); margin: 14px 0 2px; text-align: left;
+    text-transform: uppercase;
   }
   .kt-npc-line { font-size: 16px; font-style: italic; min-height: 44px; }
   .kt-show-hud {
@@ -12026,6 +12040,7 @@ function klRenderTown() {
       '<button class="kl-back kt-town-back" onclick="klLeaveTown()" title="Leave">←</button>' +
       (klIsDevAvailable() ? klDevBar() : '') +
     '</div>';
+  klFlushNotifications(klRenderTown); // any queued rent/promo notices play as cutscenes
 }
 window.klRenderTown = klRenderTown; // inline onclick handlers need it global
 
@@ -12212,15 +12227,15 @@ function klSetComplete(setId) {
   if (setId === 'waddy') {
     const awarded = klGrantWaddyMilestone();
     klSaveProgress();
-    klToast(awarded
-      ? '🧙 "That\u2019s everything I\u2019ve got, kid." (+60 XP — you earn more now!) Hit the Garage.'
-      : '🧙 "Back already? Hit the Garage."');
+    klNotify('🧙', 'Sweet Waddy\u2019s — done!', awarded
+      ? '"That\u2019s everything I\u2019ve got, kid." (+60 XP — you earn more now!) Head to the Garage.'
+      : '"Back already? Head to the Garage."');
   } else {
     const awarded = klGrantGarageMilestone();
     klSaveProgress();
-    klToast(awarded
-      ? '🎸 Garage cleared! (+80 XP — you earn even more now!) Book a show at the Venue!'
-      : '🎸 Garage cleared! Book a show at the Venue!');
+    klNotify('🎸', 'The Garage — cleared!', awarded
+      ? '(+80 XP — you earn even more now!) Book a show at the Venue.'
+      : 'Book a show at the Venue.');
   }
   klRenderTown();
 }
@@ -12561,15 +12576,28 @@ const KL_SHOPKEEP_SVG =
 
 // The persistent game HUD (money / level+XP / day / show+hype) — one source of
 // truth so it can appear identically in town AND inside every building.
+let klShownLevel = null; // last level the HUD painted — used to flash the meter on level-up
 function klHudMarkup() {
   const showHint = klState.bookedDay
     ? (klState.day >= klState.bookedDay ? '🎤 SHOW NIGHT — get to the venue!' : '🎤 show booked · day ' + klState.bookedDay)
     : '';
   const rentOwed = klRentOwed();
   const daysLeft = klRentDaysLeft();
+  // Level-up flash: animate the meter the first CLEAN paint after the level rises.
+  // While notification cutscenes are queued we keep it pending so it isn't "spent"
+  // behind a cutscene; XP rollbacks (dev reset) just resync with no animation.
+  const lvl = klLevel();
+  let leveled = false;
+  if (klShownLevel == null) klShownLevel = lvl;
+  else if (lvl > klShownLevel) { leveled = true; if (klNotifyQueue.length === 0) klShownLevel = lvl; }
+  else if (lvl < klShownLevel) klShownLevel = lvl;
+  const xpInto = klXpIntoLevel(), xpFor = klXpForLevel();
+  const pct = Math.max(0, Math.min(100, Math.round(xpInto / Math.max(1, xpFor) * 100)));
   return '<div class="kt-hud">' +
     '<span class="kt-hud-item">💵 $' + klState.money + '</span>' +
-    '<span class="kt-hud-item">⭐ Lv.' + klLevel() + ' · ' + klXpIntoLevel() + '/' + klXpForLevel() + '</span>' +
+    '<span class="kt-hud-item kt-hud-level' + (leveled ? ' leveled' : '') + '">⭐ Lv.' + lvl +
+      '<span class="kt-xpbar"><span class="kt-xpbar-fill" style="width:' + pct + '%"></span></span>' +
+      '<span class="kt-xp-num">' + xpInto + '/' + xpFor + '</span></span>' +
     '<span class="kt-hud-item">' + klSeasonLabel() + ' · ' + klDayName() + (klIsWeekend() ? ' 🎉' : '') + '</span>' +
     (rentOwed > 0 ? '<span class="kt-hud-item kt-hud-rent" onclick="klPayRent()" title="Pay rent">🏠 RENT $' + rentOwed + (daysLeft != null ? ' · ' + Math.max(0, daysLeft) + 'd' : '') + '</span>' : '') +
     (klState.bookedDay ? '<span class="kt-hud-item kt-hud-show">🎤 Day ' + klState.bookedDay + ' · ' + klDayName(klState.bookedDay) + (klHypeMult() > 1 ? ' · 🔥×' + klHypeMult().toFixed(2) : '') + '</span>' : '') +
@@ -12682,7 +12710,7 @@ function klRenderInterior(id) {
             '<button class="kt-int-sub" ' + (klState.money < rentOwed ? 'disabled' : '') + ' onclick="klPayRent()">Pay $' + rentOwed + '</button>' +
             (rentDaysLeft != null ? '<span class="kt-shop-extra">' + Math.max(0, rentDaysLeft) + ' day' + (rentDaysLeft === 1 ? '' : 's') + ' before eviction</span>' : '') +
           '</div>'
-        : '<div style="padding:2px 4px 6px;font-family:\'Barlow\',sans-serif;font-size:12.5px;color:rgba(220,210,255,0.6);">Paid up. Next rent on Day ' + nextRentDay + ' (' + klSeason(nextRentDay) + ').</div>');
+        : '<div style="padding:4px 4px 6px;font-family:\'Barlow\',sans-serif;font-size:13.5px;color:rgba(232,224,255,0.85);">Paid up. Next rent on Day ' + nextRentDay + ' (' + klSeason(nextRentDay) + ').</div>');
     body =
       '<p class="kt-int-line">Strings, amps, and the only van for sale in fifty miles.</p>' +
       '<div class="kt-shop-grid">' +
@@ -12748,6 +12776,7 @@ function klRenderInterior(id) {
       '</div>' +
       (klIsDevAvailable() ? klDevBar() : '') +
     '</div>';
+  klFlushNotifications(() => klRenderInterior(id)); // level-up / cleared notices play here
 }
 
 window.klTalkTo = function(who) {
@@ -13454,7 +13483,7 @@ function klCheckRent() {
   if (!klState.rentIntroShown) {
     klState.rentIntroShown = true;
     klSaveProgress();
-    klToast('🏠 New in town: rent is $' + KL_RENT + ', due the 1st of every season. Your first season is free — start earning.');
+    klNotify('🔑', 'Welcome to town!', 'Your place runs $' + KL_RENT + ' a season, due on the 1st. This first season is on the house — get out there and start earning so you can cover it.');
   }
   const due = klRentDueCount();
   if (klState.rentPaidCount >= due) return false; // nothing owed right now
@@ -13463,7 +13492,7 @@ function klCheckRent() {
   if (klState.rentNotifiedFor !== due) {
     klState.rentNotifiedFor = due;
     klSaveProgress();
-    klToast('🏠 RENT DUE — $' + klRentOwed() + '. Pay the landlord by Day ' + klRentEvictDay() + ' (' + klSeasonLabel(klRentEvictDay()) + ') or you\u2019re evicted. Tap the rent pill or visit the Shop.');
+    klNotify('🏠', 'RENT IS DUE', 'The landlord wants $' + klRentOwed() + '. Pay by Day ' + klRentEvictDay() + ' (' + klSeasonLabel(klRentEvictDay()) + ') — tap the red rent pill up top or head to the Shop. Miss it and you\u2019re out on the street.');
   }
   return false;
 }
@@ -13526,7 +13555,7 @@ function klExpirePromo() {
   ['flyers', 'ads', 'radio'].forEach(t => {
     if ((p[t] || 0) > 0 && klState.day > (e[t] || 0)) { p[t] = 0; e[t] = 0; worn.push(t); }
   });
-  if (worn.length) { klSaveProgress(); klToast('📉 Promo wore off (' + worn.join(', ') + '). Buy fresh hype before your next show.'); }
+  if (worn.length) { klSaveProgress(); klNotify('📉', 'Promo wore off', 'Your ' + worn.join(', ') + ' ' + (worn.length > 1 ? 'have' : 'has') + ' run their course. Buy fresh hype at the Shop before your next show, or the crowd stays small.'); }
 }
 // Bar fill 0–1 against max promo hype (+1.05 over base).
 function klHypeFill() { return Math.max(0, Math.min(1, (klHypeMult() - 1) / 1.05)); }
@@ -13970,6 +13999,42 @@ window.klPlayCutscene = function(key, onContinue) {
   setTimeout(() => { wrap.onclick = cont; }, 350);
 };
 // ── END CUTSCENES ──────────────────────────────────────────────────────────
+
+// ── NOTIFICATION CUTSCENES ──────────────────────────────────────────────────
+// Important, must-read beats (rent, level-up, milestones) play as a dismissable
+// CUTSCENE instead of a fleeting toast. They QUEUE so several on one screen play
+// one after another, then the screen re-renders. Routine grind confirmations
+// (busk/work earnings, +XP ticks, "not enough cash") stay as quick toasts.
+let klNotifyQueue = [];
+function klNotify(art, title, line) { klNotifyQueue.push({ art: art, title: title, line: line }); }
+function klShowNotifyCutscene(n, onContinue) {
+  document.getElementById('kidlab').classList.remove('kl-playing');
+  klStopClock(); klStopBeatBar();
+  const wrap = document.getElementById('kl-wrap');
+  const cont = () => { wrap.onclick = null; onContinue && onContinue(); };
+  wrap.innerHTML =
+    '<div class="kl-cutscene">' +
+      '<div class="kl-cut-art">' + (n.art || '📣') + '</div>' +
+      '<div class="kl-cut-title">' + n.title + '</div>' +
+      '<div class="kl-cut-line">' + n.line + '</div>' +
+      '<button class="kl-listen kl-cut-go" onclick="event.stopPropagation(); window.__klCutGo && window.__klCutGo();">▶</button>' +
+      '<div class="kl-cut-skip">tap anywhere to continue</div>' +
+    '</div>';
+  window.__klCutGo = cont;
+  setTimeout(() => { wrap.onclick = cont; }, 350);
+}
+// Play every queued notice in order, then re-render the screen via reRender().
+// Returns true if it took over the screen. Call at the end of a screen render.
+function klFlushNotifications(reRender) {
+  if (!klNotifyQueue.length) return false;
+  const n = klNotifyQueue.shift();
+  klShowNotifyCutscene(n, () => {
+    if (klNotifyQueue.length) klFlushNotifications(reRender);
+    else if (reRender) reRender();
+  });
+  return true;
+}
+// ── END NOTIFICATION CUTSCENES ──────────────────────────────────────────────
 
 // ── DRUM TRANSCRIPTION PUZZLE ──────────────────────────────────────────
 // A different engine from melody: rows are DRUM VOICES (hi-hat / snare / kick),
@@ -14987,10 +15052,12 @@ window.klDevUnlock = function(id) {
   if (!klState.modDone) klState.modDone = {};
   if (!klState.modDone[id]) {
     const got = klMarkModuleDone(id, true); // grants per-level (+ milestone) XP, once
+    klState.day++; // completing a module costs a day — same as real play
     const m = klModuleDef(id);
-    klToast('✅ ' + (m ? m.name : id) + (got ? ' · +' + got + ' XP' : ' (XP already earned)'));
+    klToast('✅ ' + (m ? m.name : id) + (got ? ' · +' + got + ' XP' : ' (XP already earned)') + ' · Day ' + klState.day);
   } else {
     klState.modDone[id] = false;
+    klState.day = Math.max(1, klState.day - 1); // un-completing gives the day back
     klDevSyncMilestones(); // recompute building flags downward
   }
   klSaveProgress();
@@ -15002,11 +15069,12 @@ window.klDevUnlock = function(id) {
 window.klDevCompleteAll = function() {
   if (!klIsDevAvailable() || !klDevBecomeMatt()) return;
   if (!klState.modDone) klState.modDone = {};
-  let total = 0;
-  KL_MODULE_DEFS.forEach(m => { total += klMarkModuleDone(m.id, true); });
+  let total = 0, newly = 0;
+  KL_MODULE_DEFS.forEach(m => { if (!klState.modDone[m.id]) newly++; total += klMarkModuleDone(m.id, true); });
+  klState.day += newly; // one day per module, same as clearing them for real
   klSaveProgress();
   klRenderTown();
-  klToast(total ? '✅ Completed all levels · +' + total + ' XP' : '✅ All levels already complete');
+  klToast(total ? '✅ Completed all levels · +' + total + ' XP · +' + newly + ' days (Day ' + klState.day + ')' : '✅ All levels already complete');
 };
 // Reset all progression: clears completions, milestones, AND refunds granted XP.
 window.klDevLockAll = function() {
@@ -16242,7 +16310,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-64'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-66'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
@@ -16893,10 +16961,17 @@ function klWin() {
         const xpGained = klMarkModuleDone(mod.id);
         klState.day++; // a practice session takes a day — can't clear it all at once
         const building = mod.building;
+        const buildingDone = klBuildingModules(building).every(m => klModuleIsDone(m.id));
         setTimeout(() => {
           klState.activeModule = null;
           klSaveProgress();
-          klToast('✅ ' + mod.name + ' cleared!' + (xpGained ? ' +' + xpGained + ' XP' : '') + ' A day passes (now Day ' + klState.day + ' · ' + klDayName() + ').');
+          if (buildingDone && building === 'waddy') {
+            klNotify('🎸', 'SWEET WADDY\u2019S — DONE!', 'You\u2019ve cleared every station here' + (xpGained ? ' (+' + xpGained + ' XP)' : '') + '. The Garage is open now — that\u2019s where the real band comes together.');
+          } else if (buildingDone && building === 'garage') {
+            klNotify('🤘', 'THE GARAGE — DONE!', 'Every station cleared' + (xpGained ? ' (+' + xpGained + ' XP)' : '') + '. You\u2019re ready to book a real show at the Venue.');
+          } else {
+            klNotify('✅', mod.name + ' cleared!', (xpGained ? '+' + xpGained + ' XP. ' : '') + 'A day of practice passes — it\u2019s now Day ' + klState.day + ' (' + klDayName() + ' · ' + klSeasonLabel() + ').');
+          }
           klRenderInterior(building);
         }, stingMs + 200);
         return;
