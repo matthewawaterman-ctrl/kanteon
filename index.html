@@ -12206,10 +12206,14 @@ window.klEnterModule = function(moduleId, force) {
   // kick+snare level is cleared, right before the hi-hat level (puzzle index 1).
   if (moduleId === 'waddy:drums' && !(klState.solved || []).includes(0)) {
     klPlayCutsceneSeq(['find_drums'], () => klRenderPuzzle());
+  } else if (KL_MODULE_INTRO[moduleId] && !mod.indices.some(i => (klState.solved || []).includes(i))) {
+    // First time into a Garage ladder with an intro → play it once, then the puzzle.
+    klPlayCutscene(KL_MODULE_INTRO[moduleId], () => klRenderPuzzle());
   } else {
     klRenderPuzzle();
   }
 };
+const KL_MODULE_INTRO = { 'garage:anatomy': 'anatomy_intro', 'garage:listen': 'listen_intro' };
 
 // One-time Waddy's milestone. Idempotent + dev-skip-safe: awards +60 XP exactly
 // once, whether reached by playing through OR by jumping past it with the dev
@@ -14324,6 +14328,18 @@ const KL_STORY = {
     line: '[STORY INTRO: Kanteon makes all the music in the galaxy. Nobody plays anymore. But you just heard something… different.]',
   },
   // === KANTEON NAMING — END ===
+  // Station intros for the Garage's Anatomy + Active Listening ladders (b31-78).
+  // Short + friendly; Matt can rewrite via the dev cut editor.
+  anatomy_intro: {
+    art: '🥁',
+    title: 'KNOW YOUR GEAR',
+    line: 'Before you can play it, you\u2019ve got to know it. Learn every part of the kit \u2014 then the guitar. Some you\u2019ll name, some you\u2019ll tap. Let\u2019s go.',
+  },
+  listen_intro: {
+    art: '👂',
+    title: 'TRAIN YOUR EARS',
+    line: 'Shut your eyes and really listen. Does it climb or fall? Get louder or softer? Speed up or slow down? Trust what you hear.',
+  },
   // ── INSTRUMENT DISCOVERIES (PLACEHOLDER art + copy — Matt to rewrite) ──
   // Play when each instrument is first found. Swap the emoji art for real later.
   // KICK + SNARE found together (one beat). Art reuses the drum-kit vector pieces
@@ -14719,9 +14735,25 @@ function klPerformerColors(av) {
     shoe: AV_SHOES[(av.shoes || 0) % AV_SHOES.length]
   };
 }
-function klRecolorPerformer(svg, av, shirtColors) {
+// The avatar's hair STYLE + accessory, scaled onto a performer's head (the avatar
+// head is authored at centre (50,42) r22; here we drop it onto a head at cx,cy,r).
+function klAvHeadHairGroup(av, cx, cy, r) {
+  av = av || klState.avatar || klAvatarDefault();
+  const hc = AV_HAIRCOL[(av.hairColor || 0) % AV_HAIRCOL.length];
+  const hair = AV_HAIR[(av.hair || 0) % AV_HAIR.length];
+  const acc = AV_ACC[(av.accessory || 0) % AV_ACC.length];
+  const s = (r / 22).toFixed(3);
+  return '<g transform="translate(' + cx + ',' + cy + ') scale(' + s + ') translate(-50,-42)">' +
+    klAvHairBack(hair, hc) + klAvHairTop(hair, hc) + klAvAccessory(acc) + '</g>';
+}
+function klRecolorPerformer(svg, av, shirtColors, head) {
   const c = klPerformerColors(av);
-  let out = svg
+  let out = svg;
+  // 1) swap the stock hair shape for the avatar's actual hair style + accessory
+  if (head && head.hairPath) out = out.split(head.hairPath).join(klAvHeadHairGroup(av, head.cx, head.cy, head.r));
+  // 2) recolor skin / pants / shoes / shirt (hair colour now lives in the injected group;
+  //    the #4a3527 / #3a2a1f fallbacks only matter if no head anchor was supplied)
+  out = out
     .split('#e8b48c').join(c.sk).split('#d39b72').join(c.sk).split('#d9a06b').join(c.sk)
     .split('#4a3527').join(c.hc).split('#3a2a1f').join(c.hc).split('#3a2527').join(c.hc)
     .split('#2c3a72').join(c.pa).split('#3b4a8c').join(klShade(c.pa, -0.14))
@@ -14729,11 +14761,13 @@ function klRecolorPerformer(svg, av, shirtColors) {
   (shirtColors || []).forEach((col, i) => { out = out.split(col).join(i === 0 ? c.sh : klShade(c.sh, -0.16)); });
   return out;
 }
-function klDrummerSVG(av)   { return klRecolorPerformer(KL_DRUMMER_SVG,   av, ['#2ec5c5', '#1f9c9c']); }
-function klBassistSVG(av)   { return klRecolorPerformer(KL_BASSIST_SVG,   av, ['#a78bfa', '#9170e0', '#8a6bd8']); }
-function klGuitaristSVG(av) { return klRecolorPerformer(KL_GUITARIST_SVG, av, ['#4ade80', '#3bbf6e']); }
-function klKeysSVG(av)      { return klRecolorPerformer(KL_KEYS_SVG,      av, ['#fbbf24', '#e0a91f']); }
-function klVocalistSVG(av)  { return klRecolorPerformer(KL_VOCALIST_SVG,  av, ['#f472b6', '#e25ba0']); }
+const KL_DRUMMER_HEAD = { cx: 180, cy: 40, r: 13, hairPath: '<path d="M167 39 Q167 24 182 25 Q197 26 193 41 Q189 32 180 32 Q171 32 167 39 Z" fill="#4a3527"/>' };
+const KL_BANDER_HEAD  = { cx: 120, cy: 37, r: 13, hairPath: '<path d="M107 36 Q107 21 122 22 Q137 23 133 38 Q129 29 120 29 Q111 29 107 36 Z" fill="#3a2a1f"/>' };
+function klDrummerSVG(av)   { return klRecolorPerformer(KL_DRUMMER_SVG,   av, ['#2ec5c5', '#1f9c9c'], KL_DRUMMER_HEAD); }
+function klBassistSVG(av)   { return klRecolorPerformer(KL_BASSIST_SVG,   av, ['#a78bfa', '#9170e0', '#8a6bd8'], KL_BANDER_HEAD); }
+function klGuitaristSVG(av) { return klRecolorPerformer(KL_GUITARIST_SVG, av, ['#4ade80', '#3bbf6e'], KL_BANDER_HEAD); }
+function klKeysSVG(av)      { return klRecolorPerformer(KL_KEYS_SVG,      av, ['#fbbf24', '#e0a91f'], KL_BANDER_HEAD); }
+function klVocalistSVG(av)  { return klRecolorPerformer(KL_VOCALIST_SVG,  av, ['#f472b6', '#e25ba0'], KL_BANDER_HEAD); }
 
 // PIECE 1: render the persistent bottom band stage from klState.band. Visual only.
 // Reuses the drummer kit art but strips element ids so it can't collide with the
@@ -16978,7 +17012,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-77'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-78'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
