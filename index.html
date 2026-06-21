@@ -2,8 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Kanteon</title>
+<!-- iPad / home-screen: launch fullscreen like an app when "Add to Home Screen" -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Kanteon">
+<meta name="theme-color" content="#0a061a">
+<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CjxkZWZzPgo8bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj4KPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjOGI3ZmY3Ii8+CjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzZkNGZmMCIvPgo8L2xpbmVhckdyYWRpZW50Pgo8L2RlZnM+CjxyZWN0IHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgcng9IjE2IiBmaWxsPSJ1cmwoI2cpIi8+CjxnIGZpbGw9IiNmZmYiPgo8cmVjdCB4PSIxNCIgeT0iMjYiIHdpZHRoPSI2IiBoZWlnaHQ9IjEyIiByeD0iMyIvPgo8cmVjdCB4PSIyNCIgeT0iMTgiIHdpZHRoPSI2IiBoZWlnaHQ9IjI4IiByeD0iMyIvPgo8cmVjdCB4PSIzNCIgeT0iMjIiIHdpZHRoPSI2IiBoZWlnaHQ9IjIwIiByeD0iMyIvPgo8cmVjdCB4PSI0NCIgeT0iMjkiIHdpZHRoPSI2IiBoZWlnaHQ9IjYiIHJ4PSIzIi8+CjwvZz4KPC9zdmc+">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CjxkZWZzPgo8bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj4KPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjOGI3ZmY3Ii8+CjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzZkNGZmMCIvPgo8L2xpbmVhckdyYWRpZW50Pgo8L2RlZnM+CjxyZWN0IHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgcng9IjE2IiBmaWxsPSJ1cmwoI2cpIi8+CjxnIGZpbGw9IiNmZmYiPgo8cmVjdCB4PSIxNCIgeT0iMjYiIHdpZHRoPSI2IiBoZWlnaHQ9IjEyIiByeD0iMyIvPgo8cmVjdCB4PSIyNCIgeT0iMTgiIHdpZHRoPSI2IiBoZWlnaHQ9IjI4IiByeD0iMyIvPgo8cmVjdCB4PSIzNCIgeT0iMjIiIHdpZHRoPSI2IiBoZWlnaHQ9IjIwIiByeD0iMyIvPgo8cmVjdCB4PSI0NCIgeT0iMjkiIHdpZHRoPSI2IiBoZWlnaHQ9IjYiIHJ4PSIzIi8+CjwvZz4KPC9zdmc+">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -41,11 +48,14 @@
     height: 100%; background: var(--bg); color: var(--text);
     font-family: var(--font-body); overscroll-behavior: none;
     -webkit-font-smoothing: antialiased;
+    -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
     font-size: 16px;
     line-height: 1.6;
     letter-spacing: 0.02em;
     word-spacing: 0.1em;
   }
+  /* keep typing/selection working where it's actually needed (the name field) */
+  input, textarea, [contenteditable] { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
   button { font-family: inherit; cursor: pointer; }
 
   /* ── SCREENS ── */
@@ -12076,12 +12086,30 @@ function klModuleIsDone(id) { return !!(klState.modDone && klState.modDone[id]);
 function klActiveModuleDef() { return klState.activeModule ? klModuleDef(klState.activeModule) : null; }
 // Mark a module cleared; if its whole building is now cleared, grant that
 // building's milestone (idempotent — drives XP + the Venue unlock).
-function klMarkModuleDone(id) {
+const KL_MODULE_XP = 25; // XP for beating a single module/level
+// Idempotent XP ledger: each reward key pays out at most once (until a dev reset),
+// so dev shortcuts or re-completing a level can't inflate XP. Stores the amount so
+// a reset can roll it back. Returns the amount actually granted (0 if already paid).
+function klAwardXp(key, amount, silent) {
+  if (!klState.xpAwarded) klState.xpAwarded = {};
+  if (klState.xpAwarded[key]) return 0;
+  klState.xpAwarded[key] = amount;
+  klState.xp = (klState.xp || 0) + amount;
+  if (!silent) klToast('✨ +' + amount + ' XP');
+  return amount;
+}
+function klMarkModuleDone(id, silent) {
   if (!klState.modDone) klState.modDone = {};
   klState.modDone[id] = true;
-  const mod = klModuleDef(id); if (!mod) return;
+  const mod = klModuleDef(id); if (!mod) return 0;
+  let got = klAwardXp('mod:' + id, KL_MODULE_XP, true); // per-level XP (once)
   const allDone = klBuildingModules(mod.building).every(m => klState.modDone[m.id]);
-  if (allDone) { if (mod.building === 'waddy') klGrantWaddyMilestone(); else klGrantGarageMilestone(); }
+  if (allDone) {
+    const before = klState.xp || 0;
+    if (mod.building === 'waddy') klGrantWaddyMilestone(); else klGrantGarageMilestone();
+    got += Math.max(0, (klState.xp || 0) - before); // include the milestone bonus if new
+  }
+  return got; // total newly-granted XP, for the caller's toast
 }
 
 window.klEnterBuilding = function(id) {
@@ -12134,21 +12162,19 @@ window.klEnterModule = function(moduleId, force) {
 // once, whether reached by playing through OR by jumping past it with the dev
 // tool. Returns true if it actually awarded (so callers can tailor their toast).
 function klGrantWaddyMilestone() {
-  if (klState.waddyDone) return false;
   klState.waddyDone = true;
-  klState.xp = (klState.xp || 0) + 60;
+  const got = klAwardXp('ms:waddy', 60, true); // +60 once, ever (ledger-guarded)
   klSaveProgress();
-  return true;
+  return got > 0;
 }
 
 // One-time Garage milestone — same idempotent + dev-skip-safe pattern. Worth more
 // XP than Waddy's since the Garage is the harder set.
 function klGrantGarageMilestone() {
-  if (klState.garageDone) return false;
   klState.garageDone = true;
-  klState.xp = (klState.xp || 0) + 80;
+  const got = klAwardXp('ms:garage', 80, true);
   klSaveProgress();
-  return true;
+  return got > 0;
 }
 
 // Set finished → back to town with a beat.
@@ -13068,7 +13094,7 @@ function klSaveProgress() {
       v: 2, puzzleIdx: klState.puzzleIdx, score: klState.score, solved, savedAt: Date.now(),
       // === ECONOMY — START ===
       money: klState.money, xp: klState.xp, day: klState.day, showsPlayed: klState.showsPlayed, bookedDay: klState.bookedDay,
-      promo: klState.promo, gear: klState.gear, gearCondition: klState.gearCondition, van: klState.van, vanLoan: klState.vanLoan, bookedDaysOut: klState.bookedDaysOut, waddyDone: klState.waddyDone, garageDone: klState.garageDone, modDone: klState.modDone, devUnlock: klState.devUnlock, setPos: klState.setPos,
+      promo: klState.promo, gear: klState.gear, gearCondition: klState.gearCondition, van: klState.van, vanLoan: klState.vanLoan, bookedDaysOut: klState.bookedDaysOut, waddyDone: klState.waddyDone, garageDone: klState.garageDone, modDone: klState.modDone, xpAwarded: klState.xpAwarded, devUnlock: klState.devUnlock, setPos: klState.setPos,
       // === ECONOMY — END ===
     }));
   } catch (e) { /* storage full/blocked — play on without saving */ }
@@ -13141,6 +13167,7 @@ const klState = {
   activeSet: null,       // 'waddy' | 'garage' | null — which puzzle set is in play
   activeModule: null,    // which module/station is being played (null = none)
   modDone: {},           // per-module completion: { 'waddy:drums': true, ... }
+  xpAwarded: {},         // idempotent XP ledger: { 'mod:waddy:drums': 25, 'ms:waddy': 60, ... }
   devUnlock: {},         // DEV-only per-module unlock overrides (testing aid)
   setPos: { waddy: 0, garage: 13 }, // resume position per set (absolute puzzle indexes)
   // === ECONOMY — END ===
@@ -13409,6 +13436,7 @@ window.klPickKid = function(kidId) {
     // Per-module completion. Migrate older saves: a fully-cleared building (or a
     // module whose every puzzle is already in `solved`) counts its modules done.
     klState.modDone = save.modDone || {};
+    klState.xpAwarded = save.xpAwarded || {};
     klState.devUnlock = save.devUnlock || {};
     KL_MODULE_DEFS.forEach(m => {
       if (klState.modDone[m.id]) return;
@@ -14572,7 +14600,7 @@ window.klDevReset = function() {
   if (!klIsDevAvailable()) return;
   if (klState.kid) { try { localStorage.removeItem(klSaveKey(klState.kid.id)); } catch (e) {} }
   klState.puzzleIdx = 0; klState.score = 0; klState.solved = [];
-  klState.money = 50; klState.xp = 0; klState.day = 1; klState.showsPlayed = 0; klState.bookedDay = null; klState.bookedDaysOut = 0;
+  klState.money = 50; klState.xp = 0; klState.xpAwarded = {}; klState.day = 1; klState.showsPlayed = 0; klState.bookedDay = null; klState.bookedDaysOut = 0;
   klState.promo = { flyers: 0, ads: 0, radio: 0 };
   klState.gear = []; klState.gearCondition = 100; klState.van = false; klState.vanLoan = false; klState.waddyDone = false; klState.garageDone = false;
   klState.activeSet = null; klState.activeModule = null; klState.modDone = {}; klState.devUnlock = {}; klState.setPos = { waddy: 0, garage: 13 };
@@ -14629,25 +14657,35 @@ function klDevSyncMilestones() {
 window.klDevUnlock = function(id) {
   if (!klIsDevAvailable() || !klDevBecomeMatt()) return;
   if (!klState.modDone) klState.modDone = {};
-  klState.modDone[id] = !klState.modDone[id];
-  klDevSyncMilestones();
+  if (!klState.modDone[id]) {
+    const got = klMarkModuleDone(id, true); // grants per-level (+ milestone) XP, once
+    const m = klModuleDef(id);
+    klToast('✅ ' + (m ? m.name : id) + (got ? ' · +' + got + ' XP' : ' (XP already earned)'));
+  } else {
+    klState.modDone[id] = false;
+    klDevSyncMilestones(); // recompute building flags downward
+  }
   klSaveProgress();
   // Auto-refresh the room you're in so station tiles flip live; else refresh tray.
   if (klState.devRoom && document.querySelector('.kl-station-grid')) klRenderInterior(klState.devRoom);
   else klDevBar();
 };
-// Complete everything (mark DONE) — opens the Venue + grants both milestones.
+// Complete everything (mark DONE) — grants every level's XP + both milestones once.
 window.klDevCompleteAll = function() {
   if (!klIsDevAvailable() || !klDevBecomeMatt()) return;
   if (!klState.modDone) klState.modDone = {};
-  KL_MODULE_DEFS.forEach(m => { klState.modDone[m.id] = true; });
-  klDevSyncMilestones();
+  let total = 0;
+  KL_MODULE_DEFS.forEach(m => { total += klMarkModuleDone(m.id, true); });
   klSaveProgress();
   klRenderTown();
+  klToast(total ? '✅ Completed all levels · +' + total + ' XP' : '✅ All levels already complete');
 };
-// Reset all progression: clears completions + milestones.
+// Reset all progression: clears completions, milestones, AND refunds granted XP.
 window.klDevLockAll = function() {
   if (!klIsDevAvailable() || !klDevBecomeMatt()) return;
+  const refund = Object.values(klState.xpAwarded || {}).reduce((a, b) => a + (b || 0), 0);
+  klState.xp = Math.max(0, (klState.xp || 0) - refund);
+  klState.xpAwarded = {};
   klState.modDone = {}; klState.devUnlock = {};
   klState.waddyDone = false; klState.garageDone = false;
   klSaveProgress();
@@ -15807,7 +15845,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-54'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-55'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
@@ -16441,13 +16479,13 @@ function klWin() {
     if (mod) {
       const pos = mod.indices.indexOf(klState.puzzleIdx);
       if (pos < 0 || pos + 1 >= mod.indices.length) {
-        klMarkModuleDone(mod.id);
+        const xpGained = klMarkModuleDone(mod.id);
         klState.day++; // a practice session takes a day — can't clear it all at once
         const building = mod.building;
         setTimeout(() => {
           klState.activeModule = null;
           klSaveProgress();
-          klToast('✅ ' + mod.name + ' cleared! A day passes (now Day ' + klState.day + ' · ' + klDayName() + ').');
+          klToast('✅ ' + mod.name + ' cleared!' + (xpGained ? ' +' + xpGained + ' XP' : '') + ' A day passes (now Day ' + klState.day + ' · ' + klDayName() + ').');
           klRenderInterior(building);
         }, stingMs + 200);
         return;
