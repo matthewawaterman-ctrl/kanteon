@@ -3658,6 +3658,8 @@
     padding: 5px 11px; border-radius: 999px;
   }
   .kt-hud-show { color: #ffd97a; }
+  .kt-hud-rent { color: #fff; background: rgba(220,38,38,0.85); border-color: rgba(255,160,160,0.6); cursor: pointer; font-weight: 800; }
+  .kt-hud-rent:hover { background: rgba(220,38,38,1); }
   .kt-hud-inline { position: static; justify-content: center; margin: 4px 0 10px; }
   .kt-interior { display: flex; align-items: center; justify-content: center; position: relative; }
   /* Illustrated room scene sits at the back; a vignette floats above it for card
@@ -11998,6 +12000,7 @@ function klRenderTown() {
   document.getElementById('kidlab').classList.remove('kl-playing');
   klStopClock(); klStopBeatBar();
   klState.activeSet = null;
+  if (klCheckRent()) return; // rent came due — auto-paid, or overdue/evicted (eviction takes the screen)
   const wrap = document.getElementById('kl-wrap');
   const showHint = klState.bookedDay
     ? (klState.day >= klState.bookedDay ? '🎤 SHOW NIGHT — get to the venue!' : '🎤 show booked · day ' + klState.bookedDay)
@@ -12476,10 +12479,13 @@ function klHudMarkup() {
   const showHint = klState.bookedDay
     ? (klState.day >= klState.bookedDay ? '🎤 SHOW NIGHT — get to the venue!' : '🎤 show booked · day ' + klState.bookedDay)
     : '';
+  const rentOwed = klRentOwed();
+  const daysLeft = klRentDaysLeft();
   return '<div class="kt-hud">' +
     '<span class="kt-hud-item">💵 $' + klState.money + '</span>' +
     '<span class="kt-hud-item">⭐ Lv.' + klLevel() + ' · ' + klXpIntoLevel() + '/' + klXpForLevel() + '</span>' +
-    '<span class="kt-hud-item">📅 Day ' + klState.day + ' · ' + klDayName() + (klIsWeekend() ? ' 🎉' : '') + '</span>' +
+    '<span class="kt-hud-item">' + klSeasonLabel() + ' · ' + klDayName() + (klIsWeekend() ? ' 🎉' : '') + '</span>' +
+    (rentOwed > 0 ? '<span class="kt-hud-item kt-hud-rent" onclick="klPayRent()" title="Pay rent">🏠 RENT $' + rentOwed + (daysLeft != null ? ' · ' + Math.max(0, daysLeft) + 'd' : '') + '</span>' : '') +
     (klState.bookedDay ? '<span class="kt-hud-item kt-hud-show">🎤 Day ' + klState.bookedDay + ' · ' + klDayName(klState.bookedDay) + (klHypeMult() > 1 ? ' · 🔥×' + klHypeMult().toFixed(2) : '') + '</span>' : '') +
     (klState.van ? '<span class="kt-hud-item">🚐</span>' : '') +
     (showHint ? '<span class="kt-hud-item kt-hud-show">' + showHint + '</span>' : '') +
@@ -12579,9 +12585,22 @@ function klRenderInterior(id) {
             : '<p class="kt-int-note" style="margin-top:6px;">Gear in top shape.</p>') +
         '</div>'
       : '';
+    const rentOwed = klRentOwed();
+    const rentDaysLeft = klRentDaysLeft();
+    const nextRentDay = klNextRentDueDay();
+    const rentSection =
+      '<div class="kt-shop-divider">RENT · $' + KL_RENT + ' on the 1st of each ' + KL_MONTH_LEN + '-day season</div>' +
+      (rentOwed > 0
+        ? '<div class="kt-shop-item" style="border-color:rgba(220,38,38,0.6);">' +
+            '<span class="kt-shop-label">🏠 Rent due' + (klState.rentLate ? ' <i style="color:#fca5a5;">(late +$' + KL_RENT_LATEFEE + ')</i>' : '') + '</span>' +
+            '<button class="kt-int-sub" ' + (klState.money < rentOwed ? 'disabled' : '') + ' onclick="klPayRent()">Pay $' + rentOwed + '</button>' +
+            (rentDaysLeft != null ? '<span class="kt-shop-extra">' + Math.max(0, rentDaysLeft) + ' day' + (rentDaysLeft === 1 ? '' : 's') + ' before eviction</span>' : '') +
+          '</div>'
+        : '<div style="padding:2px 4px 6px;font-family:\'Barlow\',sans-serif;font-size:12.5px;color:rgba(220,210,255,0.6);">Paid up. Next rent on Day ' + nextRentDay + ' (' + klSeason(nextRentDay) + ').</div>');
     body =
       '<p class="kt-int-line">Strings, amps, and the only van for sale in fifty miles.</p>' +
       '<div class="kt-shop-grid">' +
+        rentSection +
         '<div class="kt-shop-divider">GEAR (each piece = +8% every show)</div>' +
         item('guitar', '🎸 Guitar <i>+8%</i>', 400, klState.gear.includes('guitar')) +
         item('keys', '🎹 Keys <i>+8%</i>', 600, klState.gear.includes('keys')) +
@@ -13163,7 +13182,7 @@ function klSaveProgress() {
       v: 2, puzzleIdx: klState.puzzleIdx, score: klState.score, solved, savedAt: Date.now(),
       // === ECONOMY — START ===
       money: klState.money, xp: klState.xp, day: klState.day, showsPlayed: klState.showsPlayed, bookedDay: klState.bookedDay,
-      promo: klState.promo, gear: klState.gear, gearCondition: klState.gearCondition, van: klState.van, vanLoan: klState.vanLoan, bookedDaysOut: klState.bookedDaysOut, waddyDone: klState.waddyDone, garageDone: klState.garageDone, modDone: klState.modDone, xpAwarded: klState.xpAwarded, devUnlock: klState.devUnlock, setPos: klState.setPos,
+      promo: klState.promo, gear: klState.gear, gearCondition: klState.gearCondition, van: klState.van, vanLoan: klState.vanLoan, rentPaidCount: klState.rentPaidCount, rentLate: klState.rentLate, bookedDaysOut: klState.bookedDaysOut, waddyDone: klState.waddyDone, garageDone: klState.garageDone, modDone: klState.modDone, xpAwarded: klState.xpAwarded, devUnlock: klState.devUnlock, setPos: klState.setPos,
       // === ECONOMY — END ===
     }));
   } catch (e) { /* storage full/blocked — play on without saving */ }
@@ -13231,6 +13250,8 @@ const klState = {
   gearCondition: 100,    // 0–100; wears down each show, repair at the Shop (Oregon-Trail style)
   van: false,            // THE END GOAL of the beta
   vanLoan: false,        // bought the van on a loan (down payment) vs cash
+  rentPaidCount: 0,      // how many monthly rents have been settled (1st of each month from month 2 on)
+  rentLate: false,       // rent went past due unpaid — late fee applies, eviction clock running
   waddyDone: false,      // one-time milestone: Waddy's house cleared (gates the +XP)
   garageDone: false,     // one-time milestone: the Garage cleared (gates the +XP)
   activeSet: null,       // 'waddy' | 'garage' | null — which puzzle set is in play
@@ -13265,6 +13286,93 @@ function klAddXp(amount) {
 const KL_DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 function klDayName(day) { return KL_DOW[((day || klState.day) - 1) % 7]; }
 function klIsWeekend(day) { const n = ((day || klState.day) - 1) % 7; return n === 5 || n === 6; }
+// === CALENDAR — Stardew-style: 4 weeks (28 days) per "month", which is really a
+// SEASON. Seasons cycle Spring → Summer → Fall → Winter → Spring … forever.
+// klState.day stays the absolute day counter (booking/economy run on it); the
+// season + day-of-month are derived views for display and for rent timing.
+const KL_SEASONS = ['Spring', 'Summer', 'Fall', 'Winter'];
+const KL_SEASON_EMOJI = { Spring: '🌱', Summer: '☀️', Fall: '🍂', Winter: '❄️' };
+const KL_MONTH_LEN = 28;
+function klMonthIndex(day) { return Math.floor(((day || klState.day) - 1) / KL_MONTH_LEN); }      // 0-based: 0=first month
+function klSeason(day) { return KL_SEASONS[klMonthIndex(day) % KL_SEASONS.length]; }
+function klDayOfMonth(day) { return (((day || klState.day) - 1) % KL_MONTH_LEN) + 1; }            // 1..28
+function klSeasonLabel(day) { const s = klSeason(day); return KL_SEASON_EMOJI[s] + ' ' + s + ' ' + klDayOfMonth(day); }
+
+// === RENT — due on the 1st of every month from the SECOND month on (the first
+// month is free move-in). Pay on time and it's auto-deducted. Can't cover it →
+// the rent goes overdue: a one-time late fee is added and you have KL_RENT_GRACE
+// days to pay up (at the Shop) before the landlord evicts you. Eviction = game
+// over. All three knobs are tunable right here. ===
+const KL_RENT = 300;          // monthly rent
+const KL_RENT_LATEFEE = 50;   // one-time penalty once rent is past due
+const KL_RENT_GRACE = 7;      // days after the 1st before eviction
+
+function klRentDueCount(day) { return klMonthIndex(day || klState.day); }  // rents that should be settled by now (month 0 free)
+function klRentOwed() {
+  const months = klRentDueCount() - klState.rentPaidCount;
+  if (months <= 0) return 0;
+  return months * KL_RENT + (klState.rentLate ? KL_RENT_LATEFEE : 0);
+}
+function klNextRentDueDay() { return (klState.rentPaidCount + 1) * KL_MONTH_LEN + 1; } // the 1st of the next unpaid month
+function klRentDaysLeft() { return klRentOwed() > 0 ? (klNextRentDueDay() + KL_RENT_GRACE - klState.day) : null; }
+
+// Settle everything currently due (manual button at the Shop / HUD).
+window.klPayRent = function() {
+  const owed = klRentOwed();
+  if (owed <= 0) return;
+  if (klState.money < owed) { klToast('💸 Not enough to cover rent ($' + owed + ').'); return; }
+  klState.money -= owed;
+  klState.rentPaidCount = klRentDueCount();
+  klState.rentLate = false;
+  klSaveProgress();
+  klToast('🏠 Rent paid: $' + owed);
+  klRenderTown();
+};
+
+// Runs after any day advance (called at the top of klRenderTown). Returns true if
+// the player was just evicted, so the caller stops rendering the town.
+function klCheckRent() {
+  if (!klState.kid) return false;
+  const owed = klRentOwed();
+  if (owed <= 0) { klState.rentLate = false; return false; }
+  // Affordable and not already late → auto-pay on time, no friction.
+  if (!klState.rentLate && klState.money >= owed) {
+    klState.money -= owed;
+    klState.rentPaidCount = klRentDueCount();
+    klSaveProgress();
+    klToast('🏠 Rent paid: $' + owed + ' · ' + klSeason());
+    return false;
+  }
+  // Can't cover it → overdue: flag late (adds the fee) and run the eviction clock.
+  klState.rentLate = true;
+  klSaveProgress();
+  if (klState.day > klNextRentDueDay() + KL_RENT_GRACE) { klEvicted(); return true; }
+  return false;
+}
+
+function klEvicted() {
+  try { klStopClock(); } catch (e) {}
+  const wrap = document.getElementById('kl-wrap');
+  wrap.innerHTML =
+    '<div class="kl-win-star" style="font-size:96px;">📦</div>' +
+    '<div class="kl-title" style="font-size:42px;">EVICTED</div>' +
+    '<div class="kl-subtitle" style="max-width:min(420px,86vw);">Rent went unpaid too long. Your stuff\u2019s on the curb and the locks are changed. Game over.</div>' +
+    '<div class="kl-subtitle" style="font-size:16px;opacity:0.8;max-width:min(420px,86vw);margin-top:6px;">You keep what you\u2019ve learned — start the hustle over with your skills intact.</div>' +
+    '<button class="kl-listen kt-int-btn" style="max-width:260px;margin-top:18px;" onclick="klRestartRun()">\u21ba Start over</button>';
+}
+
+// Game-over restart: wipe the money grind (cash, calendar, rent, gear, bookings,
+// shows) but KEEP earned skills — module completion and XP/level carry over.
+window.klRestartRun = function() {
+  klState.money = 50; klState.day = 1;
+  klState.rentPaidCount = 0; klState.rentLate = false;
+  klState.bookedDay = null; klState.bookedDaysOut = 0;
+  klState.promo = { flyers: 0, ads: 0, radio: 0 };
+  klState.gear = []; klState.gearCondition = 100;
+  klState.showsPlayed = 0; klState.van = false; klState.vanLoan = false;
+  klSaveProgress();
+  klRenderTown();
+};
 
 // === HYPE + GEAR (show-payout drivers) ===
 // Day-of-week multipliers, grounded in how live audiences + foot traffic really
@@ -13501,6 +13609,8 @@ window.klPickKid = function(kidId) {
     klState.bookedDaysOut = save.bookedDaysOut || 0;
     klState.van = !!save.van;
     klState.vanLoan = !!save.vanLoan;
+    klState.rentPaidCount = save.rentPaidCount || 0;
+    klState.rentLate = !!save.rentLate;
     klState.waddyDone = !!save.waddyDone;
     klState.garageDone = !!save.garageDone;
     // Per-module completion. Migrate older saves: a fully-cleared building (or a
@@ -14672,7 +14782,7 @@ window.klDevReset = function() {
   klState.puzzleIdx = 0; klState.score = 0; klState.solved = [];
   klState.money = 50; klState.xp = 0; klState.xpAwarded = {}; klState.day = 1; klState.showsPlayed = 0; klState.bookedDay = null; klState.bookedDaysOut = 0;
   klState.promo = { flyers: 0, ads: 0, radio: 0 };
-  klState.gear = []; klState.gearCondition = 100; klState.van = false; klState.vanLoan = false; klState.waddyDone = false; klState.garageDone = false;
+  klState.gear = []; klState.gearCondition = 100; klState.van = false; klState.vanLoan = false; klState.rentPaidCount = 0; klState.rentLate = false; klState.waddyDone = false; klState.garageDone = false;
   klState.activeSet = null; klState.activeModule = null; klState.modDone = {}; klState.devUnlock = {}; klState.setPos = { waddy: 0, garage: 13 };
   klRebuildLayersFor(0);
   klToast('♻ Clean slate — fresh save.');
@@ -15894,7 +16004,7 @@ let klDrumFirstPlay = true;  // extra audio lead on the first drum play (ctx war
 // Manual audio-sync TRIM (ms), layered on top of the auto-measured latency below.
 // Positive = delay the visual playhead a little more; negative = pull it earlier.
 // 0 = trust the measured value. Tunable live from DEV → Sync.
-let klAudioOffsetMs = 40; // default trim: +40ms felt locked on Matt's setup (built-in speakers)
+let klAudioOffsetMs = -45; // default sync trim for sequencer playheads (auto + this); -45 lined up best
 // Baked rhythm-tap trim (ms), subtracted from captured taps when grading. 0 works
 // well on built-in audio (Chromebooks / iPads), which is what the game targets;
 // it's a single tunable here if a fixed nudge is ever wanted. No Bluetooth — the
@@ -15919,7 +16029,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-58'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-59'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
