@@ -27,6 +27,10 @@
 <style>
   :root {
     --bg: #0f0e2a;
+    --space-bg:
+      radial-gradient(ellipse 60% 42% at 28% 24%, rgba(120,60,200,0.22) 0%, transparent 60%),
+      radial-gradient(ellipse 55% 36% at 78% 72%, rgba(40,180,220,0.15) 0%, transparent 55%),
+      #0f0e2a;
     --bg2: #17153d;
     --bg3: #1f1c50;
     --bg4: #0a0919;
@@ -50,13 +54,7 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body {
-    height: 100%;
-    background:
-      radial-gradient(ellipse 60% 42% at 28% 24%, rgba(120,60,200,0.20) 0%, transparent 60%),
-      radial-gradient(ellipse 55% 36% at 78% 72%, rgba(40,180,220,0.13) 0%, transparent 55%),
-      var(--bg);
-    background-attachment: fixed;
-    color: var(--text);
+    height: 100%; background: var(--bg); color: var(--text);
     font-family: var(--font-body); overscroll-behavior: none;
     -webkit-font-smoothing: antialiased;
     -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
@@ -70,7 +68,7 @@
   button { font-family: inherit; cursor: pointer; }
 
   /* ── SCREENS ── */
-  .screen { display: none; height: 100vh; max-height: 100vh; flex-direction: column; overflow: hidden; }
+  .screen { display: none; height: 100vh; max-height: 100vh; flex-direction: column; overflow: hidden; background: var(--space-bg); }
   .screen.active { display: flex; }
 
   /* === KIDLAB — START === */
@@ -92,7 +90,7 @@
   .home-kids-btn:active { transform: scale(0.96); }
   /* === KIDLAB — END === */
   /* ── HOME ── */
-  #home { background: var(--bg); }
+  #home { background: var(--space-bg); }
   .home-status {
     padding: 18px 24px 8px;
     display: flex; justify-content: space-between; align-items: center;
@@ -540,7 +538,7 @@
   }
 
   /* ── QUESTION SCREEN ── */
-  #question-screen { background: var(--bg); }
+  #question-screen { background: var(--space-bg); }
   .q-header {
     padding: 14px 18px; display: flex; align-items: center; gap: 12px;
     border-bottom: 1px solid var(--border);
@@ -552,6 +550,8 @@
   }
   .q-progress-track { height: 6px; background: rgba(255,255,255,0.08); border-radius: 99px; overflow: hidden; }
   .q-progress-fill { height: 100%; background: linear-gradient(90deg, var(--red), var(--cyan)); border-radius: 99px; transition: width 0.3s ease; }
+  /* Lesson Mode no longer uses XP — the whole mechanic is hidden. */
+  .xp-card, .q-xp-badge, #xp-toast { display: none !important; }
   .q-xp-badge {
     font-family: var(--font-display); font-size: 14px; font-weight: 800;
     color: var(--gold); letter-spacing: 1px;
@@ -1396,7 +1396,7 @@
   #module-index .tx-index-filter { font-size: 13px; padding: 6px 14px; }
 
   /* ── EAR TRAINING FREESTYLE ──────────────────────────────────────────── */
-  #ear-config { background: var(--bg); }
+  #ear-config { background: var(--space-bg); }
 
   /* Mode selector: horizontal row of [toggle | LABEL = tab | count] groups */
   .ear-mode-list {
@@ -1463,22 +1463,21 @@
     display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
   }
   .ear-item-btn {
-    background: var(--bg2); border: 1px solid var(--border);
-    color: var(--text2); padding: 9px 10px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.16);
+    color: var(--text2); padding: 10px 10px;
     font-family: var(--font-display); font-size: 13px; font-weight: 700;
-    letter-spacing: 1px; cursor: pointer; border-radius: 4px;
+    letter-spacing: 1px; cursor: pointer; border-radius: 12px;
     transition: background 0.1s, border-color 0.1s, color 0.1s, transform 0.05s;
     text-align: center;
     user-select: none;
   }
-  .ear-item-btn:hover { background: var(--bg3); border-color: var(--border2); }
-  .ear-item-btn:active { transform: scale(0.98); }
+  .ear-item-btn:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.28); }
+  .ear-item-btn:active { transform: scale(0.97); }
   .ear-item-btn.selected {
-    background: linear-gradient(145deg, #9b8fff 0%, #7c6ff7 50%, #6358d4 100%);
+    background: linear-gradient(160deg, #9b8fff, #7c6ff7 55%, #6358d4);
     border-color: rgba(255,255,255,0.3);
-    color: #fff;
-    box-shadow: 0 1px 0 rgba(255,255,255,0.2) inset, 0 -1px 0 rgba(0,0,0,0.3) inset, 0 0 12px rgba(124,111,247,0.3);
-    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    color: #fff; text-shadow: none;
+    box-shadow: 0 0 14px rgba(124,111,247,0.45);
   }
 
   .ear-options-row {
@@ -1536,17 +1535,17 @@
     background: linear-gradient(to top, var(--bg) 70%, rgba(13,13,15,0));
   }
   .ear-start-btn {
-    width: 100%; padding: 14px;
-    background: linear-gradient(145deg, #9b8fff 0%, #7c6ff7 50%, #6358d4 100%);
-    border: none; border-radius: 6px;
-    color: #fff; font-family: var(--font-display); font-weight: 900;
-    font-size: 16px; letter-spacing: 3px; cursor: pointer;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.4);
-    box-shadow: 0 1px 0 rgba(255,255,255,0.2) inset, 0 -2px 0 rgba(0,0,0,0.3) inset, 0 4px 16px rgba(124,111,247,0.3);
-    transition: filter 0.1s, transform 0.05s;
+    width: 100%; padding: 15px;
+    background: linear-gradient(160deg, #ffe27a, #f59e0b);
+    border: none; border-radius: 16px;
+    color: #5a3a00; font-family: var(--font-display); font-weight: 900;
+    font-size: 17px; letter-spacing: 2px; cursor: pointer;
+    text-shadow: none;
+    box-shadow: 0 6px 0 #b45309, 0 10px 20px rgba(0,0,0,0.25);
+    transition: filter 0.1s, transform 0.1s, box-shadow 0.1s;
   }
-  .ear-start-btn:hover { filter: brightness(1.08); }
-  .ear-start-btn:active { transform: scale(0.99); }
+  .ear-start-btn:hover { filter: brightness(1.05); }
+  .ear-start-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #b45309, 0 4px 10px rgba(0,0,0,0.25); }
   .ear-start-btn:disabled { filter: grayscale(0.7) brightness(0.6); cursor: not-allowed; }
 
   .ear-quick-actions {
@@ -1598,7 +1597,7 @@
   }
 
   /* ── EAR TRAINING SESSION ─────────────────────────────────────────────── */
-  #ear-session { background: var(--bg); }
+  #ear-session { background: var(--space-bg); }
   .ear-session-body {
     flex: 1; display: flex; flex-direction: column;
     padding: 16px; gap: 16px;
@@ -1713,8 +1712,8 @@
   }
 
   /* ── BUILD MODE ─────────────────────────────────────────────────────────── */
-  #build-config { background: var(--bg); }
-  #build-session { background: var(--bg); }
+  #build-config { background: var(--space-bg); }
+  #build-session { background: var(--space-bg); }
   .build-session-body {
     flex: 1; display: flex; flex-direction: column;
     padding: 16px; gap: 14px;
@@ -2559,8 +2558,8 @@
   }
 
   /* === CHAT G: NOTATION — START === */
-  #notation-config { background: var(--bg); }
-  #notation-session { background: var(--bg); }
+  #notation-config { background: var(--space-bg); }
+  #notation-session { background: var(--space-bg); }
   .notation-session-body {
     flex: 1; display: flex; flex-direction: column;
     padding: 16px; gap: 14px;
@@ -3003,8 +3002,8 @@
   .studio-autospeed-current .v { color: var(--gold); font-size: 14px; }
   /* === CHAT F: STUDIO — END === */
   /* === CHAT E: THEORY — START === */
-  #theory-config { background: var(--bg); }
-  #theory-session { background: var(--bg); }
+  #theory-config { background: var(--space-bg); }
+  #theory-session { background: var(--space-bg); }
   .theory-session-body {
     flex: 1; display: flex; flex-direction: column;
     padding: 16px; gap: 14px;
@@ -3163,7 +3162,7 @@
     -webkit-text-fill-color: transparent;
   }
 
-  #mixtape-start { background: var(--bg); }
+  #mixtape-start { background: var(--space-bg); }
   .mt-start-body {
     flex: 1; display: flex; flex-direction: column;
     padding: 24px 16px; gap: 24px; overflow-y: auto;
@@ -3249,7 +3248,7 @@
   .mt-start-go:hover { filter: brightness(1.1); }
   .mt-start-go:active { transform: scale(0.99); }
 
-  #mixtape-session { background: var(--bg); }
+  #mixtape-session { background: var(--space-bg); }
   .mt-hud {
     display: flex; align-items: center; gap: 12px;
     padding: 10px 16px;
@@ -17564,7 +17563,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-91'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-92'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
@@ -21333,10 +21332,11 @@ window.endSession = function() {
     showScreen(returnScreen);
     return;
   }
-  if (confirm('End session? Progress won\'t be saved.')) showScreen('home');
+  showScreen('home'); // Lesson Mode keeps no progress — leave immediately, no prompt.
 };
 
 function showXpToast(xp) {
+  return; // Lesson Mode XP removed — no toast.
   const toast = document.getElementById('xp-toast');
   toast.textContent = '+' + xp + ' XP';
   toast.classList.remove('pulse');
