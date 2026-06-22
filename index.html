@@ -51,6 +51,15 @@
     --font-display: 'Barlow Condensed', sans-serif;
     --font-body: 'Barlow', sans-serif;
     --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+
+    /* ── LESSON-MODE TYPE SCALE — single source for card/label/sub sizes.
+       Bump these to grow text everywhere at once (all screens repoint here). */
+    --fs-card-title: 30px;   /* big card names: BEGINNER / EASY / instrument headers */
+    --fs-card-sub: 18px;     /* card descriptions + difficulty subtitles */
+    --fs-label: 15px;        /* section labels + toggle-row labels (uppercase) */
+    --fs-helper: 15px;       /* helper / instruction lines */
+    --fs-badge: 13px;        /* small pills / badges */
+    --fs-item: 16px;         /* selectable item buttons (Bass Guitar, etc.) */
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body {
@@ -521,19 +530,19 @@
   .level-card:hover { filter: brightness(1.08); }
   .level-card:active { transform: scale(0.99); }
   .level-card-name {
-    font-family: var(--font-display); font-size: 28px; font-weight: 800;
+    font-family: var(--font-display); font-size: var(--fs-card-title); font-weight: 800;
     letter-spacing: -0.5px; line-height: 1;
   }
   .level-card-desc {
-    font-family: var(--font-body); font-size: 14px; color: var(--text2); margin-top: 4px;
+    font-family: var(--font-body); font-size: var(--fs-card-sub); color: var(--text2); margin-top: 6px;
     line-height: 1.5; letter-spacing: 0.02em;
   }
   .level-card-meta {
     display: flex; gap: 8px; margin-top: 10px;
   }
   .meta-pill {
-    font-family: var(--font-mono); font-size: 11px; color: var(--text3);
-    letter-spacing: 1px; padding: 2px 6px; border: 1px solid var(--border);
+    font-family: var(--font-mono); font-size: var(--fs-badge); color: var(--text2);
+    letter-spacing: 1px; padding: 3px 8px; border: 1px solid var(--border);
   }
 
   /* ── QUESTION SCREEN ── */
@@ -1153,7 +1162,7 @@
     border-radius: 14px;
   }
   .tx-roll-grid-label {
-    font-family: var(--font-display); font-size: 13px; font-weight: 800;
+    font-family: var(--font-display); font-size: var(--fs-label); font-weight: 800;
     color: rgba(255,255,255,0.75);
     letter-spacing: 2px; padding: 10px 14px 6px;
     text-shadow: 0 0 12px rgba(45,212,191,0.3);
@@ -1423,8 +1432,8 @@
     flex: 1;
     background: transparent; border: none;
     color: var(--text2); padding: 6px 0;
-    font-family: var(--font-display); font-size: 13px; font-weight: 800;
-    letter-spacing: 1.5px; cursor: pointer;
+    font-family: var(--font-display); font-size: var(--fs-label); font-weight: 800;
+    letter-spacing: 1px; cursor: pointer;
     text-align: left;
     transition: color 0.1s;
     white-space: nowrap;
@@ -1451,7 +1460,7 @@
     border-bottom: 1px solid var(--border);
   }
   .ear-section-title {
-    font-family: var(--font-display); font-size: 14px; font-weight: 800;
+    font-family: var(--font-display); font-size: var(--fs-label); font-weight: 800;
     color: var(--text2); letter-spacing: 2px; text-transform: uppercase;
     margin-bottom: 8px;
   }
@@ -1464,8 +1473,8 @@
   }
   .ear-item-btn {
     background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.16);
-    color: var(--text2); padding: 10px 10px;
-    font-family: var(--font-display); font-size: 13px; font-weight: 700;
+    color: var(--text2); padding: 12px 10px;
+    font-family: var(--font-display); font-size: var(--fs-item); font-weight: 700;
     letter-spacing: 1px; cursor: pointer; border-radius: 12px;
     transition: background 0.1s, border-color 0.1s, color 0.1s, transform 0.05s;
     text-align: center;
@@ -1553,8 +1562,8 @@
   }
   .ear-quick-btn {
     flex: 1; background: var(--bg2); border: 1px solid var(--border);
-    color: var(--text2); padding: 7px;
-    font-family: var(--font-display); font-size: 11px; font-weight: 800;
+    color: var(--text2); padding: 9px;
+    font-family: var(--font-display); font-size: var(--fs-badge); font-weight: 800;
     letter-spacing: 1.5px; cursor: pointer; border-radius: 4px;
     transition: background 0.1s, color 0.1s;
   }
@@ -2006,7 +2015,7 @@
     opacity: 0.45;
     cursor: not-allowed;
   }
-  .anatomy-inst-btn .anatomy-inst-icon { font-size: 22px; }
+  .anatomy-inst-btn .anatomy-inst-icon { font-size: 24px; }
   .anatomy-inst-btn .anatomy-inst-soon {
     position: absolute;
     top: 6px;
@@ -2033,7 +2042,7 @@
     color: var(--text2);
     font-family: var(--font-display);
     font-weight: 800;
-    font-size: 13px;
+    font-size: var(--fs-label);
     letter-spacing: 1.5px;
     cursor: pointer;
     text-align: center;
@@ -2298,9 +2307,9 @@
   .anatomy-section-label {
     padding: 14px 16px 6px;
     font-family: var(--font-display);
-    font-size: 11px;
+    font-size: var(--fs-label);
     letter-spacing: 3px;
-    color: var(--text3);
+    color: var(--text2);
     text-transform: uppercase;
   }
   /* === CHAT C: INSTRUMENT ANATOMY — END === */
@@ -3213,11 +3222,11 @@
   .mt-diff-btn.selected .mt-diff-num { color: var(--gold); }
   .mt-diff-info { flex: 1; display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
   .mt-diff-name {
-    font-family: var(--font-display); font-size: 30px; font-weight: 900;
+    font-family: var(--font-display); font-size: var(--fs-card-title); font-weight: 900;
     letter-spacing: 1.5px; line-height: 1;
   }
   .mt-diff-meta {
-    font-family: var(--font-mono); font-size: 18px; color: var(--text2);
+    font-family: var(--font-mono); font-size: var(--fs-card-sub); color: var(--text2);
     letter-spacing: 0.5px;
   }
   .mt-diff-mult {
@@ -5105,7 +5114,6 @@
       <div class="level-card-name" style="color: var(--green)">BEGINNER</div>
       <div class="level-card-desc" id="beginner-desc">Quarter notes · Half notes · Whole notes</div>
       <div class="level-card-meta">
-        <span class="meta-pill">+10 XP / Q</span>
         <span class="meta-pill" id="beginner-count"></span>
       </div>
     </div>
@@ -5113,7 +5121,6 @@
       <div class="level-card-name" style="color: var(--gold)">INTERMEDIATE</div>
       <div class="level-card-desc" id="intermediate-desc">8th notes · Dotted quarters · Syncopation</div>
       <div class="level-card-meta">
-        <span class="meta-pill">+20 XP / Q</span>
         <span class="meta-pill" id="intermediate-count"></span>
       </div>
     </div>
@@ -5121,7 +5128,6 @@
       <div class="level-card-name" style="color: var(--red)">ADVANCED</div>
       <div class="level-card-desc" id="advanced-desc">16th notes · Dotted 8ths · Triplets · Odd meters</div>
       <div class="level-card-meta">
-        <span class="meta-pill">+30 XP / Q</span>
         <span class="meta-pill" id="advanced-count"></span>
       </div>
     </div>
@@ -5485,7 +5491,7 @@
         <button class="ear-quick-btn" onclick="alQuickSelect('instruments','starter')">STARTER</button>
       </div>
       <div class="ear-item-grid" id="al-instruments-grid" style="margin-top:8px;"></div>
-      <div style="margin-top:10px; font-family:var(--font-display); font-size:11px; color:var(--text3); letter-spacing:1px;">
+      <div style="margin-top:10px; font-family:var(--font-display); font-size:var(--fs-helper); color:var(--text2); letter-spacing:1px;">
         Hear a short phrase. Identify which instrument is playing.
       </div>
     </div>
@@ -17560,7 +17566,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-97'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-98'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
