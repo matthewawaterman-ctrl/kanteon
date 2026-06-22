@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<!-- Never cache the document itself: it's the whole app, so a stale copy means a
+     deploy silently doesn't show up. Forces a fresh fetch on every launch. -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Kanteon</title>
 <!-- iPad / home-screen: launch fullscreen like an app when "Add to Home Screen" -->
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -4581,7 +4586,14 @@
   @keyframes klEarShake { 0%,100%{transform:translateX(0);} 20%{transform:translateX(-7px);} 40%{transform:translateX(7px);} 60%{transform:translateX(-5px);} 80%{transform:translateX(5px);} }
   .kl-dev-btn.danger { color: #fca5a5; border-color: #7f1d1d; }
   .kl-dev-btn.danger:hover { background: rgba(127,29,29,0.4); }
-  #kl-devbar-host { display: contents; }
+  #kl-update-banner {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 99999;
+    background: linear-gradient(160deg, #ffe27a, #f59e0b); color: #5a3a00; border: none;
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 15px;
+    letter-spacing: 0.5px; padding: 11px 14px; cursor: pointer; text-align: center;
+    box-shadow: 0 3px 14px rgba(0,0,0,0.45);
+  }
+  #kl-update-banner:active { filter: brightness(0.95); }
   /* ── END DEV JUMPER ── */
   /* ── DRUM PUZZLE ── */
   .kl-drumtitle {
@@ -17531,7 +17543,37 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-88'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-90'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+// ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
+// The whole app is one cached file, so a stale copy = a deploy that silently
+// never showed up. On launch we fetch the server's current copy (cache-bypassed)
+// and, if its build tag differs from the one we're running, surface a tap-to-
+// update banner. This makes "did my deploy land?" self-evident on every device.
+function klShowUpdateBanner(liveTag) {
+  if (document.getElementById('kl-update-banner')) return;
+  const b = document.createElement('button');
+  b.id = 'kl-update-banner';
+  b.textContent = '🔄 New build ' + liveTag + ' is live — tap to update (you\u2019re on ' + KL_BUILD_TAG + ')';
+  b.onclick = function() { location.replace(location.pathname + '?v=' + Date.now()); };
+  document.body.appendChild(b);
+}
+(function klCheckForUpdate() {
+  function run() {
+    fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' })
+      .then(r => r.text())
+      .then(function(txt) {
+        const key = "KL_BUILD_TAG = '";
+        const i = txt.indexOf(key);
+        if (i < 0) return;
+        const rest = txt.slice(i + key.length);
+        const live = rest.slice(0, rest.indexOf("'"));
+        if (live && live !== KL_BUILD_TAG) klShowUpdateBanner(live);
+      })
+      .catch(function() {});
+  }
+  if (document.readyState === 'complete') setTimeout(run, 1500);
+  else window.addEventListener('load', function() { setTimeout(run, 1500); });
+})();
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
