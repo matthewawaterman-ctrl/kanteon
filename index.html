@@ -12106,8 +12106,13 @@ function klBuildingModules(building) { return KL_MODULE_DEFS.filter(m => m.build
 function klModuleUnlocked(mod) {
   if (klModuleIsDone(mod.id)) return true;
   // THE GARAGE is a single gate: nothing inside opens until EVERY station at
-  // Sweet Waddy's is cleared — then all garage modules unlock together.
-  if (mod.building === 'garage') return klBuildingModules('waddy').every(w => klModuleIsDone(w.id));
+  // Sweet Waddy's is cleared — then the garage modules unlock together. Mode Lab
+  // is the exception: it's the deepest ear skill and opens only after Listening.
+  if (mod.building === 'garage') {
+    if (!klBuildingModules('waddy').every(w => klModuleIsDone(w.id))) return false;
+    if (mod.id === 'garage:mode') return klModuleIsDone('garage:listen');
+    return true;
+  }
   if (!mod.requires) return true;
   const reqs = Array.isArray(mod.requires) ? mod.requires : [mod.requires];
   return reqs.every(r => klModuleIsDone(r));
@@ -12122,7 +12127,9 @@ function klJoinAnd(arr) {
 function klModuleLockReason(mod) {
   if (mod.building === 'garage') {
     const left = klBuildingModules('waddy').filter(w => !klModuleIsDone(w.id)).length;
-    return left ? 'Finish every station at Sweet Waddy\u2019s to open the Garage.' : '';
+    if (left) return 'Finish every station at Sweet Waddy\u2019s to open the Garage.';
+    if (mod.id === 'garage:mode' && !klModuleIsDone('garage:listen')) return 'Clear Active Listening first to open Mode Lab.';
+    return '';
   }
   const reqs = Array.isArray(mod.requires) ? mod.requires : (mod.requires ? [mod.requires] : []);
   const blab = { waddy: 'Sweet Waddy\u2019s', garage: 'the Garage' };
@@ -12171,7 +12178,9 @@ function klMarkModuleDone(id, silent) {
   klState.modDone[id] = true;
   const mod = klModuleDef(id); if (!mod) return 0;
   let got = klAwardXp('mod:' + id, KL_MODULE_XP, true); // per-level XP (once)
-  const allDone = klBuildingModules(mod.building).every(m => klState.modDone[m.id]);
+  // Mode Lab is a bonus module — it shouldn't gate the building milestone (or the Venue).
+  const sibs = klBuildingModules(mod.building).filter(m => m.id !== 'garage:mode');
+  const allDone = sibs.every(m => klState.modDone[m.id]);
   if (allDone) {
     const before = klState.xp || 0;
     if (mod.building === 'waddy') klGrantWaddyMilestone(); else klGrantGarageMilestone();
@@ -12234,7 +12243,7 @@ window.klEnterModule = function(moduleId, force) {
     klRenderPuzzle();
   }
 };
-const KL_MODULE_INTRO = { 'garage:anatomy': 'anatomy_intro', 'garage:listen': 'listen_intro' };
+const KL_MODULE_INTRO = { 'garage:anatomy': 'anatomy_intro', 'garage:listen': 'listen_intro', 'garage:mode': 'mode_intro' };
 
 // One-time Waddy's milestone. Idempotent + dev-skip-safe: awards +60 XP exactly
 // once, whether reached by playing through OR by jumping past it with the dev
@@ -13469,6 +13478,30 @@ KL_LISTEN_DEFS.forEach((ld, i) => KL_PUZZLES.push({ id: ld.id, type: 'listen', d
   const idx = KL_LISTEN_DEFS.map((ld, i) => KL_LISTEN_START + i);
   KL_MODULE_DEFS.push({ id: 'garage:listen', building: 'garage', obj: '🔊', name: 'ACTIVE LISTENING', desc: 'Loud or soft? High or low? Fast or slow?', indices: idx, requires: ['waddy:ear'] });
 })();
+
+// ── MODE LAB — the deepest ear skill: the COLOUR of the seven modes ──────────
+// Tier 1 = "Bright or Dark?" — gross contrasts you can hear without theory.
+// Brightness order: Lydian › Ionian › Mixolydian › Dorian › Aeolian › Phrygian › Locrian.
+const KL_MODE_STEPS = {
+  ionian:     [0, 2, 4, 5, 7, 9, 11, 12],
+  dorian:     [0, 2, 3, 5, 7, 9, 10, 12],
+  phrygian:   [0, 1, 3, 5, 7, 8, 10, 12],
+  lydian:     [0, 2, 4, 6, 7, 9, 11, 12],
+  mixolydian: [0, 2, 4, 5, 7, 9, 10, 12],
+  aeolian:    [0, 2, 3, 5, 7, 8, 10, 12],
+  locrian:    [0, 1, 3, 5, 6, 8, 10, 12]
+};
+const KL_MODE_T1_DEFS = [
+  { id: 701, bright: 'ionian',     dark: 'aeolian' },   // major vs minor — the cleanest contrast
+  { id: 702, bright: 'lydian',     dark: 'locrian' },   // brightest vs darkest
+  { id: 703, bright: 'mixolydian', dark: 'phrygian' }   // bright-ish vs dark
+];
+const KL_MODE_START = KL_PUZZLES.length;
+KL_MODE_T1_DEFS.forEach((md, i) => KL_PUZZLES.push({ id: md.id, type: 'mode', dot: 160 + i, mdef: md }));
+(function registerModeStation() {
+  const idx = KL_MODE_T1_DEFS.map((md, i) => KL_MODE_START + i);
+  KL_MODULE_DEFS.push({ id: 'garage:mode', building: 'garage', obj: '🌗', name: 'MODE LAB', desc: 'Hear the colour of a scale — bright or dark?', indices: idx, requires: ['garage:listen'] });
+})();
 // Melody puzzles carry no type/layer field; identify them as "has notes, no type".
 function klIsMelodyPuzzle(p) { return !!(p && p.notes && !p.type); }
 // The dot's melody instrument: guitar → keys → vocals as the kid progresses.
@@ -14400,6 +14433,11 @@ const KL_STORY = {
     art: '👂',
     title: 'TRAIN YOUR EARS',
     line: 'Shut your eyes and really listen. Does it climb or fall? Get louder or softer? Speed up or slow down? Trust what you hear.',
+  },
+  mode_intro: {
+    art: '🌗',
+    title: 'THE COLOUR OF SCALES',
+    line: 'Every scale has a mood. Some sound bright and happy, some dark and tense. You won\u2019t name these by sight \u2014 you\u2019ll feel them. Listen for the colour.',
   },
   // ── INSTRUMENT DISCOVERIES (PLACEHOLDER art + copy — Matt to rewrite) ──
   // Play when each instrument is first found. Swap the emoji art for real later.
@@ -15641,7 +15679,7 @@ window.klDevModule = function(id) {
 // stay correct whether dev toggles unlock OR re-lock. No XP side-effects in dev.
 function klDevSyncMilestones() {
   klState.waddyDone  = klBuildingModules('waddy').every(m => klModuleIsDone(m.id));
-  klState.garageDone = klBuildingModules('garage').every(m => klModuleIsDone(m.id));
+  klState.garageDone = klBuildingModules('garage').filter(m => m.id !== 'garage:mode').every(m => klModuleIsDone(m.id));
 }
 // Per-thing UNLOCK: toggles a dev override that makes the station playable at its
 // home WITHOUT marking it done — so it stays fresh to test, and downstream gates
@@ -16352,6 +16390,69 @@ window.klListenPick = function(i) {
   }
 };
 
+// ── MODE LAB — hear a scale's COLOUR over a tonic drone (b31-81, Tier 1) ─────
+// A mode only sounds modal against its own tonic, so every clip plays the scale
+// ascending over a sustained root+fifth drone. That drone is what makes "bright
+// vs dark" hearable instead of deducible.
+function klModePlay(modeKey) {
+  const ctx = getAudio(); if (!ctx) return;
+  const steps = KL_MODE_STEPS[modeKey]; if (!steps) return;
+  const t0 = ctx.currentTime + 0.08;
+  const root = 261.63; // C4
+  const tone = (freq, start, dur, gain, type) => {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type || 'triangle'; o.frequency.value = freq;
+    o.connect(g); g.connect(ctx.destination);
+    g.gain.setValueAtTime(0.0001, start);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.001, gain), start + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+    o.start(start); o.stop(start + dur + 0.05);
+  };
+  const span = 0.34 * steps.length + 0.5;
+  // tonic drone: root an octave down + its fifth, quiet sine, held under everything
+  tone(root / 2, t0, span, 0.13, 'sine');
+  tone((root / 2) * Math.pow(2, 7 / 12), t0, span, 0.09, 'sine');
+  // the mode's scale, ascending over the drone
+  steps.forEach((s, i) => tone(root * Math.pow(2, s / 12), t0 + 0.12 + i * 0.34, 0.3, 0.24, 'triangle'));
+}
+function klRenderModePuzzle(p) {
+  document.getElementById('kidlab').classList.add('kl-playing');
+  klStopClock(); klStopBeatBar();
+  const wrap = document.getElementById('kl-wrap');
+  const md = p.mdef;
+  // Randomise which side of the contrast plays, so it's an ear test, not memory.
+  const playBright = Math.random() < 0.5;
+  klState.modePlaying = playBright ? md.bright : md.dark;
+  klState.modeAnswer = playBright ? 'Bright' : 'Dark';
+  klState.modeSolved = false;
+  const btns = ['Bright', 'Dark'].map((c, i) => '<button class="kl-ear-choice" id="kl-mode-' + i + '" onclick="klModePick(' + i + ')">' + c + '</button>').join('');
+  wrap.innerHTML =
+    (klPuzzleBuilding() ? '<div class="kl-room-bg kt-bg-' + klPuzzleBuilding() + '">' + klSceneArt(klPuzzleBuilding()) + '</div>' : '') +
+    '<div class="kl-puzzle-top"><button class="kl-back" onclick="klExit()">←</button></div>' +
+    '<div class="kl-drumtitle">🌗 Bright or Dark?</div>' +
+    '<div class="kl-build-hint">a scale plays over a drone — does it feel <b>bright</b> (happy) or <b>dark</b> (sad / tense)?</div>' +
+    '<div class="kl-listen-row"><button class="kl-listen" id="kl-mode-listen" onclick="klModeReplay()">🔊 LISTEN</button></div>' +
+    '<div class="kl-ear-choices">' + btns + '</div>' +
+    '<div class="kl-bandmate" id="kl-bandmate">&nbsp;</div>';
+  setTimeout(() => klModePlay(klState.modePlaying), 450);
+}
+window.klModeReplay = function() { if (klState.modePlaying) klModePlay(klState.modePlaying); };
+window.klModePick = function(i) {
+  if (klState.modeSolved) return;
+  const picked = ['Bright', 'Dark'][i];
+  const btn = document.getElementById('kl-mode-' + i);
+  if (picked === klState.modeAnswer) {
+    klState.modeSolved = true;
+    if (btn) btn.classList.add('correct');
+    klConfetti();
+    setTimeout(() => klWin(), 720);
+  } else {
+    if (btn) { btn.classList.add('wrong'); setTimeout(() => btn.classList.remove('wrong'), 550); }
+    const bm = document.getElementById('kl-bandmate'); if (bm) bm.textContent = 'Listen again — focus on the 3rd note over the drone.';
+    setTimeout(() => klModePlay(klState.modePlaying), 300);
+  }
+};
+
 // ── GROOVE LAB engine ───────────────────────────────────────────────────────
 // Home-row keys for tapping. Single voice taps on ANY of them for now; later each
 // key maps to a pitch (Pro-Tools-style musical typing) for multi-voice rhythms.
@@ -16728,6 +16829,8 @@ function klRenderPuzzle() {
   if (p.type === 'anatomy') { klRenderAnatomyPuzzle(p); return; }
   // Active Listening: hear a sound — name what changed (native leveled module).
   if (p.type === 'listen') { klRenderListenPuzzle(p); return; }
+  // Mode Lab: hear a scale's colour over a drone (bright vs dark, etc.).
+  if (p.type === 'mode') { klRenderModePuzzle(p); return; }
 
   klState.placed = [];
   klState.selectedBlock = null;
@@ -17073,7 +17176,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-80'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-81'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
