@@ -12938,8 +12938,12 @@ function klGarageScene() {
     '<text x="145" y="404" font-family="Barlow Condensed" font-size="22" font-weight="900" fill="#caa64a" text-anchor="middle" opacity="0.8">amp</text>' +
     // cables on floor
     '<path d="M120 575 q200 -28 380 8 t400 -6" stroke="#0c0c0e" stroke-width="6" fill="none" opacity="0.5"/>' +
-    // interactive gear
-    mode + jam + ear + chord + groove + notation + anatomy + listen +
+    // interactive gear — Ear / Groove / Anatomy pushed back (smaller, raised,
+    // drawn first) so the front-row gear overlaps them for a sense of depth.
+    '<g transform="translate(60.84,56.3) scale(0.82)" opacity="0.9">' + ear + '</g>' +
+    '<g transform="translate(118.8,50) scale(0.82)" opacity="0.9">' + groove + '</g>' +
+    '<g transform="translate(172.44,51.8) scale(0.82)" opacity="0.9">' + anatomy + '</g>' +
+    mode + jam + chord + notation + listen +
   '</svg>';
 }
 
@@ -14605,15 +14609,15 @@ window.klShowModeSelect = function() {
           '<div class="kl-mode-name">STORY MODE</div>' +
           '<div class="kl-mode-sub">Build your band &amp; play the campaign</div>' +
         '</button>' +
-        '<button class="kl-mode kl-mode-lesson" onclick="klOpenTools(\'modes\')">' +
-          '<div class="kl-mode-icon">📖</div>' +
-          '<div class="kl-mode-name">LESSON MODE</div>' +
-          '<div class="kl-mode-sub">Ear training, theory &amp; drills</div>' +
-        '</button>' +
         '<button class="kl-mode kl-mode-arcade" onclick="openMixtape()">' +
           '<div class="kl-mode-icon">🎧</div>' +
           '<div class="kl-mode-name">ARCADE MODE</div>' +
           '<div class="kl-mode-sub">Rapid-fire mixtape &amp; world leaderboard</div>' +
+        '</button>' +
+        '<button class="kl-mode kl-mode-lesson" onclick="klOpenTools(\'modes\')">' +
+          '<div class="kl-mode-icon">📖</div>' +
+          '<div class="kl-mode-name">LESSON MODE</div>' +
+          '<div class="kl-mode-sub">Ear training, theory &amp; drills</div>' +
         '</button>' +
       '</div>' +
       '<div class="kl-mode-foot">' +
@@ -17082,11 +17086,30 @@ function klGrooveLightSync(t0) {
 function klGrooveStatus(txt) { const bm = document.getElementById('kl-bandmate'); if (bm) bm.textContent = txt; }
 // LISTEN — one-bar count-in (drummer + 1-2-3-4), then sound each played note and
 // light every written note + rest in time.
+// Voices one written note for its full notated length, so a half note rings ~2
+// beats and an eighth blips — the example now SOUNDS like what's on the staff,
+// instead of a fixed-length staccato click at every onset.
+function klGrooveVoice(time, durBeats, gain) {
+  const ctx = getAudio();
+  const durSec = Math.max(0.14, durBeats * klGroove.beat - 0.05); // tiny gap between notes
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = 'triangle';
+  o.frequency.setValueAtTime(680, time);
+  o.frequency.exponentialRampToValueAtTime(330, time + 0.05); // soft mallet attack that settles
+  const peak = Math.max(0.001, (gain || 0.6) * 0.5);
+  g.gain.setValueAtTime(0.0001, time);
+  g.gain.exponentialRampToValueAtTime(peak, time + 0.008);                 // fast attack
+  g.gain.exponentialRampToValueAtTime(peak * 0.55, time + durSec * 0.6);   // sustain / gentle decay
+  g.gain.exponentialRampToValueAtTime(0.0001, time + durSec);              // release at the note's end
+  o.connect(g); g.connect(ctx.destination);
+  o.start(time); o.stop(time + durSec + 0.05);
+}
 window.klGroovePlay = function() {
   if (klGroove.recording || klGroove.solved || klGroove.busy) return; // no overlapping playback
   klGroove.busy = true;
   const t0 = klGrooveCountIn();
-  klGroove.onsets.forEach(b => klTapClick(t0 + b * klGroove.beat, 0.6, false));
+  // Sound each note for its written duration (half note holds, eighth blips).
+  klGroove.events.filter(e => !e.rest).forEach(e => klGrooveVoice(t0 + e.onset * klGroove.beat, e.d, 0.6));
   klGrooveLightSync(t0);
   const ctx = getAudio();
   klGrooveStatus('Count in…');
@@ -17712,7 +17735,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-105'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-108'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
