@@ -386,9 +386,9 @@
   .carousel-item.mod-studio   { color: var(--green); }
 
   /* ── BOOK OF KNOWLEDGE — FLAT LIST (game-skinned, matches .kl-station) ── */
-  .bok-screen { width: 100%; max-width: 1040px; margin: 0 auto; padding: 2px 0 8px;
+  .bok-screen { width: 100%; max-width: 1240px; margin: 0 auto; padding: 2px 0 8px;
     flex: 1 1 auto; min-height: 0; display: flex; }
-  .bok-list { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%;
+  .bok-list { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%;
     align-content: start;
     overflow-y: auto; padding: 2px 6px 2px 2px; }
 
@@ -398,17 +398,17 @@
   .bok-row { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left;
     cursor: pointer; color: var(--gold);
     background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.18);
-    border-left: 4px solid currentColor; border-radius: 14px; padding: 16px 18px;
+    border-left: 4px solid currentColor; border-radius: 14px; padding: 20px 22px;
     transition: transform 0.08s ease, background 0.15s ease, box-shadow 0.15s ease; }
   .bok-row:hover { background: rgba(255,255,255,0.13);
     box-shadow: 0 6px 20px rgba(0,0,0,0.3), 0 0 14px -2px currentColor; }
   .bok-row:active { transform: scale(0.98); }
-  .bok-row-icon { font-size: 36px; line-height: 1; flex: 0 0 auto; width: 40px; text-align: center;
+  .bok-row-icon { font-size: 40px; line-height: 1; flex: 0 0 auto; width: 46px; text-align: center;
     filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); }
   .bok-row-text { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
-  .bok-row-name { font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 23px;
+  .bok-row-name { font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 26px;
     letter-spacing: 0.4px; color: #fff; line-height: 1.1; }
-  .bok-row-desc { font-family: 'Barlow', sans-serif; font-size: 13px; letter-spacing: 0.4px;
+  .bok-row-desc { font-family: 'Barlow', sans-serif; font-size: 14px; letter-spacing: 0.4px;
     line-height: 1.25; color: rgba(228,224,245,0.65); text-transform: uppercase; }
   .bok-row-go { font-size: 15px; color: currentColor; opacity: 0.75; flex: 0 0 auto; }
   .bok-row.bok-row-mix { background: rgba(240,192,64,0.10); border-color: rgba(240,192,64,0.28);
@@ -3229,6 +3229,44 @@
     flex: 0 0 auto; min-width: 70px; text-align: right;
     font-weight: 900; font-size: 20px; color: var(--gold);
   }
+  .mt-board-open {
+    margin: 12px auto 0; display: block; cursor: pointer;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(240,192,64,0.4);
+    color: var(--gold); border-radius: 999px; padding: 8px 20px;
+    font-family: var(--font-display); font-size: 15px; font-weight: 800; letter-spacing: 1px;
+  }
+  .mt-board-open:hover { background: rgba(240,192,64,0.14); }
+  .mt-personal-best {
+    display: flex; justify-content: space-between; align-items: baseline;
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 14px 18px; margin-top: 10px;
+  }
+  .mt-pb-label {
+    font-family: var(--font-display); font-size: var(--fs-label); font-weight: 800;
+    color: var(--text2); letter-spacing: 2px;
+  }
+  .mt-pb-score { font-family: var(--font-display); font-size: 28px; font-weight: 900; color: var(--gold); }
+  .mt-board-modal {
+    display: none; position: fixed; inset: 0; z-index: 9000;
+    background: rgba(8,7,22,0.78); align-items: center; justify-content: center; padding: 24px;
+  }
+  .mt-board-modal.open { display: flex; }
+  .mt-board-panel {
+    width: 100%; max-width: 560px; max-height: 82vh; overflow-y: auto;
+    background: var(--bg2); border: 1px solid rgba(240,192,64,0.35);
+    border-radius: 14px; padding: 18px 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .mt-board-head {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;
+    font-family: var(--font-display); font-size: 20px; font-weight: 900;
+    color: var(--gold); letter-spacing: 1px;
+  }
+  .mt-board-close {
+    background: rgba(255,255,255,0.08); border: 1px solid var(--border); cursor: pointer;
+    color: var(--text); border-radius: 8px; width: 34px; height: 34px; font-size: 16px;
+  }
+  .mt-board-close:hover { background: rgba(255,255,255,0.16); }
 
   .mt-difficulty-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
   .mt-diff-btn {
@@ -6344,11 +6382,7 @@
       <div class="mt-hero-title">🎧 MIXTAPE</div>
       <div class="mt-hero-sub">Rapid-fire arcade · All modules</div>
       <div class="mt-world-best" id="mt-world-best">🌍 WORLD BEST · —</div>
-    </div>
-
-    <div class="mt-leaderboard">
-      <div class="mt-hi-scores-title">🏆 ALL-TIME TOP 10</div>
-      <div id="mt-leaderboard-list"><div class="mt-lb-empty">Loading…</div></div>
+      <button class="mt-board-open" onclick="mtOpenBoard()">🏆 View all-time leaderboard</button>
     </div>
 
     <div>
@@ -6356,14 +6390,25 @@
       <div class="mt-difficulty-grid" id="mt-difficulty-grid"></div>
     </div>
 
-    <div class="mt-hi-scores">
-      <div class="mt-hi-scores-title">PERSONAL BESTS</div>
-      <div id="mt-hi-scores-list"></div>
+    <div class="mt-personal-best">
+      <span class="mt-pb-label">YOUR BEST</span>
+      <span class="mt-pb-score" id="mt-personal-best">0</span>
     </div>
   </div>
 
   <div class="ear-start-bar">
     <button class="mt-start-go" id="mt-start-go-btn" onclick="startMixtape()">▶ START</button>
+  </div>
+
+  <!-- ALL-TIME LEADERBOARD MODAL -->
+  <div class="mt-board-modal" id="mt-board-modal" onclick="if(event.target===this)mtCloseBoard()">
+    <div class="mt-board-panel">
+      <div class="mt-board-head">
+        <span>🏆 ALL-TIME TOP 10</span>
+        <button class="mt-board-close" onclick="mtCloseBoard()">✕</button>
+      </div>
+      <div id="mt-leaderboard-list"><div class="mt-lb-empty">Loading…</div></div>
+    </div>
   </div>
 </div>
 
@@ -17632,7 +17677,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-99'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-100'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
@@ -23248,11 +23293,11 @@ function renderTabSVG(item, small) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 const MT_DIFFICULTIES = [
-  { lvl: 1, name: 'EASY',    desc: 'Fundamentals only · 12s timer',     timer: 12, mult: 1.0, startPool: 1 },
-  { lvl: 2, name: 'NORMAL',  desc: 'Common items · 10s timer',          timer: 10, mult: 1.2, startPool: 2 },
-  { lvl: 3, name: 'HARD',    desc: 'Mixed difficulty · 9s timer',       timer: 9,  mult: 1.5, startPool: 3 },
-  { lvl: 4, name: 'EXPERT',  desc: 'Advanced items · 8s timer',         timer: 8,  mult: 1.8, startPool: 4 },
-  { lvl: 5, name: 'LEGEND',  desc: 'Everything · 7s timer · 2.2× mult', timer: 7,  mult: 2.2, startPool: 5 },
+  { lvl: 1, name: 'EASY',    desc: 'Fundamentals · 12s start',     timer: 12, mult: 1.0, startPool: 1 },
+  { lvl: 2, name: 'NORMAL',  desc: 'Adds common items · 10s',      timer: 10, mult: 1.2, startPool: 2 },
+  { lvl: 3, name: 'HARD',    desc: 'Adds harder items · 9s',       timer: 9,  mult: 1.5, startPool: 3 },
+  { lvl: 4, name: 'EXPERT',  desc: 'Adds advanced items · 8s',     timer: 8,  mult: 1.8, startPool: 4 },
+  { lvl: 5, name: 'LEGEND',  desc: 'Full pool · 7s start',         timer: 7,  mult: 2.2, startPool: 5 },
 ];
 
 // ── Arcade pool by difficulty (1-5) ─────────────────────────────────────────
@@ -23493,18 +23538,25 @@ function buildMtStartScreen() {
     grid.appendChild(btn);
   });
   const scores = mtLoadHiScores();
-  const list = document.getElementById('mt-hi-scores-list');
-  list.innerHTML = '';
-  MT_DIFFICULTIES.forEach(d => {
-    const row = document.createElement('div');
-    row.className = 'mt-hi-scores-row';
-    row.innerHTML = '<span class="lvl">' + d.name + '</span><span class="score">' + (scores[d.lvl] || 0) + '</span>';
-    list.appendChild(row);
-  });
+  const best = Math.max(0, ...Object.values(scores));
+  const pbEl = document.getElementById('mt-personal-best');
+  if (pbEl) pbEl.textContent = best;
   refreshMixtapeHiScore();
-  mtRenderGlobalHi();   // show cached immediately
-  mtFetchGlobalHi();    // then refresh from the shared doc
+  mtRenderGlobalHi();   // keep modal list in sync if open
+  mtFetchGlobalHi();    // refresh cache + world-best banner
 }
+
+// Leaderboard modal — clear, dedicated way to view the all-time top 10.
+window.mtOpenBoard = function () {
+  const m = document.getElementById('mt-board-modal');
+  if (m) m.classList.add('open');
+  mtRenderGlobalHi();   // show cached immediately
+  mtFetchGlobalHi();    // then refresh from Firestore
+};
+window.mtCloseBoard = function () {
+  const m = document.getElementById('mt-board-modal');
+  if (m) m.classList.remove('open');
+};
 
 // ── Session control ──────────────────────────────────────────────────────
 window.startMixtape = function() {
