@@ -707,6 +707,7 @@
     font-family: var(--font-mono); font-size: 11px; color: var(--text3);
     letter-spacing: 1px; margin-top: 8px;
   }
+  .rhythm-notation { width: 100%; max-width: 560px; margin: 0 auto 4px; }
   .rhythm-bpm-row {
     display: flex; align-items: center; gap: 14px;
     font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 13px; color: var(--text2);
@@ -17551,7 +17552,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-93'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-94'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
@@ -19033,6 +19034,62 @@ function buildKeyboard(tonicHintNote, onAnyKeyClick) {
 }
 
 // ── RHYTHM RENDERER (NEW: BPM-grid scoring) ───────────────────────────────
+// ── GROOVE LAB NOTATION (b31-94) ───────────────────────────────────────────
+// Parse a lesson rhythm's ▮/—/_ visual into the SAME event format story mode
+// uses, so we can render it with the exact story-mode notation renderer and
+// light each note as it's tapped. Conservative: only accepts clean patterns
+// that fill the bar exactly; returns null for prose/sixteenth visuals so the
+// old text + even-tap behaviour stays untouched for those.
+function klRhyParse(visual, meterBeats) {
+  if (!visual) return null;
+  var NOTE = '\u25ae', HOLD = '\u2014', REST = '_';
+  var allOf = function (s, ch) { if (!s.length) return false; for (var i = 0; i < s.length; i++) { if (s[i] !== ch) return false; } return true; };
+  var startsNoteThenHolds = function (s) { if (s[0] !== NOTE) return false; for (var i = 1; i < s.length; i++) { if (s[i] !== HOLD) return false; } return true; };
+  var tokens = visual.trim().split(' ').filter(function (t) { return t.length; });
+  if (!tokens.length) return null;
+  var events = [];
+  for (var t = 0; t < tokens.length; t++) {
+    var tok = tokens[t];
+    if (allOf(tok, NOTE)) {                          // run of ▮ = one subdivided beat
+      if (tok.length === 1) events.push({ d: 1, rest: false });
+      else if (tok.length === 2) { events.push({ d: 0.5, rest: false }); events.push({ d: 0.5, rest: false }); }
+      else return null;                              // triplets / sixteenths: bail to fallback
+    } else if (allOf(tok, REST)) {                   // run of _ = that many quarter rests
+      for (var r = 0; r < tok.length; r++) events.push({ d: 1, rest: true });
+    } else if (allOf(tok, HOLD)) {                   // lone — = extend previous note
+      var last = events[events.length - 1];
+      if (!last || last.rest) return null;
+      last.d += tok.length;
+    } else if (startsNoteThenHolds(tok)) {           // ▮—, ▮——, ▮——— = held note
+      events.push({ d: 1 + (tok.length - 1), rest: false });
+    } else {
+      return null;                                   // anything else (prose, ♪, ×, .) → fallback
+    }
+  }
+  var bp = 0;
+  for (var e = 0; e < events.length; e++) { events[e].onset = bp; bp += events[e].d; }
+  if (Math.abs(bp - meterBeats) > 0.001) return null; // must fill the bar exactly
+  for (var i = 0; i < events.length; i++) {
+    if (events[i].d === 0.5 && !events[i].rest && i + 1 < events.length && events[i + 1].d === 0.5 && !events[i + 1].rest) { events[i]._beamed = true; events[i + 1]._beamed = true; }
+  }
+  var onsets = [], onsetEventIdx = [];
+  events.forEach(function (ev, idx) { if (!ev.rest) { onsets.push(ev.onset); onsetEventIdx.push(idx); } });
+  if (!onsets.length) return null;                   // rest-only bar → fallback
+  return { events: events, onsets: onsets, onsetEventIdx: onsetEventIdx };
+}
+function klRhythmNotation(visual, meterBeats, ts) {
+  var parsed = klRhyParse(visual, meterBeats);
+  if (!parsed) return null;
+  var svg = klGrooveNotationSVG(parsed.events, meterBeats, ts);
+  svg = svg.split('id="kl-gnote-').join('id="lm-gnote-'); // namespace so it can't collide
+  return { svg: svg, onsets: parsed.onsets, onsetEventIdx: parsed.onsetEventIdx };
+}
+function klLmLightNote(idx) {
+  var g = document.getElementById('lm-gnote-' + idx);
+  if (!g) return;
+  g.classList.add('lit');
+  setTimeout(function () { if (g) g.classList.remove('lit'); }, 220);
+}
 function renderRhythmQ(q, body) {
   const qText = document.createElement('div');
   qText.className = 'q-text';
@@ -19043,14 +19100,27 @@ function renderRhythmQ(q, body) {
   pattern.className = 'rhythm-pattern';
   const visual = q.visual || q.patternDescription || '';
   const meta = (q.meter || '4/4') + ' · ' + (q.patternDescription || '');
-  pattern.innerHTML =
-    '<div class="rhythm-visual">' + visual + '</div>' +
-    '<div class="rhythm-meta">' + meta + '</div>';
+  const tsParts = (q.meter || '4/4').split('/');
+  const meterBeats = parseInt(tsParts[0]) || 4;
+  const ts = [meterBeats, parseInt(tsParts[1]) || 4];
+  const notation = klRhythmNotation(visual, meterBeats, ts);
+  if (notation) {
+    pattern.innerHTML =
+      '<div class="rhythm-notation">' + notation.svg + '</div>' +
+      '<div class="rhythm-meta">' + meta + '</div>';
+  } else {
+    pattern.innerHTML =
+      '<div class="rhythm-visual">' + visual + '</div>' +
+      '<div class="rhythm-meta">' + meta + '</div>';
+  }
   body.appendChild(pattern);
 
   const bpm = 80;
-  const beats = parseInt(q.tapCount) || 4;
+  const onsetBeats = notation ? notation.onsets : null;
+  const onsetEventIdx = notation ? notation.onsetEventIdx : null;
+  const beats = onsetBeats ? onsetBeats.length : (parseInt(q.tapCount) || 4);
   const beatInterval = 60 / bpm; // seconds per beat
+  let expectedTimes = null;      // real per-note tap times once armed (notation mode)
   const tolerances = { beginner: 0.150, intermediate: 0.100, advanced: 0.075 };
   const tolerance = tolerances[currentLevel] || 0.150;
 
@@ -19193,7 +19263,18 @@ function renderRhythmQ(q, body) {
       if (labelEl) labelEl.textContent = 'TAP HERE';
       updateDots();
 
-      const finishAt = firstBeatTime + (beats - 1) * beatInterval + 0.6;
+      // Notation mode: tap targets are the real note onsets; light each note as it lands.
+      const lastOnsetBeat = onsetBeats ? onsetBeats[onsetBeats.length - 1] : (beats - 1);
+      if (onsetBeats) {
+        expectedTimes = onsetBeats.map(o => firstBeatTime + o * beatInterval);
+        onsetBeats.forEach((o, i) => {
+          const t = firstBeatTime + o * beatInterval;
+          const delay = Math.max(0, (t - ctx.currentTime) * 1000);
+          setTimeout(() => klLmLightNote(onsetEventIdx[i]), delay);
+        });
+      }
+
+      const finishAt = firstBeatTime + lastOnsetBeat * beatInterval + 0.6;
       const delayMs = Math.max(0, (finishAt - ctx.currentTime) * 1000);
       scoringTimeout = setTimeout(scoreTaps, delayMs);
 
@@ -19215,9 +19296,21 @@ function renderRhythmQ(q, body) {
     // without the user's habitual lag (or lead).
     const calibrationOffsetSec = (getInputLatencyMs() || 0) / 1000;
     const adjustedNow = now - calibrationOffsetSec;
-    const beatNumGuess = Math.round((adjustedNow - firstBeatTime) / beatInterval);
-    const safeBeat = Math.max(0, Math.min(beats - 1, beatNumGuess));
-    const expected = firstBeatTime + safeBeat * beatInterval;
+    let safeBeat, expected;
+    if (expectedTimes) {
+      // Notation mode: snap to the nearest real note onset.
+      let bestI = 0, bestD = Infinity;
+      for (let k = 0; k < expectedTimes.length; k++) {
+        const dd = Math.abs(adjustedNow - expectedTimes[k]);
+        if (dd < bestD) { bestD = dd; bestI = k; }
+      }
+      safeBeat = bestI;
+      expected = expectedTimes[bestI];
+    } else {
+      const beatNumGuess = Math.round((adjustedNow - firstBeatTime) / beatInterval);
+      safeBeat = Math.max(0, Math.min(beats - 1, beatNumGuess));
+      expected = firstBeatTime + safeBeat * beatInterval;
+    }
     const delta = adjustedNow - expected;
     // === CHAT D: RHYTHM KEYBOARD + CALIBRATE — END ===
     const absDelta = Math.abs(delta);
