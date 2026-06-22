@@ -1451,8 +1451,8 @@
     border-bottom: 1px solid var(--border);
   }
   .ear-section-title {
-    font-family: var(--font-display); font-size: 12px; font-weight: 800;
-    color: var(--text3); letter-spacing: 2px; text-transform: uppercase;
+    font-family: var(--font-display); font-size: 14px; font-weight: 800;
+    color: var(--text2); letter-spacing: 2px; text-transform: uppercase;
     margin-bottom: 8px;
   }
   .ear-section-title .ear-count {
@@ -3177,7 +3177,7 @@
     margin-bottom: 6px;
   }
   .mt-hero-sub {
-    font-family: var(--font-mono); font-size: 13px; color: var(--text3);
+    font-family: var(--font-mono); font-size: 15px; color: var(--text2);
     letter-spacing: 2px; text-transform: uppercase;
   }
 
@@ -3199,22 +3199,22 @@
     border-color: var(--gold);
   }
   .mt-diff-num {
-    font-family: var(--font-display); font-size: 32px; font-weight: 900;
+    font-family: var(--font-display); font-size: 40px; font-weight: 900;
     color: var(--text3); min-width: 40px;
     transition: color 0.1s;
   }
   .mt-diff-btn.selected .mt-diff-num { color: var(--gold); }
   .mt-diff-info { flex: 1; }
   .mt-diff-name {
-    font-family: var(--font-display); font-size: 16px; font-weight: 900;
-    letter-spacing: 2px;
+    font-family: var(--font-display); font-size: 23px; font-weight: 900;
+    letter-spacing: 1.5px;
   }
   .mt-diff-meta {
-    font-family: var(--font-mono); font-size: 11px; color: var(--text3);
-    letter-spacing: 1px; margin-top: 2px;
+    font-family: var(--font-mono); font-size: 15px; color: var(--text2);
+    letter-spacing: 0.5px; margin-top: 5px;
   }
   .mt-diff-mult {
-    font-family: var(--font-display); font-size: 18px; font-weight: 900;
+    font-family: var(--font-display); font-size: 24px; font-weight: 900;
     color: var(--gold);
   }
 
@@ -3223,13 +3223,13 @@
     border-radius: 6px; padding: 14px 16px;
   }
   .mt-hi-scores-title {
-    font-family: var(--font-display); font-size: 12px; font-weight: 800;
-    color: var(--text3); letter-spacing: 2px;
+    font-family: var(--font-display); font-size: 15px; font-weight: 800;
+    color: var(--text2); letter-spacing: 2px;
     margin-bottom: 8px;
   }
   .mt-hi-scores-row {
     display: flex; justify-content: space-between;
-    font-family: var(--font-mono); font-size: 13px;
+    font-family: var(--font-mono); font-size: 16px;
     padding: 4px 0;
   }
   .mt-hi-scores-row .lvl { color: var(--text2); }
@@ -17552,7 +17552,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-95'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-96'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
