@@ -3180,12 +3180,19 @@
     font-family: var(--font-mono); font-size: 15px; color: var(--text2);
     letter-spacing: 2px; text-transform: uppercase;
   }
+  .mt-world-best {
+    margin: 14px auto 0; max-width: 520px;
+    font-family: var(--font-display); font-size: 18px; font-weight: 800;
+    letter-spacing: 1px; color: var(--gold); text-align: center;
+    background: rgba(240,192,64,0.10); border: 1px solid rgba(240,192,64,0.35);
+    border-radius: 10px; padding: 10px 16px;
+  }
 
   .mt-difficulty-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
   .mt-diff-btn {
-    display: flex; align-items: center; gap: 16px;
+    display: flex; align-items: center; gap: 18px;
     background: var(--bg2); border: 1px solid var(--border);
-    color: var(--text); padding: 14px 18px;
+    color: var(--text); padding: 20px 24px;
     cursor: pointer; border-radius: 6px;
     transition: background 0.1s, border-color 0.1s, transform 0.05s;
     text-align: left;
@@ -3199,22 +3206,22 @@
     border-color: var(--gold);
   }
   .mt-diff-num {
-    font-family: var(--font-display); font-size: 40px; font-weight: 900;
-    color: var(--text3); min-width: 40px;
+    font-family: var(--font-display); font-size: 44px; font-weight: 900;
+    color: var(--text3); min-width: 44px;
     transition: color 0.1s;
   }
   .mt-diff-btn.selected .mt-diff-num { color: var(--gold); }
-  .mt-diff-info { flex: 1; }
+  .mt-diff-info { flex: 1; display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
   .mt-diff-name {
-    font-family: var(--font-display); font-size: 23px; font-weight: 900;
-    letter-spacing: 1.5px;
+    font-family: var(--font-display); font-size: 30px; font-weight: 900;
+    letter-spacing: 1.5px; line-height: 1;
   }
   .mt-diff-meta {
-    font-family: var(--font-mono); font-size: 15px; color: var(--text2);
-    letter-spacing: 0.5px; margin-top: 5px;
+    font-family: var(--font-mono); font-size: 18px; color: var(--text2);
+    letter-spacing: 0.5px;
   }
   .mt-diff-mult {
-    font-family: var(--font-display); font-size: 24px; font-weight: 900;
+    font-family: var(--font-display); font-size: 27px; font-weight: 900;
     color: var(--gold);
   }
 
@@ -6276,6 +6283,7 @@
     <div class="mt-hero">
       <div class="mt-hero-title">🎧 MIXTAPE</div>
       <div class="mt-hero-sub">Rapid-fire arcade · All modules</div>
+      <div class="mt-world-best" id="mt-world-best">🌍 WORLD BEST · —</div>
     </div>
 
     <div>
@@ -17552,7 +17560,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-96'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-97'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
@@ -23309,6 +23317,47 @@ function mtSaveHiScores(scores) {
   try { localStorage.setItem('mt_hi_scores', JSON.stringify(scores)); } catch (e) {}
 }
 
+// ── Community-wide high score (shared Firestore doc: leaderboard/mixtape) ────
+// Everyone reads the same doc; a run only writes if it beats the global best.
+// All calls are fully guarded — if Firestore is unreachable/blocked the game
+// keeps working and the banner just shows "—".
+let mtGlobalHi = null; // cached { score, name, difficulty }
+function mtRenderGlobalHi() {
+  const el = document.getElementById('mt-world-best');
+  if (!el) return;
+  if (mtGlobalHi && mtGlobalHi.score > 0) {
+    const dn = (MT_DIFFICULTIES.find(d => d.lvl === mtGlobalHi.difficulty) || {}).name;
+    el.textContent = '🌍 WORLD BEST · ' + mtGlobalHi.score +
+      (mtGlobalHi.name ? ' · ' + mtGlobalHi.name : '') + (dn ? ' (' + dn + ')' : '');
+  } else {
+    el.textContent = '🌍 WORLD BEST · —';
+  }
+}
+async function mtFetchGlobalHi() {
+  try {
+    const snap = await getDoc(doc(db, 'leaderboard', 'mixtape'));
+    mtGlobalHi = snap.exists() ? snap.data() : { score: 0 };
+  } catch (e) { /* offline / rules — leave cache as-is */ }
+  mtRenderGlobalHi();
+}
+async function mtSubmitGlobalHi(score, difficulty) {
+  if (!score || score <= 0) return false;
+  try {
+    const ref = doc(db, 'leaderboard', 'mixtape');
+    const snap = await getDoc(ref);
+    const cur = (snap.exists() && snap.data().score) || 0;
+    if (score > cur) {
+      let name = 'Anon';
+      try { if (typeof klState !== 'undefined' && klState.kid && klState.kid.name && !klState.guest) name = klState.kid.name; } catch (e) {}
+      await setDoc(ref, { score: score, name: name, difficulty: difficulty, at: serverTimestamp() });
+      mtGlobalHi = { score: score, name: name, difficulty: difficulty };
+      mtRenderGlobalHi();
+      return true; // new world record
+    }
+  } catch (e) { /* write blocked — silently keep local best */ }
+  return false;
+}
+
 // ── Difficulty select screen ─────────────────────────────────────────────
 window.openMixtape = function() {
   buildMtStartScreen();
@@ -23346,6 +23395,8 @@ function buildMtStartScreen() {
     list.appendChild(row);
   });
   refreshMixtapeHiScore();
+  mtRenderGlobalHi();   // show cached immediately
+  mtFetchGlobalHi();    // then refresh from the shared doc
 }
 
 // ── Session control ──────────────────────────────────────────────────────
@@ -24049,6 +24100,14 @@ function endMixtape() {
   const cfg = MT_DIFFICULTIES.find(d => d.lvl === mtState.difficulty);
   document.getElementById('mt-go-difficulty').textContent = cfg.name;
   document.getElementById('mt-go-newbest').style.display = isNewBest ? 'block' : 'none';
+
+  // Submit to the community leaderboard; upgrade the banner on a world record.
+  mtSubmitGlobalHi(mtState.score, mtState.difficulty).then(function (isWorld) {
+    if (isWorld) {
+      const nb = document.getElementById('mt-go-newbest');
+      if (nb) { nb.style.display = 'block'; nb.textContent = '🌍 NEW WORLD BEST!'; }
+    }
+  });
 
   showScreen('mixtape-gameover');
 }
