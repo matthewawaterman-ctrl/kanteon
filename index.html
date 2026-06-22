@@ -4579,6 +4579,11 @@
   .kl-anat-hot:active { fill: rgba(252,211,77,0.34); }
   .kl-anat-hot.correct { fill: rgba(74,222,128,0.34); stroke: #4ade80; stroke-dasharray: none; }
   .kl-anat-hot.wrong { fill: rgba(239,68,68,0.28); stroke: #ef4444; stroke-dasharray: none; }
+  /* ── NOTATION — staff display ── */
+  .kl-notation-stage { display: flex; justify-content: center; margin: 8px auto 4px; }
+  .kl-notation-svg { width: clamp(240px, 64vw, 360px); height: auto;
+    background: #fbfaf5; border-radius: 12px; padding: 6px 8px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3); }
   /* ── SHARED CALENDAR (venue booking + day-job planner) ── */
   .kl-cal { width: min(320px, 96%); margin: 8px auto 4px; }
   .kl-cal-scroll { max-height: 46vh; overflow-y: auto; padding-right: 2px; }
@@ -4600,6 +4605,30 @@
   .kl-cal-book .kl-cal-day.sel { background: linear-gradient(180deg,#a78bfa,#7c4ddb); border-color: #a78bfa; }
   .kl-cal-work .kl-cal-day.sel { background: linear-gradient(180deg,#7ad98a,#4fae63); border-color: #7ad98a; color: #0b2415; }
   .kl-cal-fire { position: absolute; top: 0; right: 1px; font-size: 8px; line-height: 1; }
+  /* ── THE GARAGE — object room (clickable furniture) ── */
+  .kl-garage-room { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
+    padding: 64px 16px 18px; overflow-y: auto;
+    background:
+      radial-gradient(120% 75% at 50% 0%, #2a2150 0%, #1c1640 42%, #15102e 72%),
+      linear-gradient(180deg, transparent 60%, rgba(0,0,0,0.28) 60%, rgba(0,0,0,0.5) 100%); }
+  .kl-garage-head { text-align: center; margin-bottom: 16px; flex: 0 0 auto; }
+  .kl-garage-title { font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 30px; letter-spacing: 1.5px; color: #fff; }
+  .kl-garage-sub { font-family: 'Barlow', sans-serif; font-size: 14px; color: #cdc8e8; max-width: 460px; margin: 2px auto 0; }
+  .kl-garage-floor { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end;
+    gap: 14px 20px; max-width: 780px; margin: auto 0; }
+  .kl-garage-obj { background: transparent; border: none; cursor: pointer; padding: 8px 6px; border-radius: 14px;
+    display: flex; flex-direction: column; align-items: center; width: 106px; position: relative;
+    transition: transform 0.12s ease, background 0.12s ease; font-family: inherit; }
+  .kl-garage-obj:hover:not(.locked) { transform: translateY(-5px); background: rgba(255,255,255,0.06); }
+  .kl-garage-icon { font-size: 48px; line-height: 1; position: relative; filter: drop-shadow(0 7px 5px rgba(0,0,0,0.55)); }
+  .kl-garage-shadow { width: 52px; height: 9px; border-radius: 50%; background: rgba(0,0,0,0.45); filter: blur(3px); margin: 1px 0 5px; }
+  .kl-garage-label { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 13px; letter-spacing: 0.4px; color: #fff; text-align: center; line-height: 1.12; }
+  .kl-garage-obj.locked { cursor: default; }
+  .kl-garage-obj.locked .kl-garage-icon { filter: grayscale(0.85) brightness(0.7) drop-shadow(0 5px 4px rgba(0,0,0,0.5)); }
+  .kl-garage-obj.locked .kl-garage-label { color: #8b87a8; }
+  .kl-garage-lock { position: absolute; right: -8px; bottom: -4px; font-size: 20px; filter: none; }
+  .kl-garage-check { position: absolute; right: -10px; top: -8px; font-size: 15px; }
+  .kl-garage-room .kt-int-leave { flex: 0 0 auto; margin-top: 16px; }
   .kl-ear-choice {
     flex: 1 1 40%; min-width: 130px; min-height: 60px; padding: 10px 18px; border-radius: 14px; cursor: pointer;
     font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 19px; letter-spacing: 1px;
@@ -12103,14 +12132,16 @@ function klBuildingModules(building) { return KL_MODULE_DEFS.filter(m => m.build
 // A module is unlocked if it's already completed, dev-unlocked, or every
 // prerequisite in `requires` is cleared. (Completed ⇒ always accessible — a
 // finished station must never render as locked at its own home.)
+// Bonus labs unlock after Active Listening and don't gate the Venue.
+const KL_GARAGE_BONUS = ['garage:mode', 'garage:notation'];
 function klModuleUnlocked(mod) {
   if (klModuleIsDone(mod.id)) return true;
   // THE GARAGE is a single gate: nothing inside opens until EVERY station at
-  // Sweet Waddy's is cleared — then the garage modules unlock together. Mode Lab
-  // is the exception: it's the deepest ear skill and opens only after Listening.
+  // Sweet Waddy's is cleared — then the garage modules unlock together. The bonus
+  // labs (Mode Lab, Notation) are the exception: deepest skills, open after Listening.
   if (mod.building === 'garage') {
     if (!klBuildingModules('waddy').every(w => klModuleIsDone(w.id))) return false;
-    if (mod.id === 'garage:mode') return klModuleIsDone('garage:listen');
+    if (KL_GARAGE_BONUS.indexOf(mod.id) >= 0) return klModuleIsDone('garage:listen');
     return true;
   }
   if (!mod.requires) return true;
@@ -12128,7 +12159,7 @@ function klModuleLockReason(mod) {
   if (mod.building === 'garage') {
     const left = klBuildingModules('waddy').filter(w => !klModuleIsDone(w.id)).length;
     if (left) return 'Finish every station at Sweet Waddy\u2019s to open the Garage.';
-    if (mod.id === 'garage:mode' && !klModuleIsDone('garage:listen')) return 'Clear Active Listening first to open Mode Lab.';
+    if (KL_GARAGE_BONUS.indexOf(mod.id) >= 0 && !klModuleIsDone('garage:listen')) return 'Clear Active Listening first to open this lab.';
     return '';
   }
   const reqs = Array.isArray(mod.requires) ? mod.requires : (mod.requires ? [mod.requires] : []);
@@ -12179,7 +12210,7 @@ function klMarkModuleDone(id, silent) {
   const mod = klModuleDef(id); if (!mod) return 0;
   let got = klAwardXp('mod:' + id, KL_MODULE_XP, true); // per-level XP (once)
   // Mode Lab is a bonus module — it shouldn't gate the building milestone (or the Venue).
-  const sibs = klBuildingModules(mod.building).filter(m => m.id !== 'garage:mode');
+  const sibs = klBuildingModules(mod.building).filter(m => KL_GARAGE_BONUS.indexOf(m.id) < 0);
   const allDone = sibs.every(m => klState.modDone[m.id]);
   if (allDone) {
     const before = klState.xp || 0;
@@ -12243,7 +12274,7 @@ window.klEnterModule = function(moduleId, force) {
     klRenderPuzzle();
   }
 };
-const KL_MODULE_INTRO = { 'garage:anatomy': 'anatomy_intro', 'garage:listen': 'listen_intro', 'garage:mode': 'mode_intro' };
+const KL_MODULE_INTRO = { 'garage:anatomy': 'anatomy_intro', 'garage:listen': 'listen_intro', 'garage:mode': 'mode_intro', 'garage:notation': 'notation_intro' };
 
 // One-time Waddy's milestone. Idempotent + dev-skip-safe: awards +60 XP exactly
 // once, whether reached by playing through OR by jumping past it with the dev
@@ -12643,12 +12674,49 @@ function klHudMarkup() {
     (showHint ? '<span class="kt-hud-item kt-hud-show">' + showHint + '</span>' : '') +
   '</div>';
 }
+// Distinct "furniture" icon per garage module for the object-room.
+const KL_GARAGE_OBJ = {
+  'garage:jam': '🎸', 'garage:build': '🎹', 'garage:tap': '🥁', 'garage:ear': '👂',
+  'garage:anatomy': '🔍', 'garage:listen': '🔊', 'garage:mode': '🌗', 'garage:notation': '🎼'
+};
 function klRenderInterior(id) {
   klState.devRoom = id; // remembered so dev unlock toggles can re-render this room live
   document.getElementById('kidlab').classList.remove('kl-playing');
   klStopClock(); klStopBeatBar();
   const wrap = document.getElementById('kl-wrap');
   let title = '', art = '', body = '';
+  // THE GARAGE is its own room: each module is a clickable object on the floor.
+  if (id === 'garage') {
+    const objs = klBuildingModules('garage').map(m => {
+      const done = klModuleIsDone(m.id);
+      const unlocked = klModuleUnlocked(m);
+      const icon = KL_GARAGE_OBJ[m.id] || m.obj;
+      const inner =
+        '<div class="kl-garage-icon">' + icon +
+          (!unlocked ? '<span class="kl-garage-lock">🔒</span>' : (done ? '<span class="kl-garage-check">✓</span>' : '')) +
+        '</div>' +
+        '<div class="kl-garage-shadow"></div>' +
+        '<div class="kl-garage-label">' + m.name + '</div>';
+      return unlocked
+        ? '<button class="kl-garage-obj" onclick="klEnterModule(\'' + m.id + '\')">' + inner + '</button>'
+        : '<div class="kl-garage-obj locked" title="' + klModuleLockReason(m).split('"').join('') + '">' + inner + '</div>';
+    }).join('');
+    wrap.innerHTML =
+      '<div class="kl-stage kt-interior kt-bg-garage">' +
+        klHudMarkup() +
+        '<div class="kl-garage-room">' +
+          '<div class="kl-garage-head">' +
+            '<div class="kl-garage-title">THE GARAGE</div>' +
+            '<div class="kl-garage-sub">Your turf — cables everywhere. Click any piece of gear to train on it.</div>' +
+          '</div>' +
+          '<div class="kl-garage-floor">' + objs + '</div>' +
+          '<button class="kt-int-leave" onclick="klRenderTown()">← Back outside</button>' +
+        '</div>' +
+        (klIsDevAvailable() ? klDevBar() : '') +
+      '</div>';
+    klFlushNotifications(() => klRenderInterior('garage'));
+    return;
+  }
   if (id === 'waddy') {
     title = "SWEET WADDY'S"; art = '🧙';
     const stations = klBuildingModules('waddy').map(klStationMarkup).join('');
@@ -13533,6 +13601,29 @@ KL_MODE_DEFS.forEach((md, i) => KL_PUZZLES.push({ id: md.id, type: 'mode', dot: 
 (function registerModeStation() {
   const idx = KL_MODE_DEFS.map((md, i) => KL_MODE_START + i);
   KL_MODULE_DEFS.push({ id: 'garage:mode', building: 'garage', obj: '🌗', name: 'MODE LAB', desc: 'Hear the colour of the scales — bright, dark, and by name.', indices: idx, requires: ['garage:listen'] });
+})();
+
+// ── NOTATION — read notes on the staff (b31-83). Treble clef, name the note.
+// "step" = position on the staff: 0 = bottom line (E4), +1 per line/space going up,
+// negative going down. Even steps land on lines; odd steps on spaces.
+const KL_NOTE_FREQ = { '-2': 261.63, '-1': 293.66, '0': 329.63, '1': 349.23, '2': 392.00, '3': 440.00, '4': 493.88, '5': 523.25, '6': 587.33, '7': 659.25, '8': 698.46, '9': 783.99 };
+const KL_NOTATION_DEFS = [
+  { id: 801, step: 0,  answer: 'E', choices: ['E', 'G', 'B'] },        // E4 — bottom line
+  { id: 802, step: 2,  answer: 'G', choices: ['E', 'G', 'B'] },        // G4 — line
+  { id: 803, step: 4,  answer: 'B', choices: ['G', 'B', 'D'] },        // B4 — middle line
+  { id: 804, step: 1,  answer: 'F', choices: ['F', 'A', 'C'] },        // F4 — space
+  { id: 805, step: 3,  answer: 'A', choices: ['F', 'A', 'C'] },        // A4 — space
+  { id: 806, step: 5,  answer: 'C', choices: ['A', 'C', 'E'] },        // C5 — space
+  { id: 807, step: 6,  answer: 'D', choices: ['C', 'D', 'E', 'F'] },   // D5 — line
+  { id: 808, step: 7,  answer: 'E', choices: ['D', 'E', 'F', 'G'] },   // E5 — space
+  { id: 809, step: 8,  answer: 'F', choices: ['D', 'E', 'F', 'G'] },   // F5 — top line
+  { id: 810, step: -2, answer: 'C', choices: ['C', 'D', 'E', 'B'] }    // C4 — middle C, ledger below
+];
+const KL_NOTATION_START = KL_PUZZLES.length;
+KL_NOTATION_DEFS.forEach((nd, i) => KL_PUZZLES.push({ id: nd.id, type: 'notation', dot: 180 + i, ndef: nd }));
+(function registerNotationStation() {
+  const idx = KL_NOTATION_DEFS.map((nd, i) => KL_NOTATION_START + i);
+  KL_MODULE_DEFS.push({ id: 'garage:notation', building: 'garage', obj: '🎼', name: 'NOTATION', desc: 'Read the notes on the staff.', indices: idx, requires: ['garage:listen'] });
 })();
 // Melody puzzles carry no type/layer field; identify them as "has notes, no type".
 function klIsMelodyPuzzle(p) { return !!(p && p.notes && !p.type); }
@@ -14470,6 +14561,11 @@ const KL_STORY = {
     art: '🌗',
     title: 'THE COLOUR OF SCALES',
     line: 'Every scale has a mood. Some sound bright and happy, some dark and tense. You won\u2019t name these by sight \u2014 you\u2019ll feel them. Listen for the colour.',
+  },
+  notation_intro: {
+    art: '🎼',
+    title: 'READING THE DOTS',
+    line: 'Those dots on the lines are notes \u2014 a map of what to play. Learn the five lines (E G B D F) and four spaces (F A C E) and you can read any tune. Let\u2019s start.',
   },
   // ── INSTRUMENT DISCOVERIES (PLACEHOLDER art + copy — Matt to rewrite) ──
   // Play when each instrument is first found. Swap the emoji art for real later.
@@ -15711,7 +15807,7 @@ window.klDevModule = function(id) {
 // stay correct whether dev toggles unlock OR re-lock. No XP side-effects in dev.
 function klDevSyncMilestones() {
   klState.waddyDone  = klBuildingModules('waddy').every(m => klModuleIsDone(m.id));
-  klState.garageDone = klBuildingModules('garage').filter(m => m.id !== 'garage:mode').every(m => klModuleIsDone(m.id));
+  klState.garageDone = klBuildingModules('garage').filter(m => KL_GARAGE_BONUS.indexOf(m.id) < 0).every(m => klModuleIsDone(m.id));
 }
 // Per-thing UNLOCK: toggles a dev override that makes the station playable at its
 // home WITHOUT marking it done — so it stays fresh to test, and downstream gates
@@ -16530,6 +16626,71 @@ window.klModePick = function(i) {
   }
 };
 
+// ── NOTATION renderer — draws a treble staff with one note on it ─────────────
+function klNotationStaff(step) {
+  const lineY = [34, 48, 62, 76, 90]; // top→bottom (F5, D5, B4, G4, E4); gap 14
+  const yOf = s => 90 - s * 7;        // step 0 = bottom line (E4); +1 = half a gap up
+  const noteX = 148;
+  let ledger = '';
+  for (let s = -2; s >= step; s -= 2) ledger += '<line x1="' + (noteX - 13) + '" y1="' + yOf(s) + '" x2="' + (noteX + 13) + '" y2="' + yOf(s) + '" stroke="#aeb4c8" stroke-width="2"/>';
+  for (let s = 10; s <= step; s += 2) ledger += '<line x1="' + (noteX - 13) + '" y1="' + yOf(s) + '" x2="' + (noteX + 13) + '" y2="' + yOf(s) + '" stroke="#aeb4c8" stroke-width="2"/>';
+  const y = yOf(step);
+  return '<svg class="kl-notation-svg" viewBox="0 0 230 132" xmlns="http://www.w3.org/2000/svg">' +
+    lineY.map(ly => '<line x1="16" y1="' + ly + '" x2="214" y2="' + ly + '" stroke="#8b91a8" stroke-width="1.6"/>').join('') +
+    // stylised treble clef (gold)
+    '<path d="M52 96 C 40 96 36 86 44 80 C 56 72 70 78 70 90 C 70 104 54 112 42 104 C 28 95 30 70 48 58 C 64 47 62 33 55 30 C 49 27 44 33 44 42 L 44 100 C 44 110 38 112 33 108" ' +
+    'fill="none" stroke="#f0c040" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>' +
+    ledger +
+    '<ellipse cx="' + noteX + '" cy="' + y + '" rx="7.8" ry="5.8" fill="#2dd4bf" stroke="#179b8e" stroke-width="1.6" transform="rotate(-20 ' + noteX + ' ' + y + ')"/>' +
+  '</svg>';
+}
+function klRenderNotationPuzzle(p) {
+  document.getElementById('kidlab').classList.add('kl-playing');
+  klStopClock(); klStopBeatBar();
+  const wrap = document.getElementById('kl-wrap');
+  const nd = p.ndef;
+  klState.notationSolved = false;
+  const choices = nd.choices.slice();
+  for (let i = choices.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = choices[i]; choices[i] = choices[j]; choices[j] = t; }
+  klState.notationChoices = choices; klState.notationAnswer = nd.answer; klState.notationStep = nd.step;
+  const btns = choices.map((c, i) => '<button class="kl-ear-choice" id="kl-note-' + i + '" onclick="klNotationPick(' + i + ')">' + c + '</button>').join('');
+  wrap.innerHTML =
+    (klPuzzleBuilding() ? '<div class="kl-room-bg kt-bg-' + klPuzzleBuilding() + '">' + klSceneArt(klPuzzleBuilding()) + '</div>' : '') +
+    '<div class="kl-puzzle-top"><button class="kl-back" onclick="klExit()">←</button></div>' +
+    '<div class="kl-drumtitle">🎼 Name the Note</div>' +
+    '<div class="kl-build-hint">which note is on the staff? (lines: E G B D F · spaces: F A C E)</div>' +
+    '<div class="kl-notation-stage">' + klNotationStaff(nd.step) + '</div>' +
+    '<div class="kl-listen-row"><button class="kl-listen" id="kl-note-hear" onclick="klNotationHear()">🔊 HEAR IT</button></div>' +
+    '<div class="kl-ear-choices">' + btns + '</div>' +
+    '<div class="kl-bandmate" id="kl-bandmate">&nbsp;</div>';
+}
+window.klNotationHear = function() {
+  const f = KL_NOTE_FREQ[String(klState.notationStep)]; if (!f) return;
+  const ctx = getAudio(); if (!ctx) return;
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = 'triangle'; o.frequency.value = f; o.connect(g); g.connect(ctx.destination);
+  const t = ctx.currentTime + 0.04;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.32, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
+  o.start(t); o.stop(t + 0.75);
+};
+window.klNotationPick = function(i) {
+  if (klState.notationSolved) return;
+  const picked = klState.notationChoices[i];
+  const btn = document.getElementById('kl-note-' + i);
+  if (picked === klState.notationAnswer) {
+    klState.notationSolved = true;
+    if (btn) btn.classList.add('correct');
+    klNotationHear();
+    klConfetti();
+    setTimeout(() => klWin(), 760);
+  } else {
+    if (btn) { btn.classList.add('wrong'); setTimeout(() => btn.classList.remove('wrong'), 550); }
+    const bm = document.getElementById('kl-bandmate'); if (bm) bm.textContent = 'Not quite — count up from a line you know (E G B D F).';
+  }
+};
+
 // ── GROOVE LAB engine ───────────────────────────────────────────────────────
 // Home-row keys for tapping. Single voice taps on ANY of them for now; later each
 // key maps to a pitch (Pro-Tools-style musical typing) for multi-voice rhythms.
@@ -16908,6 +17069,8 @@ function klRenderPuzzle() {
   if (p.type === 'listen') { klRenderListenPuzzle(p); return; }
   // Mode Lab: hear a scale's colour over a drone (bright vs dark, etc.).
   if (p.type === 'mode') { klRenderModePuzzle(p); return; }
+  // Notation: read a note on the staff and name it.
+  if (p.type === 'notation') { klRenderNotationPuzzle(p); return; }
 
   klState.placed = [];
   klState.selectedBlock = null;
@@ -17253,7 +17416,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-82'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-83'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
