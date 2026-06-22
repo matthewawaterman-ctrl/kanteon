@@ -4205,113 +4205,6 @@
   .kl-mode-lesson .kl-mode-name { color: var(--gold); }
   .kl-mode-arcade .kl-mode-name { color: var(--gold); }
   .kl-mode-foot { display: flex; gap: 18px; margin-top: 6px; }
-
-  /* ════════════════════════════════════════════════════════════════════
-     Y2K / SEGA-DREAMCAST SKIN — scoped to the mode-select landing only.
-     Pure CSS/SVG: sunset sky, neon grid floor, lime frame, CRT scanlines,
-     chrome-glass cards, holographic title. No image assets.
-     ════════════════════════════════════════════════════════════════════ */
-  .y2k-stage {
-    position: relative; max-width: 100%; width: 100%; height: 100%;
-    overflow: hidden; justify-content: center; align-items: center;
-    padding: 0; gap: 0;
-  }
-  /* sunset / dusk sky with sun bloom */
-  .y2k-stage .y2k-sky {
-    position: absolute; inset: 0; z-index: 0;
-    background:
-      radial-gradient(60% 42% at 72% 16%, rgba(255,250,224,0.85), rgba(255,224,180,0) 60%),
-      radial-gradient(85% 60% at 22% 24%, rgba(255,176,196,0.55), rgba(255,176,196,0) 62%),
-      linear-gradient(178deg, #f8ead0 0%, #f4b9ad 22%, #d98bb6 42%, #8a6bc0 60%, #4a4f9e 78%, #1d1840 100%);
-  }
-  /* receding neon grid floor */
-  .y2k-stage .y2k-floor {
-    position: absolute; left: -25%; right: -25%; bottom: -8%; height: 46%; z-index: 0;
-    background:
-      repeating-linear-gradient(90deg, rgba(80,255,140,0.45) 0 2px, transparent 2px 70px),
-      repeating-linear-gradient(0deg,  rgba(80,255,140,0.35) 0 2px, transparent 2px 70px);
-    transform: perspective(360px) rotateX(66deg); transform-origin: bottom center;
-    -webkit-mask-image: linear-gradient(to top, #000 0%, transparent 82%);
-            mask-image: linear-gradient(to top, #000 0%, transparent 82%);
-    filter: drop-shadow(0 0 6px rgba(80,255,140,0.4));
-  }
-  /* CRT scanlines */
-  .y2k-stage .y2k-scan {
-    position: absolute; inset: 0; z-index: 6; pointer-events: none;
-    background: repeating-linear-gradient(0deg, rgba(0,0,0,0.16) 0 1px, transparent 1px 3px);
-    opacity: 0.55;
-  }
-  /* lime frame + corner brackets */
-  .y2k-stage .y2k-frame {
-    position: absolute; inset: 16px; z-index: 7; pointer-events: none;
-    border: 3px solid #39ff5a; border-radius: 3px;
-    box-shadow: 0 0 14px rgba(57,255,90,0.65), inset 0 0 14px rgba(57,255,90,0.22);
-  }
-  .y2k-stage .y2k-corner { position: absolute; width: 20px; height: 20px; }
-  .y2k-stage .y2k-corner::before, .y2k-stage .y2k-corner::after {
-    content: ''; position: absolute; background: #aef9c0; box-shadow: 0 0 6px #39ff5a;
-  }
-  .y2k-stage .y2k-corner::before { width: 20px; height: 3px; }
-  .y2k-stage .y2k-corner::after  { width: 3px; height: 20px; }
-  .y2k-stage .y2k-corner.tl { top: 5px; left: 5px; }
-  .y2k-stage .y2k-corner.tr { top: 5px; right: 5px; }
-  .y2k-stage .y2k-corner.tr::after { right: 0; }
-  .y2k-stage .y2k-corner.bl { bottom: 5px; left: 5px; }
-  .y2k-stage .y2k-corner.bl::before { bottom: 0; }
-  .y2k-stage .y2k-corner.br { bottom: 5px; right: 5px; }
-  .y2k-stage .y2k-corner.br::before { bottom: 0; }
-  .y2k-stage .y2k-corner.br::after  { right: 0; }
-  /* content above the layers */
-  .y2k-stage .y2k-content {
-    position: relative; z-index: 5; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 20px;
-    width: 100%; max-width: 1120px; padding: 0 28px;
-  }
-  /* holographic chrome greeting */
-  .y2k-stage .kl-mode-hello {
-    background: linear-gradient(180deg, #ffffff 0%, #d8f0ff 38%, #9fb8ff 55%, #f0c0ff 100%);
-    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-    text-shadow: 0 0 20px rgba(180,220,255,0.45); letter-spacing: 2px;
-  }
-  /* red/white checker ribbon accent */
-  .y2k-stage .y2k-checker {
-    width: 220px; height: 12px; border-radius: 2px; opacity: 0.85;
-    background:
-      conic-gradient(#ff5470 90deg, #fff 0 180deg, #ff5470 0 270deg, #fff 0);
-    background-size: 12px 12px;
-    box-shadow: 0 0 10px rgba(255,84,112,0.5);
-  }
-  /* chrome-glass cards */
-  .y2k-stage .kl-mode {
-    position: relative; overflow: hidden;
-    background: linear-gradient(180deg, rgba(255,255,255,0.26) 0%, rgba(255,255,255,0.07) 42%, rgba(24,12,46,0.4) 100%);
-    border: 1px solid rgba(255,255,255,0.55);
-    box-shadow: 0 12px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.8);
-  }
-  .y2k-stage .kl-mode::before { /* glossy top sheen */
-    content: ''; position: absolute; inset: 0 0 auto 0; height: 46%;
-    background: linear-gradient(180deg, rgba(255,255,255,0.4), rgba(255,255,255,0));
-    pointer-events: none;
-  }
-  .y2k-stage .kl-mode:hover {
-    border-color: #39ff5a;
-    box-shadow: 0 14px 36px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.85), 0 0 26px rgba(57,255,90,0.45);
-  }
-  .y2k-stage .kl-mode-story {
-    background: linear-gradient(180deg, rgba(255,236,180,0.34) 0%, rgba(255,255,255,0.08) 44%, rgba(40,20,12,0.4) 100%);
-    border-color: rgba(255,220,140,0.8);
-    box-shadow: 0 12px 34px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.85), 0 0 24px -4px var(--gold);
-  }
-  .y2k-stage .kl-mode-icon { filter: drop-shadow(0 3px 10px rgba(0,0,0,0.5)); }
-  .y2k-stage .kl-mode-name { text-shadow: 0 0 16px rgba(240,192,64,0.6), 0 2px 0 rgba(0,0,0,0.35); }
-  .y2k-stage .kl-mode-sub { color: rgba(255,255,255,0.85); }
-  /* chunky glossy footer buttons */
-  .y2k-stage .kl-tools-link {
-    background: linear-gradient(180deg, rgba(255,255,255,0.25), rgba(255,255,255,0.05));
-    border: 1px solid rgba(255,255,255,0.5); border-radius: 999px;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.6);
-    color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-  }
   /* prominent logo */
   .kl-title-land { font-size: clamp(46px, 13vw, 72px); margin: 0; line-height: 0.95; }
   .kl-hero {
@@ -12139,70 +12032,7 @@ const KL_BAND_SVG =
 // background sky. Swap this whole SVG for real art later; it is a single string.
 // === KANTEON NAMING — END ===
 const KL_HERO_SVG =
-  '<svg viewBox="0 0 400 640" width="100%" height="100%" preserveAspectRatio="xMaxYMax meet" ' +
-  'xmlns="http://www.w3.org/2000/svg" style="display:block;">' +
-    '<defs>' +
-      '<radialGradient id="klMach" cx="50%" cy="45%" r="55%">' +
-        '<stop offset="0%" stop-color="#ffe9fb"/><stop offset="38%" stop-color="#d98cff"/>' +
-        '<stop offset="72%" stop-color="#7b3ff0"/><stop offset="100%" stop-color="#3a1a8a"/>' +
-      '</radialGradient>' +
-      '<linearGradient id="klRkt" x1="0" y1="0" x2="0" y2="1">' +
-        '<stop offset="0%" stop-color="#fbfdff"/><stop offset="100%" stop-color="#b9c6e6"/>' +
-      '</linearGradient>' +
-      '<linearGradient id="klGround" x1="0" y1="0" x2="0" y2="1">' +
-        '<stop offset="0%" stop-color="#5a3a9c"/><stop offset="100%" stop-color="#2a1b5e"/>' +
-      '</linearGradient>' +
-      '<linearGradient id="klSky" x1="0" y1="0" x2="0" y2="1">' +
-        '<stop offset="0%" stop-color="#3a1f6e"/><stop offset="55%" stop-color="#4a2580"/>' +
-        '<stop offset="100%" stop-color="#2a1b5e"/>' +
-      '</linearGradient>' +
-    '</defs>' +
-    // full sky
-    '<rect x="0" y="0" width="400" height="640" fill="none"/>' +
-    // === KANTEON RENAME — START ===
-    // (colored glow pools removed; sky is the realistic dark gradient from #kidlab)
-    // === KANTEON RENAME — END ===
-    // stars
-    '<circle cx="60" cy="70" r="9" fill="rgba(120,200,255,0.5)"/>' +
-    '<circle cx="120" cy="46" r="4" fill="rgba(255,255,255,0.6)"/>' +
-    '<circle cx="300" cy="180" r="2.5" fill="rgba(255,255,255,0.5)"/>' +
-    '<circle cx="40" cy="220" r="2" fill="rgba(255,255,255,0.45)"/>' +
-    '<circle cx="360" cy="260" r="3" fill="rgba(255,255,255,0.5)"/>' +
-    // === KANTEON RENAME — START ===
-    // (logo now rendered as the chrome Monoton overlay on the player-select scene)
-    // === KANTEON RENAME — END === +
-    /* === KANTEON NAMING — START === */
-    // (Kanteon, the ominous music-machine, now lives as the .kl-machine background element)
-    /* === KANTEON NAMING — END === */
-    // ground
-    '<path d="M0 520 Q200 496 400 520 L400 640 L0 640 Z" fill="url(#klGround)"/>' +
-    '<path d="M0 520 Q200 496 400 520" stroke="rgba(180,150,255,0.5)" stroke-width="2.5" fill="none"/>' +
-    // rocketship (right side, leaving the left clear for the player panel)
-    '<g>' +
-      '<path d="M300 528 L300 416 Q300 372 326 352 Q352 372 352 416 L352 528 Z" fill="url(#klRkt)" stroke="#8b9bc4" stroke-width="2.5"/>' +
-      '<circle cx="326" cy="408" r="11" fill="#2dd4bf" stroke="#0e3b39" stroke-width="2.5"/>' +
-      '<path d="M300 496 L282 528 L300 528 Z" fill="#7c6ff7"/>' +
-      '<path d="M352 496 L370 528 L352 528 Z" fill="#7c6ff7"/>' +
-      '<path d="M326 352 L326 336 L342 344 Z" fill="#f0c040"/>' +
-      '<circle cx="326" cy="446" r="5" fill="#f0c040"/>' +
-    '</g>' +
-    // the band — center-ish, on the ground
-    '<g stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none" ' +
-      'style="filter:drop-shadow(0 0 4px rgba(255,255,255,0.55))">' +
-      '<circle cx="150" cy="452" r="8"/>' +
-      '<path d="M150 460 L150 484"/><path d="M150 484 L140 502 M150 484 L160 502"/>' +
-      '<path d="M150 467 L136 474 M150 468 L168 477"/>' +
-      '<ellipse cx="136" cy="476" rx="8" ry="5" stroke="#f0c040"/>' +
-      '<path d="M141 472 L168 463" stroke="#f0c040"/>' +
-      '<circle cx="198" cy="446" r="8"/>' +
-      '<path d="M198 454 L198 480"/><path d="M198 480 L188 502 M198 480 L208 502"/>' +
-      '<path d="M198 462 L214 451"/>' +
-      '<circle cx="217" cy="448" r="4" stroke="#2dd4bf"/><path d="M217 452 L217 459" stroke="#2dd4bf"/>' +
-      '<circle cx="240" cy="452" r="8"/>' +
-      '<path d="M240 460 L240 484"/><path d="M240 484 L230 502 M240 484 L250 502"/>' +
-      '<path d="M240 467 L226 460 M240 468 L254 461"/>' +
-    '</g>' +
-  '</svg>';
+  '<svg viewBox=\"0 0 400 640\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"xMaxYMax meet\" xmlns=\"http://www.w3.org/2000/svg\" style=\"display:block;\"><defs><radialGradient id=\"klMach\" cx=\"50%\" cy=\"45%\" r=\"55%\"><stop offset=\"0%\" stop-color=\"#ffe9fb\"/><stop offset=\"38%\" stop-color=\"#d98cff\"/><stop offset=\"72%\" stop-color=\"#7b3ff0\"/><stop offset=\"100%\" stop-color=\"#3a1a8a\"/></radialGradient><linearGradient id=\"klRkt\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0%\" stop-color=\"#fbfdff\"/><stop offset=\"100%\" stop-color=\"#b9c6e6\"/></linearGradient><linearGradient id=\"klGround\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0%\" stop-color=\"#5a3a9c\"/><stop offset=\"100%\" stop-color=\"#2a1b5e\"/></linearGradient><linearGradient id=\"klSky\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0%\" stop-color=\"#3a1f6e\"/><stop offset=\"55%\" stop-color=\"#4a2580\"/><stop offset=\"100%\" stop-color=\"#2a1b5e\"/></linearGradient><radialGradient id=\"klHead\" cx=\"38%\" cy=\"30%\" r=\"72%\"><stop offset=\"0%\" stop-color=\"#ffffff\"/><stop offset=\"55%\" stop-color=\"#ece6ff\"/><stop offset=\"100%\" stop-color=\"#b9a8e8\"/></radialGradient><radialGradient id=\"klWinG\" cx=\"38%\" cy=\"32%\" r=\"72%\"><stop offset=\"0%\" stop-color=\"#bafaf0\"/><stop offset=\"50%\" stop-color=\"#2dd4bf\"/><stop offset=\"100%\" stop-color=\"#0e7d72\"/></radialGradient><linearGradient id=\"klRktHi\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0\"><stop offset=\"0%\" stop-color=\"#ffffff\" stop-opacity=\"0.85\"/><stop offset=\"42%\" stop-color=\"#ffffff\" stop-opacity=\"0.12\"/><stop offset=\"100%\" stop-color=\"#ffffff\" stop-opacity=\"0\"/></linearGradient><radialGradient id=\"klShadowG\" cx=\"50%\" cy=\"50%\" r=\"50%\"><stop offset=\"0%\" stop-color=\"#000000\" stop-opacity=\"0.42\"/><stop offset=\"100%\" stop-color=\"#000000\" stop-opacity=\"0\"/></radialGradient><radialGradient id=\"klRktGlow\" cx=\"50%\" cy=\"50%\" r=\"50%\"><stop offset=\"0%\" stop-color=\"#96aaff\" stop-opacity=\"0.32\"/><stop offset=\"100%\" stop-color=\"#96aaff\" stop-opacity=\"0\"/></radialGradient></defs><rect x=\"0\" y=\"0\" width=\"400\" height=\"640\" fill=\"none\"/><circle cx=\"60\" cy=\"70\" r=\"9\" fill=\"rgba(120,200,255,0.5)\"/><circle cx=\"120\" cy=\"46\" r=\"4\" fill=\"rgba(255,255,255,0.6)\"/><circle cx=\"300\" cy=\"180\" r=\"2.5\" fill=\"rgba(255,255,255,0.5)\"/><circle cx=\"40\" cy=\"220\" r=\"2\" fill=\"rgba(255,255,255,0.45)\"/><circle cx=\"360\" cy=\"260\" r=\"3\" fill=\"rgba(255,255,255,0.5)\"/><path d=\"M0 520 Q200 496 400 520 L400 640 L0 640 Z\" fill=\"url(#klGround)\"/><path d=\"M0 520 Q200 496 400 520\" stroke=\"rgba(180,150,255,0.5)\" stroke-width=\"2.5\" fill=\"none\"/><ellipse cx=\"326\" cy=\"450\" rx=\"58\" ry=\"116\" fill=\"url(#klRktGlow)\"/><g><path d=\"M300 528 L300 416 Q300 372 326 352 Q352 372 352 416 L352 528 Z\" fill=\"url(#klRkt)\" stroke=\"#8b9bc4\" stroke-width=\"2.5\"/><circle cx=\"326\" cy=\"408\" r=\"11\" fill=\"#2dd4bf\" stroke=\"#0e3b39\" stroke-width=\"2.5\"/><path d=\"M300 496 L282 528 L300 528 Z\" fill=\"#7c6ff7\"/><path d=\"M352 496 L370 528 L352 528 Z\" fill=\"#7c6ff7\"/><path d=\"M326 352 L326 336 L342 344 Z\" fill=\"#f0c040\"/><circle cx=\"326\" cy=\"446\" r=\"5\" fill=\"#f0c040\"/></g><path d=\"M307 522 L307 418 Q307 384 322 362 L327 364 Q313 388 313 420 L313 522 Z\" fill=\"url(#klRktHi)\"/><circle cx=\"326\" cy=\"408\" r=\"10\" fill=\"url(#klWinG)\"/><circle cx=\"322\" cy=\"404\" r=\"3\" fill=\"#ffffff\" fill-opacity=\"0.85\"/><ellipse cx=\"150\" cy=\"506\" rx=\"22\" ry=\"5\" fill=\"url(#klShadowG)\"/><ellipse cx=\"198\" cy=\"506\" rx=\"22\" ry=\"5\" fill=\"url(#klShadowG)\"/><ellipse cx=\"240\" cy=\"506\" rx=\"22\" ry=\"5\" fill=\"url(#klShadowG)\"/><circle cx=\"150\" cy=\"452\" r=\"8\" fill=\"url(#klHead)\"/><circle cx=\"198\" cy=\"446\" r=\"8\" fill=\"url(#klHead)\"/><circle cx=\"240\" cy=\"452\" r=\"8\" fill=\"url(#klHead)\"/><circle cx=\"147\" cy=\"449\" r=\"2.4\" fill=\"#ffffff\" fill-opacity=\"0.95\"/><circle cx=\"195\" cy=\"443\" r=\"2.4\" fill=\"#ffffff\" fill-opacity=\"0.95\"/><circle cx=\"237\" cy=\"449\" r=\"2.4\" fill=\"#ffffff\" fill-opacity=\"0.95\"/><g stroke=\"#fff\" stroke-width=\"2.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\" style=\"filter:drop-shadow(0 0 7px rgba(190,170,255,0.75))\"><circle cx=\"150\" cy=\"452\" r=\"8\"/><path d=\"M150 460 L150 484\"/><path d=\"M150 484 L140 502 M150 484 L160 502\"/><path d=\"M150 467 L136 474 M150 468 L168 477\"/><ellipse cx=\"136\" cy=\"476\" rx=\"8\" ry=\"5\" stroke=\"#f0c040\"/><path d=\"M141 472 L168 463\" stroke=\"#f0c040\"/><circle cx=\"198\" cy=\"446\" r=\"8\"/><path d=\"M198 454 L198 480\"/><path d=\"M198 480 L188 502 M198 480 L208 502\"/><path d=\"M198 462 L214 451\"/><circle cx=\"217\" cy=\"448\" r=\"4\" stroke=\"#2dd4bf\"/><path d=\"M217 452 L217 459\" stroke=\"#2dd4bf\"/><circle cx=\"240\" cy=\"452\" r=\"8\"/><path d=\"M240 460 L240 484\"/><path d=\"M240 484 L230 502 M240 484 L250 502\"/><path d=\"M240 467 L226 460 M240 468 L254 461\"/></g></svg>';
 // ── END HERO SCENE ─────────────────────────────────────────────────────────
 
 // === KANTEON TOWN — START ===
@@ -14766,41 +14596,31 @@ window.klShowModeSelect = function() {
   const wrap = document.getElementById('kl-wrap');
   const kid = klState.kid || {};
   wrap.innerHTML =
-    '<div class="kl-landing kl-modeselect y2k-stage">' +
-      '<div class="y2k-sky"></div>' +
-      '<div class="y2k-floor"></div>' +
-      '<div class="y2k-scan"></div>' +
-      '<div class="y2k-frame">' +
-        '<span class="y2k-corner tl"></span><span class="y2k-corner tr"></span>' +
-        '<span class="y2k-corner bl"></span><span class="y2k-corner br"></span>' +
+    '<div class="kl-landing kl-modeselect">' +
+      klChromeLogoHTML('kl-scene-logo', false, 'sceneTeal', 7) +
+      '<div class="kl-mode-hello">Hey ' + (kid.name || 'Player') + ' — pick a mode</div>' +
+      '<div class="kl-modes">' +
+        '<button class="kl-mode kl-mode-story" onclick="klEnterStory()">' +
+          '<div class="kl-mode-icon">🎸</div>' +
+          '<div class="kl-mode-name">STORY MODE</div>' +
+          '<div class="kl-mode-sub">Build your band &amp; play the campaign</div>' +
+        '</button>' +
+        '<button class="kl-mode kl-mode-lesson" onclick="klOpenTools(\'modes\')">' +
+          '<div class="kl-mode-icon">📖</div>' +
+          '<div class="kl-mode-name">LESSON MODE</div>' +
+          '<div class="kl-mode-sub">Ear training, theory &amp; drills</div>' +
+        '</button>' +
+        '<button class="kl-mode kl-mode-arcade" onclick="openMixtape()">' +
+          '<div class="kl-mode-icon">🎧</div>' +
+          '<div class="kl-mode-name">ARCADE MODE</div>' +
+          '<div class="kl-mode-sub">Rapid-fire mixtape &amp; world leaderboard</div>' +
+        '</button>' +
       '</div>' +
-      '<div class="y2k-content">' +
-        klChromeLogoHTML('kl-scene-logo', false, 'sceneTeal', 7) +
-        '<div class="kl-mode-hello">Hey ' + (kid.name || 'Player') + ' — pick a mode</div>' +
-        '<div class="y2k-checker"></div>' +
-        '<div class="kl-modes">' +
-          '<button class="kl-mode kl-mode-story" onclick="klEnterStory()">' +
-            '<div class="kl-mode-icon">🎸</div>' +
-            '<div class="kl-mode-name">STORY MODE</div>' +
-            '<div class="kl-mode-sub">Build your band &amp; play the campaign</div>' +
-          '</button>' +
-          '<button class="kl-mode kl-mode-lesson" onclick="klOpenTools(\'modes\')">' +
-            '<div class="kl-mode-icon">📖</div>' +
-            '<div class="kl-mode-name">LESSON MODE</div>' +
-            '<div class="kl-mode-sub">Ear training, theory &amp; drills</div>' +
-          '</button>' +
-          '<button class="kl-mode kl-mode-arcade" onclick="openMixtape()">' +
-            '<div class="kl-mode-icon">🎧</div>' +
-            '<div class="kl-mode-name">ARCADE MODE</div>' +
-            '<div class="kl-mode-sub">Rapid-fire mixtape &amp; world leaderboard</div>' +
-          '</button>' +
-        '</div>' +
-        '<div class="kl-mode-foot">' +
-          '<button class="kl-tools-link" onclick="klRenderPlayerSelect()">← Switch player</button>' +
-          '<button class="kl-tools-link" onclick="klToggleFullscreen()">⛶ Fullscreen</button>' +
-        '</div>' +
-        (klIsDevAvailable() ? klDevBar() : '') +
+      '<div class="kl-mode-foot">' +
+        '<button class="kl-tools-link" onclick="klRenderPlayerSelect()">← Switch player</button>' +
+        '<button class="kl-tools-link" onclick="klToggleFullscreen()">⛶ Fullscreen</button>' +
       '</div>' +
+      (klIsDevAvailable() ? klDevBar() : '') +
     '</div>';
 };
 
@@ -17892,7 +17712,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-104'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-105'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
