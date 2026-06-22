@@ -4588,6 +4588,7 @@
   .kl-cal-dow { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-bottom: 3px; }
   .kl-cal-dow span { text-align: center; font-size: 10px; opacity: 0.45; font-weight: 700; }
   .kl-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .kl-cal-blank { aspect-ratio: 1; }
   .kl-cal-day { aspect-ratio: 1; border-radius: 7px; border: 1px solid rgba(255,255,255,0.1);
     background: rgba(255,255,255,0.05); color: #fff; font-family: 'Barlow', sans-serif; font-weight: 700;
     font-size: 12px; cursor: pointer; position: relative; padding: 0;
@@ -12734,6 +12735,7 @@ function klRenderInterior(id) {
         ? '<div class="kt-shop-item" style="border-color:rgba(220,38,38,0.6);">' +
             '<span class="kt-shop-label">🏠 Rent due</span>' +
             '<button class="kt-int-sub" ' + (klState.money < rentOwed ? 'disabled' : '') + ' onclick="klPayRent()">Pay $' + rentOwed + '</button>' +
+            (klRentLateFee() > 0 ? '<span class="kt-shop-extra" style="color:#fca5a5;">$' + klRentBase() + ' rent + $' + klRentLateFee() + ' late fee</span>' : '') +
             (rentDaysLeft != null ? '<span class="kt-shop-extra">' + Math.max(0, rentDaysLeft) + ' day' + (rentDaysLeft === 1 ? '' : 's') + ' before eviction</span>' : '') +
           '</div>'
         : '<div style="padding:4px 4px 6px;font-family:\'Barlow\',sans-serif;font-size:15.5px;color:rgba(238,231,255,0.92);">Paid up. Next rent on Day ' + nextRentDay + ' (' + klSeason(nextRentDay) + ').</div>');
@@ -12780,6 +12782,7 @@ function klRenderInterior(id) {
         ? '<div class="kt-shop-item" style="border-color:rgba(220,38,38,0.6);">' +
             '<span class="kt-shop-label">🏠 Rent due</span>' +
             '<button class="kt-int-sub" ' + (klState.money < rentOwed ? 'disabled' : '') + ' onclick="klPayRent()">Pay $' + rentOwed + '</button>' +
+            (klRentLateFee() > 0 ? '<span class="kt-shop-extra" style="color:#fca5a5;">$' + klRentBase() + ' rent + $' + klRentLateFee() + ' late fee</span>' : '') +
             (rentDaysLeft != null ? '<span class="kt-shop-extra">' + Math.max(0, rentDaysLeft) + ' day' + (rentDaysLeft === 1 ? '' : 's') + ' before eviction</span>' : '') +
           '</div>'
         : '<div style="padding:4px 4px 6px;font-family:\'Barlow\',sans-serif;font-size:15.5px;color:rgba(238,231,255,0.92);">Paid up. Next rent on Day ' + nextRentDay + ' (' + klSeason(nextRentDay) + ').</div>');
@@ -12854,14 +12857,15 @@ window.klTalkTo = function(who) {
 //   o = { fromDay, seasons, enableFrom, enableTo, selStart, selEnd, today,
 //         hotWeekends, onPick (fn name, called with the absolute day), theme }
 function klCalendarGrid(o) {
-  const dow = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  const dow = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];   // US week: Sunday on the left
   let html = '<div class="kl-cal ' + (o.theme === 'work' ? 'kl-cal-work' : 'kl-cal-book') + '"><div class="kl-cal-scroll">';
   for (let s = 0; s < o.seasons; s++) {
     const seasonStart = o.fromDay + s * 28;
-    html += '<div class="kl-cal-season">' +
-      '<div class="kl-cal-seasonhdr">' + KL_SEASON_EMOJI[klSeason(seasonStart)] + ' ' + klSeason(seasonStart) + '</div>' +
-      '<div class="kl-cal-dow">' + dow.map(d => '<span>' + d + '</span>').join('') + '</div>' +
-      '<div class="kl-cal-grid">';
+    // Sunday-first column of day-of-month 1. Game weekday: (day-1)%7 with 0=Mon…6=Sun;
+    // US column = (monIdx + 1) % 7, so Sunday lands in column 0. (dom 1 is always a Monday → 1 blank.)
+    const lead = (((seasonStart - 1) % 7) + 1) % 7;
+    let cells = '';
+    for (let b = 0; b < lead; b++) cells += '<div class="kl-cal-blank"></div>';
     for (let dom = 1; dom <= 28; dom++) {
       const day = seasonStart + (dom - 1);
       const enabled = day >= o.enableFrom && day <= o.enableTo;
@@ -12873,10 +12877,15 @@ function klCalendarGrid(o) {
       if (inSel) cls.push('sel');
       if (isToday) cls.push('today');
       if (hot && enabled && !inSel) cls.push('hot');
-      html += '<button class="' + cls.join(' ') + '" ' + (enabled ? ('onclick="' + o.onPick + '(' + day + ')"') : 'disabled') + '>' +
+      cells += '<button class="' + cls.join(' ') + '" ' + (enabled ? ('onclick="' + o.onPick + '(' + day + ')"') : 'disabled') + '>' +
         dom + (hot && enabled ? '<span class="kl-cal-fire">🔥</span>' : '') + '</button>';
     }
-    html += '</div></div>';
+    const trail = (7 - ((lead + 28) % 7)) % 7;
+    for (let b = 0; b < trail; b++) cells += '<div class="kl-cal-blank"></div>';
+    html += '<div class="kl-cal-season">' +
+      '<div class="kl-cal-seasonhdr">' + KL_SEASON_EMOJI[klSeason(seasonStart)] + ' ' + klSeason(seasonStart) + '</div>' +
+      '<div class="kl-cal-dow">' + dow.map(d => '<span>' + d + '</span>').join('') + '</div>' +
+      '<div class="kl-cal-grid">' + cells + '</div></div>';
   }
   return html + '</div></div>';
 }
@@ -13851,12 +13860,19 @@ function klSeasonLabel(day) { const s = klSeason(day); return KL_SEASON_EMOJI[s]
 // you. Eviction = game over. All knobs are tunable right here. ===
 const KL_RENT = 2000;         // monthly rent
 const KL_RENT_GRACE = 7;      // days after the 1st before eviction
+const KL_RENT_LATE_FEE = 200; // one-time fee if you don't pay ON the 1st
 
 function klRentDueCount(day) { return klMonthIndex(day || klState.day); }  // rents that should be settled by now (month 0 free)
-function klRentOwed() {
+function klRentBase() {
   const months = klRentDueCount() - klState.rentPaidCount;
   return months > 0 ? months * KL_RENT : 0;
 }
+// Rent is due on the 1st. Pay on the 1st → no fee; any later day while still
+// owing adds a one-time late fee on top.
+function klRentLateFee() {
+  return (klRentBase() > 0 && klState.day > klNextRentDueDay()) ? KL_RENT_LATE_FEE : 0;
+}
+function klRentOwed() { return klRentBase() + klRentLateFee(); }
 function klNextRentDueDay() { return (klState.rentPaidCount + 1) * KL_MONTH_LEN + 1; } // the 1st of the next unpaid month
 function klRentEvictDay() { return klNextRentDueDay() + KL_RENT_GRACE; }
 function klRentDaysLeft() { return klRentOwed() > 0 ? (klRentEvictDay() - klState.day) : null; }
@@ -13865,11 +13881,12 @@ function klRentDaysLeft() { return klRentOwed() > 0 ? (klRentEvictDay() - klStat
 window.klPayRent = function() {
   const owed = klRentOwed();
   if (owed <= 0) return;
+  const fee = klRentLateFee();
   if (klState.money < owed) { klToast('💸 Not enough to cover rent ($' + owed + '). Go earn it — busk, work, or play a show.'); return; }
   klState.money -= owed;
   klState.rentPaidCount = klRentDueCount();
   klSaveProgress();
-  klToast('🏠 Rent paid: $' + owed + '. Next rent on Day ' + klNextRentDueDay() + ' (' + klSeasonLabel(klNextRentDueDay()) + ').');
+  klToast('🏠 Rent paid: $' + owed + (fee > 0 ? ' (incl. $' + fee + ' late fee)' : '') + '. Next rent on Day ' + klNextRentDueDay() + ' (' + klSeasonLabel(klNextRentDueDay()) + ').');
   klRenderTown();
 };
 
@@ -17056,7 +17073,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-79'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-80'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
