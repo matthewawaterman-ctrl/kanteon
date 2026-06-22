@@ -4156,6 +4156,56 @@
     justify-content: center; gap: 8px;
     width: 100%; max-width: 480px; height: 100%;
   }
+  /* ── THREE-MODE LANDING (Story / Lesson / Arcade) ── */
+  .kl-modeselect { max-width: 1120px; gap: 22px; padding: 0 16px; }
+  .kl-mode-hello {
+    font-family: var(--font-display); font-size: 22px; font-weight: 800;
+    letter-spacing: 1px; color: var(--text2); text-transform: uppercase;
+  }
+  .kl-modes {
+    display: flex; flex-wrap: wrap; justify-content: center;
+    align-items: stretch; gap: 18px; width: 100%;
+  }
+  .kl-mode {
+    flex: 1 1 260px; min-width: 240px; max-width: 360px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; cursor: pointer; text-align: center;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 18px; padding: 30px 22px; color: var(--text);
+    transition: transform 0.1s ease, background 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+  .kl-mode:hover { transform: translateY(-3px); background: rgba(255,255,255,0.1); }
+  .kl-mode:active { transform: translateY(0) scale(0.99); }
+  .kl-mode-icon { font-size: 52px; line-height: 1; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.4)); }
+  .kl-mode-name {
+    font-family: var(--font-display); font-weight: 900; font-size: 30px;
+    letter-spacing: 1px; line-height: 1;
+  }
+  .kl-mode-sub {
+    font-family: var(--font-body); font-size: 15px; color: var(--text2);
+    line-height: 1.3; max-width: 230px;
+  }
+  /* Story = marginally bigger + gold accent + a PLAY chip */
+  .kl-mode-story {
+    flex: 1.25 1 300px; max-width: 420px;
+    border-color: rgba(240,192,64,0.5);
+    background: linear-gradient(180deg, rgba(240,192,64,0.14), rgba(255,255,255,0.05));
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3), 0 0 22px -6px var(--gold);
+  }
+  .kl-mode-story:hover { box-shadow: 0 10px 34px rgba(0,0,0,0.35), 0 0 26px -4px var(--gold); }
+  .kl-mode-story .kl-mode-icon { font-size: 60px; }
+  .kl-mode-story .kl-mode-name { font-size: 36px; color: var(--gold); }
+  .kl-mode-go {
+    margin-top: 4px; font-family: var(--font-display); font-weight: 900;
+    font-size: 16px; letter-spacing: 2px; color: #3a2a00;
+    background: linear-gradient(135deg, var(--gold), #ff9d4d);
+    border-radius: 999px; padding: 6px 18px;
+  }
+  .kl-mode-lesson { border-color: rgba(124,111,247,0.4); }
+  .kl-mode-lesson .kl-mode-name { color: #b3a9ff; }
+  .kl-mode-arcade { border-color: rgba(45,212,191,0.4); }
+  .kl-mode-arcade .kl-mode-name { color: var(--cyan); }
+  .kl-mode-foot { display: flex; gap: 18px; margin-top: 6px; }
   /* prominent logo */
   .kl-title-land { font-size: clamp(46px, 13vw, 72px); margin: 0; line-height: 0.95; }
   .kl-hero {
@@ -6373,7 +6423,7 @@
 <!-- MIXTAPE — START SCREEN -->
 <div class="screen" id="mixtape-start">
   <div class="module-header">
-    <button class="back-btn" onclick="showScreen('home')">←</button>
+    <button class="back-btn" onclick="klArcadeBack()">←</button>
     <div class="module-header-title">MIXTAPE</div>
   </div>
 
@@ -11765,7 +11815,6 @@ window.startModuleIndexPreview = function(q) {
 // === HOME CAROUSEL — 3D NAVIGATION ===
 const CAROUSEL_DATA = {
   home: [
-    { id: 'mixtape',  icon: '🎧', name: 'MIXTAPE',        sub: 'ARCADE MODE',  cls: 'cat-mixtape', action: 'mixtape',  desc: 'Rapid-fire shuffle of every module. 3 lives, combo multiplier, leaderboards per difficulty.' },
     { id: 'play',     icon: '👂', name: 'PLAY BY EAR',    sub: '4 MODULES',    cls: 'cat-play',    action: 'sub:play', desc: 'Train your ears. Identify intervals, chords, instruments, and transcribe what you hear.' },
     { id: 'read',     icon: '📖', name: 'READ & PERFORM', sub: '2 MODULES',    cls: 'cat-read',    action: 'sub:read', desc: 'Read rhythms, treble & bass clef, drum notation, and guitar tab.' },
     { id: 'study',    icon: '🎼', name: 'STUDY',          sub: '2 MODULES',    cls: 'cat-study',   action: 'sub:study',desc: 'Music theory deep dives and instrument anatomy reference.' },
@@ -14575,6 +14624,7 @@ window.klEnter = klEnter;
 // otherwise to the player-select screen. (Fixes the book dumping you on the
 // main screen with no way back to town.)
 window.klBookBack = function() {
+  if (klState._lessonReturn === 'modes') { klShowModeSelect(); return; }
   if (klState.kid) {
     showScreen('kidlab');
     klRenderTown();
@@ -14584,11 +14634,59 @@ window.klBookBack = function() {
 };
 
 // Open the original teacher-tools app (the secondary page). Reachable from the
-// Kid Lab home and presented at the end of the game.
-window.klOpenTools = function() {
+// mode-select landing ('modes') and from inside the running game ('town').
+window.klOpenTools = function(from) {
+  klState._lessonReturn = from || 'town';
   document.getElementById('kidlab').classList.remove('kl-playing');
   if (typeof refreshHome === 'function') refreshHome();
   showScreen('home');
+};
+
+// Three-mode landing: Story / Lesson / Arcade, shown after a player is chosen.
+window.klEnterStory = function() {
+  showScreen('kidlab');
+  if (klState._needStoryIntro) {
+    klOpenAvatar('create', () => klPlayCutscene('intro', () => klRenderTown()));
+  } else {
+    klRenderTown();
+  }
+};
+window.klArcadeBack = function() {
+  if (klState.kid) klShowModeSelect(); else klEnter();
+};
+window.klShowModeSelect = function() {
+  showScreen('kidlab');
+  document.getElementById('kidlab').classList.remove('kl-playing');
+  const wrap = document.getElementById('kl-wrap');
+  const kid = klState.kid || {};
+  wrap.innerHTML =
+    '<div class="kl-landing kl-modeselect">' +
+      klChromeLogoHTML('kl-scene-logo', false, 'sceneTeal', 7) +
+      '<div class="kl-mode-hello">Hey ' + (kid.name || 'Player') + ' — pick a mode</div>' +
+      '<div class="kl-modes">' +
+        '<button class="kl-mode kl-mode-story" onclick="klEnterStory()">' +
+          '<div class="kl-mode-icon">🎸</div>' +
+          '<div class="kl-mode-name">STORY MODE</div>' +
+          '<div class="kl-mode-sub">Build your band &amp; play the campaign</div>' +
+          '<div class="kl-mode-go">▶ PLAY</div>' +
+        '</button>' +
+        '<button class="kl-mode kl-mode-lesson" onclick="klOpenTools(\'modes\')">' +
+          '<div class="kl-mode-icon">📖</div>' +
+          '<div class="kl-mode-name">LESSON MODE</div>' +
+          '<div class="kl-mode-sub">Ear training, theory &amp; drills</div>' +
+        '</button>' +
+        '<button class="kl-mode kl-mode-arcade" onclick="openMixtape()">' +
+          '<div class="kl-mode-icon">🎧</div>' +
+          '<div class="kl-mode-name">ARCADE MODE</div>' +
+          '<div class="kl-mode-sub">Rapid-fire mixtape &amp; world leaderboard</div>' +
+        '</button>' +
+      '</div>' +
+      '<div class="kl-mode-foot">' +
+        '<button class="kl-tools-link" onclick="klRenderPlayerSelect()">← Switch player</button>' +
+        '<button class="kl-tools-link" onclick="klToggleFullscreen()">⛶ Fullscreen</button>' +
+      '</div>' +
+      (klIsDevAvailable() ? klDevBar() : '') +
+    '</div>';
 };
 
 function klRenderPlayerSelect() {
@@ -14621,7 +14719,6 @@ function klRenderPlayerSelect() {
         '<div class="kl-panel-title">Who\'s playing?</div>' +
         '<div class="kl-panel-players">' + players.map(btn).join('') + addTile + guestTile + '</div>' +
         '<div class="kl-bt-note">🔊 Use your device\u2019s built-in speakers. Bluetooth headphones &amp; speakers add a delay that throws off the rhythm games — please turn them off first.</div>' +
-        '<button class="kl-tools-link kl-lesson-cta" onclick="klOpenTools()">📖 Lesson Mode</button>' +
         '<button class="kl-tools-link" onclick="klToggleFullscreen()">⛶ Fullscreen</button>' +
         // === KANTEON RENAME — START ===
         '<div class="kl-company-credit">a Velion game</div>' +
@@ -14733,7 +14830,8 @@ window.klPickKid = function(kidId) {
     klRebuildLayersFor(klState.puzzleIdx);
     klLogSessionStart();
     getAudio(); // unlock audio on this user gesture
-    klRenderTown();
+    klState._needStoryIntro = false;
+    klShowModeSelect();
     return;
   }
   // Fresh start
@@ -14747,7 +14845,8 @@ window.klPickKid = function(kidId) {
   // === KANTEON TOWN — START ===
   // Build your character first (with a dice-roll randomizer), THEN play the opening
   // intro and land in the hometown directory.
-  klOpenAvatar('create', () => klPlayCutscene('intro', () => klRenderTown()));
+  klState._needStoryIntro = true;
+  klShowModeSelect();
   // === KANTEON TOWN — END ===
 };
 
@@ -14759,7 +14858,8 @@ window.klPickGuest = function() {
   klResetFreshState();
   klLogSessionStart();
   getAudio(); // unlock audio on this user gesture
-  klOpenAvatar('create', () => klPlayCutscene('intro', () => klRenderTown()));
+  klState._needStoryIntro = true;
+  klShowModeSelect();
 };
 
 // Play a list of cutscenes back-to-back, then call onDone. Each advances on the
@@ -17677,7 +17777,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-100'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-101'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
