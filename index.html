@@ -4605,30 +4605,35 @@
   .kl-cal-book .kl-cal-day.sel { background: linear-gradient(180deg,#a78bfa,#7c4ddb); border-color: #a78bfa; }
   .kl-cal-work .kl-cal-day.sel { background: linear-gradient(180deg,#7ad98a,#4fae63); border-color: #7ad98a; color: #0b2415; }
   .kl-cal-fire { position: absolute; top: 0; right: 1px; font-size: 8px; line-height: 1; }
-  /* ── THE GARAGE — object room (clickable furniture) ── */
+  /* ── THE GARAGE — gear drawn into the room, standing on the floor ── */
+  .kl-garage-scrim { position: absolute; inset: 0; z-index: 2; pointer-events: none;
+    background: linear-gradient(180deg, rgba(10,8,24,0.4) 0%, rgba(10,8,24,0.18) 38%, rgba(10,8,24,0.62) 100%); }
   .kl-garage-room { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
-    padding: 64px 16px 18px; overflow-y: auto;
-    background:
-      radial-gradient(120% 75% at 50% 0%, #2a2150 0%, #1c1640 42%, #15102e 72%),
-      linear-gradient(180deg, transparent 60%, rgba(0,0,0,0.28) 60%, rgba(0,0,0,0.5) 100%); }
-  .kl-garage-head { text-align: center; margin-bottom: 16px; flex: 0 0 auto; }
+    padding: 58px 14px 16px; overflow-y: auto; z-index: 3; }
+  .kl-garage-head { text-align: center; flex: 0 0 auto;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.8); }
   .kl-garage-title { font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 30px; letter-spacing: 1.5px; color: #fff; }
-  .kl-garage-sub { font-family: 'Barlow', sans-serif; font-size: 14px; color: #cdc8e8; max-width: 460px; margin: 2px auto 0; }
+  .kl-garage-sub { font-family: 'Barlow', sans-serif; font-size: 14px; color: #e6e2f5; margin: 2px auto 0; }
   .kl-garage-floor { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end;
-    gap: 14px 20px; max-width: 780px; margin: auto 0; }
-  .kl-garage-obj { background: transparent; border: none; cursor: pointer; padding: 8px 6px; border-radius: 14px;
-    display: flex; flex-direction: column; align-items: center; width: 106px; position: relative;
-    transition: transform 0.12s ease, background 0.12s ease; font-family: inherit; }
-  .kl-garage-obj:hover:not(.locked) { transform: translateY(-5px); background: rgba(255,255,255,0.06); }
-  .kl-garage-icon { font-size: 48px; line-height: 1; position: relative; filter: drop-shadow(0 7px 5px rgba(0,0,0,0.55)); }
-  .kl-garage-shadow { width: 52px; height: 9px; border-radius: 50%; background: rgba(0,0,0,0.45); filter: blur(3px); margin: 1px 0 5px; }
-  .kl-garage-label { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 13px; letter-spacing: 0.4px; color: #fff; text-align: center; line-height: 1.12; }
-  .kl-garage-obj.locked { cursor: default; }
-  .kl-garage-obj.locked .kl-garage-icon { filter: grayscale(0.85) brightness(0.7) drop-shadow(0 5px 4px rgba(0,0,0,0.5)); }
-  .kl-garage-obj.locked .kl-garage-label { color: #8b87a8; }
-  .kl-garage-lock { position: absolute; right: -8px; bottom: -4px; font-size: 20px; filter: none; }
-  .kl-garage-check { position: absolute; right: -10px; top: -8px; font-size: 15px; }
-  .kl-garage-room .kt-int-leave { flex: 0 0 auto; margin-top: 16px; }
+    gap: 8px 18px; max-width: 860px; margin-top: auto; margin-bottom: 6px; }
+  .kl-gobj { background: transparent; border: none; cursor: pointer; padding: 6px 4px; border-radius: 14px;
+    display: flex; flex-direction: column; align-items: center; width: 116px; position: relative;
+    transition: transform 0.12s ease; font-family: inherit; }
+  .kl-gobj:hover:not(.locked) { transform: translateY(-6px); }
+  .kl-gobj-art { position: relative; display: flex; align-items: flex-end; justify-content: center; height: 92px;
+    filter: drop-shadow(0 6px 5px rgba(0,0,0,0.55)); }
+  .kl-gobj-svg { height: 88px; width: auto; }
+  .kl-gobj:hover:not(.locked) .kl-gobj-art { filter: drop-shadow(0 6px 5px rgba(0,0,0,0.55)) drop-shadow(0 0 9px rgba(240,192,64,0.65)); }
+  .kl-gobj-emoji { font-size: 50px; line-height: 1; }
+  .kl-gobj-shadow { width: 64px; height: 10px; border-radius: 50%; background: rgba(0,0,0,0.5); filter: blur(3px); margin: 3px 0 5px; }
+  .kl-gobj-label { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 12.5px; letter-spacing: 0.4px;
+    color: #fff; text-align: center; line-height: 1.1; text-shadow: 0 1px 4px rgba(0,0,0,0.9); }
+  .kl-gobj.locked { cursor: default; }
+  .kl-gobj.locked .kl-gobj-art { filter: grayscale(0.9) brightness(0.55); }
+  .kl-gobj.locked .kl-gobj-label { color: #9a96b4; }
+  .kl-gobj-lock { position: absolute; right: 2px; bottom: 2px; font-size: 22px; }
+  .kl-gobj-check { position: absolute; right: 0; top: -4px; font-size: 16px; }
+  .kl-garage-room .kt-int-leave { flex: 0 0 auto; margin-top: 8px; }
   .kl-ear-choice {
     flex: 1 1 40%; min-width: 130px; min-height: 60px; padding: 10px 18px; border-radius: 14px; cursor: pointer;
     font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 19px; letter-spacing: 1px;
@@ -12679,35 +12684,110 @@ const KL_GARAGE_OBJ = {
   'garage:jam': '🎸', 'garage:build': '🎹', 'garage:tap': '🥁', 'garage:ear': '👂',
   'garage:anatomy': '🔍', 'garage:listen': '🔊', 'garage:mode': '🌗', 'garage:notation': '🎼'
 };
+// Drawn, flat-style objects that stand in the room (not emoji). Sized via CSS.
+const KL_GOBJ_SVG = {
+  // electric guitar on a stand
+  'garage:jam':
+    '<svg class="kl-gobj-svg" viewBox="0 0 70 116" xmlns="http://www.w3.org/2000/svg">' +
+      '<path d="M35 96 L18 112 M35 96 L52 112 M35 84 L35 110" stroke="#6b7280" stroke-width="3" fill="none"/>' +
+      '<rect x="31" y="10" width="8" height="74" rx="3" fill="#5b3f26"/>' +
+      '<rect x="29" y="5" width="12" height="9" rx="2" fill="#3a2614"/>' +
+      '<g fill="#cfcfcf"><circle cx="28" cy="8" r="1.4"/><circle cx="42" cy="8" r="1.4"/></g>' +
+      '<ellipse cx="35" cy="84" rx="22" ry="20" fill="#c0392b"/>' +
+      '<ellipse cx="35" cy="84" rx="7" ry="7" fill="#2a1a14"/>' +
+      '<rect x="33.4" y="60" width="3.2" height="40" fill="#bbb" opacity="0.7"/>' +
+    '</svg>',
+  // keyboard / synth
+  'garage:build':
+    '<svg class="kl-gobj-svg" viewBox="0 0 104 64" xmlns="http://www.w3.org/2000/svg">' +
+      '<rect x="6" y="8" width="92" height="11" rx="3" fill="#3a3f52"/>' +
+      '<circle cx="14" cy="13.5" r="2" fill="#7c6ff7"/><circle cx="22" cy="13.5" r="2" fill="#2dd4bf"/>' +
+      '<rect x="6" y="19" width="92" height="36" rx="3" fill="#edeef2"/>' +
+      '<g stroke="#b8bcc8" stroke-width="1">' + [16, 26, 36, 46, 56, 66, 76, 86].map(x => '<line x1="' + x + '" y1="19" x2="' + x + '" y2="55"/>').join('') + '</g>' +
+      '<g fill="#1a1a22">' + [22, 32, 52, 62, 72].map(x => '<rect x="' + x + '" y="19" width="7" height="22" rx="1"/>').join('') + '</g>' +
+    '</svg>',
+  // compact drum kit
+  'garage:tap':
+    '<svg class="kl-gobj-svg" viewBox="0 0 104 88" xmlns="http://www.w3.org/2000/svg">' +
+      '<ellipse cx="52" cy="82" rx="46" ry="6" fill="rgba(0,0,0,0.3)"/>' +
+      '<line x1="22" y1="30" x2="30" y2="58" stroke="#888" stroke-width="2"/><ellipse cx="22" cy="30" rx="13" ry="4" fill="#f0c040"/>' +
+      '<line x1="84" y1="26" x2="80" y2="56" stroke="#888" stroke-width="2"/><ellipse cx="84" cy="26" rx="14" ry="4.5" fill="#f0c040"/>' +
+      '<ellipse cx="70" cy="44" rx="13" ry="5" fill="#fb7185"/><rect x="57" y="44" width="26" height="11" fill="#e0556a"/><ellipse cx="70" cy="55" rx="13" ry="5" fill="#c9485c"/>' +
+      '<circle cx="40" cy="58" r="22" fill="#c084fc" stroke="#a855f7" stroke-width="3"/><circle cx="40" cy="58" r="6" fill="#9333ea"/>' +
+    '</svg>',
+  // headphones on a hook
+  'garage:ear':
+    '<svg class="kl-gobj-svg" viewBox="0 0 80 84" xmlns="http://www.w3.org/2000/svg">' +
+      '<path d="M14 52 V40 a26 26 0 0 1 52 0 V52" fill="none" stroke="#cbd5e1" stroke-width="6" stroke-linecap="round"/>' +
+      '<rect x="6" y="48" width="17" height="28" rx="6" fill="#7c6ff7"/>' +
+      '<rect x="57" y="48" width="17" height="28" rx="6" fill="#7c6ff7"/>' +
+      '<rect x="9" y="52" width="11" height="20" rx="4" fill="#5b4fd0"/><rect x="60" y="52" width="11" height="20" rx="4" fill="#5b4fd0"/>' +
+    '</svg>',
+  // magnifying glass over a guitar (anatomy = inspect the parts)
+  'garage:anatomy':
+    '<svg class="kl-gobj-svg" viewBox="0 0 84 84" xmlns="http://www.w3.org/2000/svg">' +
+      '<rect x="20" y="12" width="5" height="34" rx="2" fill="#5b3f26"/>' +
+      '<ellipse cx="22.5" cy="50" rx="14" ry="13" fill="#3b7dd8"/><ellipse cx="22.5" cy="50" rx="4.5" ry="4.5" fill="#16243a"/>' +
+      '<circle cx="52" cy="40" r="17" fill="rgba(130,205,255,0.16)" stroke="#dfe6f0" stroke-width="4"/>' +
+      '<line x1="64" y1="52" x2="76" y2="66" stroke="#dfe6f0" stroke-width="6" stroke-linecap="round"/>' +
+    '</svg>',
+  // studio monitor speaker
+  'garage:listen':
+    '<svg class="kl-gobj-svg" viewBox="0 0 66 92" xmlns="http://www.w3.org/2000/svg">' +
+      '<rect x="7" y="6" width="52" height="80" rx="5" fill="#1c1f26" stroke="#3a3f52" stroke-width="2"/>' +
+      '<circle cx="33" cy="58" r="18" fill="#2a2d3a" stroke="#5a5f72" stroke-width="3"/><circle cx="33" cy="58" r="6.5" fill="#0c0c10"/>' +
+      '<circle cx="33" cy="26" r="8.5" fill="#2a2d3a" stroke="#5a5f72" stroke-width="2"/><circle cx="33" cy="26" r="3" fill="#0c0c10"/>' +
+      '<circle cx="15" cy="14" r="2" fill="#4ade80"/>' +
+    '</svg>',
+  // bright/dark disc (mode colour)
+  'garage:mode':
+    '<svg class="kl-gobj-svg" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">' +
+      '<circle cx="40" cy="40" r="31" fill="#1b1640" stroke="#3a3470" stroke-width="2"/>' +
+      '<path d="M40 9 A31 31 0 0 1 40 71 Z" fill="#f0c040"/>' +
+      '<circle cx="40" cy="40" r="31" fill="none" stroke="rgba(0,0,0,0.25)" stroke-width="1.5"/>' +
+    '</svg>',
+  // music stand with a sheet
+  'garage:notation':
+    '<svg class="kl-gobj-svg" viewBox="0 0 72 104" xmlns="http://www.w3.org/2000/svg">' +
+      '<line x1="36" y1="46" x2="36" y2="84" stroke="#7b8190" stroke-width="3"/>' +
+      '<path d="M22 96 L36 84 L50 96" stroke="#7b8190" stroke-width="3" fill="none" stroke-linecap="round"/>' +
+      '<rect x="11" y="8" width="50" height="38" rx="3" fill="#fbfaf5"/>' +
+      '<g stroke="#9aa0b5" stroke-width="1">' + [16, 22, 28, 34, 40].map(y => '<line x1="16" y1="' + y + '" x2="56" y2="' + y + '"/>').join('') + '</g>' +
+      '<text x="20" y="34" font-family="Georgia,serif" font-size="20" fill="#f0c040">\uD834\uDD1E</text>' +
+      '<ellipse cx="44" cy="28" rx="4" ry="3" fill="#2dd4bf" transform="rotate(-20 44 28)"/>' +
+    '</svg>'
+};
 function klRenderInterior(id) {
   klState.devRoom = id; // remembered so dev unlock toggles can re-render this room live
   document.getElementById('kidlab').classList.remove('kl-playing');
   klStopClock(); klStopBeatBar();
   const wrap = document.getElementById('kl-wrap');
   let title = '', art = '', body = '';
-  // THE GARAGE is its own room: each module is a clickable object on the floor.
+  // THE GARAGE is its own room: the gear stands on the floor, drawn into the scene.
   if (id === 'garage') {
     const objs = klBuildingModules('garage').map(m => {
       const done = klModuleIsDone(m.id);
       const unlocked = klModuleUnlocked(m);
-      const icon = KL_GARAGE_OBJ[m.id] || m.obj;
+      const art = KL_GOBJ_SVG[m.id] || ('<div class="kl-gobj-emoji">' + (KL_GARAGE_OBJ[m.id] || m.obj) + '</div>');
       const inner =
-        '<div class="kl-garage-icon">' + icon +
-          (!unlocked ? '<span class="kl-garage-lock">🔒</span>' : (done ? '<span class="kl-garage-check">✓</span>' : '')) +
+        '<div class="kl-gobj-art">' + art +
+          (!unlocked ? '<span class="kl-gobj-lock">🔒</span>' : (done ? '<span class="kl-gobj-check">✓</span>' : '')) +
         '</div>' +
-        '<div class="kl-garage-shadow"></div>' +
-        '<div class="kl-garage-label">' + m.name + '</div>';
+        '<div class="kl-gobj-shadow"></div>' +
+        '<div class="kl-gobj-label">' + m.name + '</div>';
       return unlocked
-        ? '<button class="kl-garage-obj" onclick="klEnterModule(\'' + m.id + '\')">' + inner + '</button>'
-        : '<div class="kl-garage-obj locked" title="' + klModuleLockReason(m).split('"').join('') + '">' + inner + '</div>';
+        ? '<button class="kl-gobj" onclick="klEnterModule(\'' + m.id + '\')">' + inner + '</button>'
+        : '<div class="kl-gobj locked" title="' + klModuleLockReason(m).split('"').join('') + '">' + inner + '</div>';
     }).join('');
     wrap.innerHTML =
       '<div class="kl-stage kt-interior kt-bg-garage">' +
+        '<div class="kt-scene-art">' + klSceneArt('garage') + '</div>' +
+        '<div class="kl-garage-scrim"></div>' +
         klHudMarkup() +
         '<div class="kl-garage-room">' +
           '<div class="kl-garage-head">' +
             '<div class="kl-garage-title">THE GARAGE</div>' +
-            '<div class="kl-garage-sub">Your turf — cables everywhere. Click any piece of gear to train on it.</div>' +
+            '<div class="kl-garage-sub">Your turf. Click any piece of gear to train on it.</div>' +
           '</div>' +
           '<div class="kl-garage-floor">' + objs + '</div>' +
           '<button class="kt-int-leave" onclick="klRenderTown()">← Back outside</button>' +
@@ -17416,7 +17496,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-83'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-84'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
