@@ -1612,26 +1612,27 @@
     flex: 1; display: flex; flex-direction: column;
     padding: 16px; gap: 16px;
   }
+  /* Ear/lesson prompt — promoted to Story .q-text typography (centered for short prompts) */
   .ear-prompt {
-    font-family: var(--font-display); font-size: 22px; font-weight: 800;
-    color: var(--text); letter-spacing: 1px; text-align: center;
-    padding: 8px 0;
+    font-family: var(--font-display); font-size: 23px; font-weight: 900;
+    line-height: 1.2; letter-spacing: 0.4px; color: #fff;
+    text-shadow: 0 2px 0 rgba(0,0,0,0.2); text-align: center; padding: 8px 0;
   }
+  /* Ear/lesson hear button — promoted to Story .play-btn (gold, chunky) */
   .ear-hear-btn {
-    width: 100%; padding: 18px;
-    background: linear-gradient(145deg, #9b8fff 0%, #7c6ff7 50%, #6358d4 100%);
-    border: none; border-radius: 6px;
-    color: #fff; font-family: var(--font-display); font-weight: 900;
-    font-size: 16px; letter-spacing: 3px; cursor: pointer;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.4);
-    box-shadow: 0 1px 0 rgba(255,255,255,0.2) inset, 0 -2px 0 rgba(0,0,0,0.3) inset, 0 0 16px rgba(124,111,247,0.25);
-    transition: filter 0.1s, transform 0.05s;
+    width: 100%;
+    background: linear-gradient(160deg, #ffe27a, #f59e0b);
+    color: #5a3a00; border: none; text-shadow: none;
+    padding: 16px 20px; font-family: 'Barlow Condensed', sans-serif; font-size: 21px;
+    font-weight: 900; letter-spacing: 1.5px; display: flex; align-items: center;
+    justify-content: center; gap: 10px; border-radius: 16px; cursor: pointer;
+    box-shadow: 0 6px 0 #b45309, 0 10px 20px rgba(0,0,0,0.25);
+    transition: filter 0.1s, transform 0.1s, box-shadow 0.1s;
   }
-  .ear-hear-btn:hover { filter: brightness(1.08); }
-  .ear-hear-btn:active { transform: scale(0.99); }
-  .ear-hear-btn.playing {
-    animation: hearPulse 0.8s ease-in-out infinite;
-  }
+  .ear-hear-btn:hover { filter: brightness(1.05); }
+  .ear-hear-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #b45309, 0 4px 10px rgba(0,0,0,0.25); }
+  .ear-hear-btn.playing { animation: klPulse 0.34s ease-in-out infinite; }
+  /* hearPulse retained — still used by .build-hear-btn.playing */
   @keyframes hearPulse {
     0%, 100% { filter: brightness(1); }
     50% { filter: brightness(1.25); }
@@ -1641,30 +1642,44 @@
     display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
     margin-top: 4px;
   }
+  /* Ear/lesson answer buttons — promoted to Story .answer-btn (chunky, glow states) */
   .ear-answer-btn {
-    background: var(--bg2); border: 1px solid var(--border);
-    color: var(--text); padding: 18px 12px;
-    font-family: var(--font-display); font-size: 16px; font-weight: 800;
-    letter-spacing: 1px; cursor: pointer; border-radius: 6px;
-    transition: background 0.1s, border-color 0.1s, transform 0.05s;
+    background: rgba(255,255,255,0.07); border: 2px solid rgba(255,255,255,0.2); color: var(--text);
+    padding: 16px 12px; font-family: 'Barlow Condensed', sans-serif; font-size: 18px;
+    font-weight: 800; letter-spacing: 1px; min-height: 64px; line-height: 1.25;
+    border-radius: 14px; box-shadow: none; text-shadow: none; cursor: pointer;
+    transition: transform 0.08s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
     text-align: center;
   }
-  .ear-answer-btn:hover:not(:disabled) { background: var(--bg3); border-color: var(--border2); }
-  .ear-answer-btn:active:not(:disabled) { transform: scale(0.98); }
-  .ear-answer-btn:disabled { cursor: not-allowed; opacity: 0.6; }
-  .ear-answer-btn.dim { opacity: 0.3; }
+  .ear-answer-btn:hover:not(:disabled) { background: rgba(255,255,255,0.14); border-color: rgba(124,111,247,0.5); }
+  .ear-answer-btn:active:not(:disabled) { transform: scale(0.97); }
+  .ear-answer-btn.dim { opacity: 0.4; }
   .ear-answer-btn.correct {
-    background: rgba(34,197,94,0.2);
-    border-color: var(--green);
-    color: var(--green);
+    background: linear-gradient(180deg, #4ade80, #22c55e); color: #08240f;
+    border-color: #4ade80; box-shadow: 0 0 18px rgba(74,222,128,0.6); text-shadow: none;
     opacity: 1 !important;
   }
   .ear-answer-btn.wrong {
-    background: rgba(232,25,44,0.2);
-    border-color: var(--red);
-    color: var(--red);
+    background: rgba(224,85,106,0.4); color: #fff; border-color: #e0556a;
+    box-shadow: none; text-shadow: none; animation: klEarShake 0.4s ease;
     opacity: 1 !important;
   }
+
+  /* ── RESPONSIVE — shared puzzle presentation (Story + lesson modules) ──── */
+  @media (max-width: 380px) {
+    .answers-grid, .ear-answer-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 599px) {
+    .answer-btn, .ear-answer-btn { min-height: 54px; padding: 13px 10px; font-size: 16px; letter-spacing: 0.5px; }
+    .play-btn, .ear-hear-btn { padding: 14px 16px; font-size: 18px; }
+    .q-text, .ear-prompt { font-size: 19px; }
+  }
+  @media (min-width: 1024px) {
+    .q-body, .ear-session-body { max-width: 880px; margin-left: auto; margin-right: auto; width: 100%; }
+  }
+
+  /* Ear Lab session: score bar dropped (Option A) — scoped so lesson siblings keep theirs */
+  #ear-session .ear-score-bar { display: none; }
 
   .ear-score-bar {
     display: flex; gap: 12px; justify-content: center;
@@ -17735,7 +17750,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-108'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-109'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
