@@ -4170,8 +4170,9 @@
     flex: 1 1 260px; min-width: 240px; max-width: 360px;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 8px; cursor: pointer; text-align: center;
-    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.16);
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(240,192,64,0.5);
     border-radius: 18px; padding: 30px 22px; color: var(--text);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3), 0 0 22px -6px var(--gold);
     transition: transform 0.1s ease, background 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
   }
   .kl-mode:hover { transform: translateY(-3px); background: rgba(255,255,255,0.1); }
@@ -4201,9 +4202,7 @@
     background: linear-gradient(135deg, var(--gold), #ff9d4d);
     border-radius: 999px; padding: 6px 18px;
   }
-  .kl-mode-lesson { border-color: rgba(124,111,247,0.4); }
   .kl-mode-lesson .kl-mode-name { color: #b3a9ff; }
-  .kl-mode-arcade { border-color: rgba(45,212,191,0.4); }
   .kl-mode-arcade .kl-mode-name { color: var(--cyan); }
   .kl-mode-foot { display: flex; gap: 18px; margin-top: 6px; }
   /* prominent logo */
@@ -14668,7 +14667,6 @@ window.klShowModeSelect = function() {
           '<div class="kl-mode-icon">🎸</div>' +
           '<div class="kl-mode-name">STORY MODE</div>' +
           '<div class="kl-mode-sub">Build your band &amp; play the campaign</div>' +
-          '<div class="kl-mode-go">▶ PLAY</div>' +
         '</button>' +
         '<button class="kl-mode kl-mode-lesson" onclick="klOpenTools(\'modes\')">' +
           '<div class="kl-mode-icon">📖</div>' +
@@ -17777,7 +17775,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-101'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-102'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
