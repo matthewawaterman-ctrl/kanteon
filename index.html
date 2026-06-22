@@ -50,7 +50,13 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body {
-    height: 100%; background: var(--bg); color: var(--text);
+    height: 100%;
+    background:
+      radial-gradient(ellipse 60% 42% at 28% 24%, rgba(120,60,200,0.20) 0%, transparent 60%),
+      radial-gradient(ellipse 55% 36% at 78% 72%, rgba(40,180,220,0.13) 0%, transparent 55%),
+      var(--bg);
+    background-attachment: fixed;
+    color: var(--text);
     font-family: var(--font-body); overscroll-behavior: none;
     -webkit-font-smoothing: antialiased;
     -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
@@ -492,9 +498,12 @@
     border-bottom: 1px solid var(--border);
   }
   .back-btn {
-    background: none; border: 1px solid var(--border); color: var(--text);
-    width: 36px; height: 36px; font-size: 20px; line-height: 1;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.2); color: var(--text);
+    width: 40px; height: 40px; font-size: 20px; line-height: 1; border-radius: 12px;
+    transition: background 0.15s, transform 0.06s;
   }
+  .back-btn:hover { background: rgba(255,255,255,0.13); }
+  .back-btn:active { transform: scale(0.95); }
   .module-header-title {
     font-family: var(--font-display); font-size: 28px; font-weight: 800;
     letter-spacing: -0.5px;
@@ -4024,6 +4033,18 @@
   }
   .kl-panel-players .kl-player-guest .kl-player-emoji { opacity: 0.9; }
   .kl-panel .kl-tools-link { align-self: flex-start; margin-top: 4px; }
+  /* Lesson Mode is a primary entry point — make it a prominent gold CTA. */
+  .kl-panel .kl-lesson-cta {
+    align-self: center; margin-top: 18px; padding: 14px 34px;
+    background: linear-gradient(160deg, #ffe27a, #f59e0b);
+    color: #5a3a00; border: none; border-radius: 999px;
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 900;
+    font-size: 20px; letter-spacing: 1px;
+    box-shadow: 0 5px 0 #b45309, 0 9px 18px rgba(0,0,0,0.25);
+    transition: transform 0.1s, box-shadow 0.1s, filter 0.1s;
+  }
+  .kl-panel .kl-lesson-cta:hover { filter: brightness(1.05); background: linear-gradient(160deg, #ffe27a, #f59e0b); }
+  .kl-panel .kl-lesson-cta:active { transform: translateY(3px); box-shadow: 0 2px 0 #b45309, 0 4px 10px rgba(0,0,0,0.25); }
   /* ── ONE-SCREEN LANDING with hero scene (no scroll) ── */
   .kl-landing {
     display: flex; flex-direction: column; align-items: center;
@@ -11638,18 +11659,18 @@ const CAROUSEL_DATA = {
     { id: 'tools',    icon: '🎚️', name: 'TOOLS',          sub: '1 MODULE',     cls: 'cat-tools',   action: 'sub:tools',desc: 'Practice tools — sequencer sandbox, metronome, and tempo trainer.' }
   ],
   play: [
-    { id: 'ear',      icon: '👂', name: 'EAR TRAINING',     sub: 'INTERVALS · CHORDS', cls: 'mod-ear',      action: 'mod:ear_training',       desc: 'Identify intervals, chords, scales, progressions, and scale degrees by ear. Five modes, fully customizable.' },
+    { id: 'ear',      icon: '👂', name: 'EAR LAB',           sub: 'INTERVALS · CHORDS', cls: 'mod-ear',      action: 'mod:ear_training',       desc: 'Identify intervals, chords, scales, progressions, and scale degrees by ear. Five modes, fully customizable.' },
     { id: 'listen',   icon: '🔊', name: 'ACTIVE LISTENING', sub: '5 MODES',            cls: 'mod-listen',   action: 'mod:active_listening',   desc: 'Identify instruments, dynamics, articulation, tempo, and texture in synthetic audio examples.' },
-    { id: 'build',    icon: '🛠️', name: 'BUILD MODE',       sub: 'CONSTRUCT BY EAR',   cls: 'mod-build',    action: 'mod:build_mode',         desc: 'Hear an interval and build it yourself with sliders. The reverse of ear training.' },
-    { id: 'tx',       icon: '🎹', name: 'TRANSCRIPTION',    sub: 'NOTATE WHAT YOU HEAR',cls: 'mod-tx',      action: 'mod:transcription_lab',  desc: 'Listen to drum and melodic patterns and place the notes on the staff yourself.' }
+    { id: 'build',    icon: '🛠️', name: 'CHORD LAB',         sub: 'CONSTRUCT BY EAR',   cls: 'mod-build',    action: 'mod:build_mode',         desc: 'Hear an interval and build it yourself with sliders. The reverse of ear training.' },
+    { id: 'tx',       icon: '🎹', name: 'JAM SESSION',       sub: 'NOTATE WHAT YOU HEAR',cls: 'mod-tx',      action: 'mod:transcription_lab',  desc: 'Listen to drum and melodic patterns and place the notes on the staff yourself.' }
   ],
   read: [
-    { id: 'rhythm',   icon: '🥁', name: 'RHYTHM',           sub: 'READ & TAP',         cls: 'mod-rhythm',   action: 'mod:rhythm_comprehension',desc: 'Read rhythmic patterns and tap them in time with the metronome.' },
+    { id: 'rhythm',   icon: '🥁', name: 'GROOVE LAB',        sub: 'READ & TAP',         cls: 'mod-rhythm',   action: 'mod:rhythm_comprehension',desc: 'Read rhythmic patterns and tap them in time with the metronome.' },
     { id: 'notation', icon: '📖', name: 'NOTATION',         sub: '5 SYSTEMS',          cls: 'mod-notation', action: 'mod:notation',           desc: 'Treble clef, bass clef, drum notation, rhythm symbols, and guitar tab — all in one place.' }
   ],
   study: [
-    { id: 'theory',   icon: '🎼', name: 'THEORY',           sub: 'MODES · KEYS',       cls: 'mod-theory',   action: 'mod:theory',             desc: 'Mode wheel, parent scales, one-note changes, and mode identification drills.' },
-    { id: 'anatomy',  icon: '🎸', name: 'ANATOMY',          sub: '9 INSTRUMENTS',      cls: 'mod-anatomy',  action: 'mod:instrument_anatomy', desc: 'Learn the parts of guitars, basses, amps, keys, organs, drums, and PA systems.' }
+    { id: 'theory',   icon: '🎼', name: 'MODE LAB',          sub: 'MODES · KEYS',       cls: 'mod-theory',   action: 'mod:theory',             desc: 'Mode wheel, parent scales, one-note changes, and mode identification drills.' },
+    { id: 'anatomy',  icon: '🎸', name: 'INSTRUMENT ANATOMY',sub: '9 INSTRUMENTS',      cls: 'mod-anatomy',  action: 'mod:instrument_anatomy', desc: 'Learn the parts of guitars, basses, amps, keys, organs, drums, and PA systems.' }
   ],
   tools: [
     { id: 'studio',   icon: '🎚️', name: 'STUDIO',           sub: 'SEQUENCER · METRO',  cls: 'mod-studio',   action: 'mod:studio',             desc: 'Sandbox sequencer with built-in metronome and auto-tempo speedup for tempo training.' }
@@ -14487,7 +14508,7 @@ function klRenderPlayerSelect() {
         '<div class="kl-panel-title">Who\'s playing?</div>' +
         '<div class="kl-panel-players">' + players.map(btn).join('') + addTile + guestTile + '</div>' +
         '<div class="kl-bt-note">🔊 Use your device\u2019s built-in speakers. Bluetooth headphones &amp; speakers add a delay that throws off the rhythm games — please turn them off first.</div>' +
-        '<button class="kl-tools-link" onclick="klOpenTools()">📖 Lesson Mode</button>' +
+        '<button class="kl-tools-link kl-lesson-cta" onclick="klOpenTools()">📖 Lesson Mode</button>' +
         '<button class="kl-tools-link" onclick="klToggleFullscreen()">⛶ Fullscreen</button>' +
         // === KANTEON RENAME — START ===
         '<div class="kl-company-credit">a Velion game</div>' +
@@ -17543,7 +17564,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-90'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-91'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
