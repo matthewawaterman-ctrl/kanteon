@@ -1122,11 +1122,12 @@
   }
   .tx-slot.filled { color: var(--text); border-color: var(--red); }
   .tx-slot-clear {
-    background: rgba(124,111,247,0.08); border: 1px solid rgba(124,111,247,0.4);
-    color: var(--red);
-    padding: 6px 14px; font-family: var(--font-mono); font-size: 13px;
-    letter-spacing: 1.5px; margin-top: 10px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.18);
+    color: var(--text2); border-radius: 10px;
+    padding: 7px 16px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 13px;
+    letter-spacing: 1.5px; margin-top: 10px; cursor: pointer; text-transform: uppercase;
   }
+  .tx-slot-clear:hover { background: rgba(255,255,255,0.12); }
 
   /* piano roll grid — beginner transcription */
   .tx-roll-grid-wrap {
@@ -1135,7 +1136,7 @@
     box-shadow: inset 0 1px 0 rgba(124,111,247,0.15), inset 0 -1px 0 rgba(0,0,0,0.3),
                 0 4px 20px rgba(0,0,0,0.4);
     overflow-x: auto;
-    border-radius: 8px;
+    border-radius: 14px;
   }
   .tx-roll-grid-label {
     font-family: var(--font-display); font-size: 13px; font-weight: 800;
@@ -1215,28 +1216,20 @@
   }
   .tx-transport-btn {
     flex: 1;
-    background: linear-gradient(145deg, #5b596e 0%, #3f3d54 50%, #2a283c 100%);
-    border: 1px solid rgba(255,255,255,0.18);
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.16);
     color: var(--text); padding: 10px 12px;
-    font-family: var(--font-display); font-size: 14px; font-weight: 900;
-    letter-spacing: 2px; cursor: pointer; display: flex;
+    font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 900;
+    letter-spacing: 1.5px; cursor: pointer; display: flex;
     align-items: center; justify-content: center; gap: 6px;
-    border-radius: 4px; min-height: 78px;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
-    box-shadow: 0 1px 0 rgba(255,255,255,0.15) inset,
-                0 -2px 0 rgba(0,0,0,0.35) inset,
-                0 0 8px rgba(0,0,0,0.3);
-    transition: filter 0.1s, transform 0.05s;
+    border-radius: 14px; min-height: 78px; text-shadow: none;
+    box-shadow: none; transition: filter 0.1s, transform 0.06s, background 0.12s;
   }
-  .tx-transport-btn:hover:not(:disabled) { filter: brightness(1.12); }
+  .tx-transport-btn:hover:not(:disabled) { background: rgba(255,255,255,0.12); }
   .tx-transport-btn:active:not(:disabled) { transform: scale(0.98); }
   .tx-transport-btn.active {
-    background: linear-gradient(145deg, #fdd87a 0%, #f0c040 55%, #c49a1a 100%);
-    border-color: rgba(255,255,255,0.3); color: #2a1f00;
-    box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset,
-                0 -2px 0 rgba(0,0,0,0.25) inset,
-                0 0 14px rgba(240,192,64,0.45);
-    text-shadow: 0 1px 0 rgba(255,255,255,0.2);
+    background: linear-gradient(160deg, #ffe27a, #f0c040 55%, #c49a1a);
+    border-color: transparent; color: #2a1f00; text-shadow: none;
+    box-shadow: 0 0 14px rgba(240,192,64,0.4);
   }
   .tx-bpm-label {
     font-family: var(--font-display); font-size: 18px; font-weight: 800;
@@ -1925,13 +1918,12 @@
     box-shadow: 0 1px 0 rgba(255,255,255,0.2) inset, 0 -2px 0 rgba(0,0,0,0.3) inset, 0 0 14px rgba(124,111,247,0.3);
   }
   .build-submit-btn {
-    background: linear-gradient(145deg, #f0c040 0%, #d4a020 50%, #a07810 100%);
-    color: #0f0e2a;
-    text-shadow: 0 1px 1px rgba(255,255,255,0.25);
-    box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 -2px 0 rgba(0,0,0,0.3) inset, 0 0 14px rgba(240,192,64,0.35);
+    background: linear-gradient(160deg, #ffe27a, #f59e0b);
+    color: #5a3a00; border: none; border-radius: 16px; text-shadow: none;
+    box-shadow: 0 6px 0 #b45309, 0 10px 20px rgba(0,0,0,0.25);
   }
-  .build-hear-btn:hover, .build-submit-btn:hover { filter: brightness(1.08); }
-  .build-hear-btn:active, .build-submit-btn:active { transform: scale(0.98); }
+  .build-hear-btn:hover, .build-submit-btn:hover { filter: brightness(1.05); }
+  .build-hear-btn:active, .build-submit-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #b45309, 0 4px 10px rgba(0,0,0,0.25); }
   .build-hear-btn:disabled, .build-submit-btn:disabled { filter: grayscale(0.7) brightness(0.6); cursor: not-allowed; }
   .build-hear-btn.playing { animation: hearPulse 0.8s ease-in-out infinite; }
   /* Try again btn */
@@ -2373,13 +2365,13 @@
   }
   .tx-pitch-selector-btn.active { background: var(--red); color: var(--text); border-color: var(--red); }
   .tx-ab-toggle {
-    display: flex; gap: 4px; background: var(--bg); padding: 2px;
-    border: 1px solid rgba(124,111,247,0.3); border-radius: 6px; margin-top: 4px;
+    display: flex; gap: 4px; background: rgba(0,0,0,0.25); padding: 3px;
+    border: 1px solid rgba(124,111,247,0.3); border-radius: 12px; margin-top: 4px;
   }
   .tx-ab-btn {
     flex: 1; background: none; border: none; color: var(--text2);
-    padding: 10px; font-family: var(--font-display); font-weight: 800;
-    font-size: 14px; letter-spacing: 2px; cursor: pointer; border-radius: 4px;
+    padding: 10px; font-family: 'Barlow Condensed', sans-serif; font-weight: 800;
+    font-size: 14px; letter-spacing: 1.5px; cursor: pointer; border-radius: 9px;
     transition: background 0.15s;
   }
   @keyframes ab-cue-pulse {
@@ -2389,72 +2381,50 @@
   }
   .tx-ab-btn.cued { box-shadow: inset 0 0 0 2px var(--cyan); color: var(--cyan); animation: ab-cue-pulse 0.6s ease; }
   .tx-ab-btn.active {
-    background: linear-gradient(180deg, #9b8fff 0%, #7c6ff7 40%, #6358d4 100%);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -2px 0 rgba(0,0,0,0.3), 0 2px 8px rgba(124,111,247,0.4);
-    color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.4); font-weight: 900;
+    background: linear-gradient(160deg, #9b8fff, #7c6ff7 55%, #6358d4);
+    box-shadow: 0 0 10px rgba(124,111,247,0.4);
+    color: #fff; text-shadow: none; font-weight: 900;
   }
   .tx-ab-btn.active-b {
-    background: linear-gradient(145deg, #5eeedd 0%, #2dd4bf 55%, #1a9e8c 100%);
-    border: 1px solid rgba(255,255,255,0.3);
-    color: #00261f;
-    box-shadow: 0 1px 0 rgba(255,255,255,0.22) inset,
-                0 -2px 0 rgba(0,0,0,0.25) inset,
-                0 0 12px rgba(45,212,191,0.4);
-    text-shadow: 0 1px 0 rgba(255,255,255,0.15); font-weight: 900;
+    background: linear-gradient(160deg, #5eeedd, #2dd4bf 55%, #1a9e8c);
+    color: #00261f; box-shadow: 0 0 10px rgba(45,212,191,0.4);
+    text-shadow: none; font-weight: 900;
   }
   .tx-daw-transport {
     display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 4px;
   }
   .tx-daw-btn {
-    background: linear-gradient(145deg, #9b8fff 0%, #7c6ff7 50%, #6358d4 100%);
-    border: 1px solid rgba(255,255,255,0.3);
-    color: #fff; padding: 12px 8px;
-    font-family: var(--font-display); font-size: 15px; font-weight: 900;
-    letter-spacing: 2px; cursor: pointer; border-radius: 4px;
-    outline: none !important;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
-    box-shadow: 0 1px 0 rgba(255,255,255,0.2) inset,
-                0 -2px 0 rgba(0,0,0,0.3) inset,
-                0 0 12px rgba(124,111,247,0.3);
-    transition: filter 0.1s, transform 0.05s;
+    background: linear-gradient(160deg, #9b8fff, #7c6ff7 55%, #6358d4);
+    border: none; color: #fff; padding: 13px 8px;
+    font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 900;
+    letter-spacing: 1.5px; cursor: pointer; border-radius: 13px;
+    outline: none !important; text-shadow: none;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.28), 0 6px 14px rgba(124,111,247,0.3);
+    transition: filter 0.1s, transform 0.08s, box-shadow 0.08s;
   }
-  .tx-daw-btn:hover:not(:disabled) { filter: brightness(1.08); }
-  .tx-daw-btn:active:not(:disabled) { transform: scale(0.98); }
+  .tx-daw-btn:hover:not(:disabled) { filter: brightness(1.06); }
+  .tx-daw-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,0.28); }
   .tx-daw-btn:focus { outline: none !important; }
   .tx-daw-btn.active {
-    background: linear-gradient(145deg, #fdd87a 0%, #f0c040 55%, #c49a1a 100%);
-    border-color: rgba(255,255,255,0.3); color: #2a1f00;
-    box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset,
-                0 -2px 0 rgba(0,0,0,0.25) inset,
-                0 0 14px rgba(240,192,64,0.4);
-    text-shadow: 0 1px 0 rgba(255,255,255,0.2);
+    background: linear-gradient(160deg, #ffe27a, #f0c040 55%, #c49a1a);
+    color: #2a1f00; text-shadow: none;
+    box-shadow: 0 4px 0 #9a7a14, 0 6px 14px rgba(240,192,64,0.35);
   }
   .tx-daw-btn.playing {
-    background: linear-gradient(145deg, #4ade80 0%, #22c55e 55%, #15803d 100%);
-    border-color: rgba(255,255,255,0.3); color: #002914;
-    box-shadow: 0 1px 0 rgba(255,255,255,0.22) inset,
-                0 -2px 0 rgba(0,0,0,0.25) inset,
-                0 0 14px rgba(34,197,94,0.45);
-    text-shadow: 0 1px 0 rgba(255,255,255,0.15);
+    background: linear-gradient(160deg, #6ee79b, #22c55e 55%, #15803d);
+    color: #002914; text-shadow: none;
+    box-shadow: 0 4px 0 #0d6b2e, 0 6px 14px rgba(34,197,94,0.4);
   }
   .tx-daw-btn.stopping {
-    background: linear-gradient(145deg, #f87171 0%, #ef4444 55%, #b91c1c 100%);
-    border-color: rgba(255,255,255,0.3); color: #fff;
-    box-shadow: 0 1px 0 rgba(255,255,255,0.2) inset,
-                0 -2px 0 rgba(0,0,0,0.3) inset,
-                0 0 14px rgba(239,68,68,0.4);
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-    transition: none;
+    background: linear-gradient(160deg, #fb9a9a, #ef4444 55%, #b91c1c);
+    color: #fff; box-shadow: 0 4px 0 #8f1414, 0 6px 14px rgba(239,68,68,0.4);
+    text-shadow: none; transition: none;
   }
   .tx-daw-btn.stop-btn {
-    background: linear-gradient(145deg, #5b596e 0%, #3f3d54 50%, #2a283c 100%);
-    border-color: rgba(255,255,255,0.18);
-    color: var(--text);
-    box-shadow: 0 1px 0 rgba(255,255,255,0.15) inset,
-                0 -2px 0 rgba(0,0,0,0.35) inset,
-                0 0 8px rgba(0,0,0,0.3);
+    background: rgba(255,255,255,0.08); border: 2px solid rgba(255,255,255,0.2);
+    color: var(--text); box-shadow: none; text-shadow: none;
   }
-  .tx-daw-btn.stop-btn:active { transform: scale(0.98); }
+  .tx-daw-btn.stop-btn:active { transform: scale(0.97); box-shadow: none; }
 
   /* ── COMPLETE / TOAST / LOADING ── */
   .complete-wrap {
@@ -5084,9 +5054,6 @@
   <div class="kl-wrap" id="kl-wrap">
     <!-- Content injected by JS depending on sub-state -->
   </div>
-  <!-- DEV panel mounts here: a sibling of .kl-wrap so the .kl-room-bg ~ * scope
-       rule can't drop its fixed positioning into document flow (b31-33). -->
-  <div id="kl-devbar-host"></div>
 </div>
 <!-- === KIDLAB — END === -->
 
@@ -6473,6 +6440,10 @@
   </div>
 </div>
 <!-- === CHAT D: RHYTHM KEYBOARD + CALIBRATE — END === -->
+
+<!-- DEV panel mounts here at TOP LEVEL (outside every .screen) so the fixed
+     overlay shows on all screens — game AND Lesson Mode (b31-88). -->
+<div id="kl-devbar-host"></div>
 
 <!-- CONTENT LOADER -->
 <script>
@@ -14504,7 +14475,7 @@ function klRenderPlayerSelect() {
         '<div class="kl-panel-title">Who\'s playing?</div>' +
         '<div class="kl-panel-players">' + players.map(btn).join('') + addTile + guestTile + '</div>' +
         '<div class="kl-bt-note">🔊 Use your device\u2019s built-in speakers. Bluetooth headphones &amp; speakers add a delay that throws off the rhythm games — please turn them off first.</div>' +
-        '<button class="kl-tools-link" onclick="klOpenTools()">📖 Book of Knowledge</button>' +
+        '<button class="kl-tools-link" onclick="klOpenTools()">📖 Lesson Mode</button>' +
         '<button class="kl-tools-link" onclick="klToggleFullscreen()">⛶ Fullscreen</button>' +
         // === KANTEON RENAME — START ===
         '<div class="kl-company-credit">a Velion game</div>' +
@@ -17560,7 +17531,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-87'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-88'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
@@ -18377,7 +18348,7 @@ function klRenderAllDone() {
     wrap.innerHTML =
       '<div class="kl-title">⭐ ' + klState.score + ' ⭐</div>' +
       '<div class="kl-subtitle">You finished all the songs!</div>' +
-      '<button class="kl-listen" onclick="klOpenTools()">📖 OPEN THE BOOK OF KNOWLEDGE</button>' +
+      '<button class="kl-listen" onclick="klOpenTools()">📖 OPEN LESSON MODE</button>' +
       '<button class="kl-tools-link" onclick="klPlayAgain()">Play again</button>' +
       '<button class="kl-back" style="margin-top:12px;" onclick="klExit()">←</button>';
   });
@@ -18516,6 +18487,7 @@ window.showScreen = function(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
+  if (typeof klDevBar === 'function') klDevBar(); // keep the dev overlay on every screen, incl. Lesson Mode
 };
 
 function refreshHome() {
