@@ -4605,35 +4605,23 @@
   .kl-cal-book .kl-cal-day.sel { background: linear-gradient(180deg,#a78bfa,#7c4ddb); border-color: #a78bfa; }
   .kl-cal-work .kl-cal-day.sel { background: linear-gradient(180deg,#7ad98a,#4fae63); border-color: #7ad98a; color: #0b2415; }
   .kl-cal-fire { position: absolute; top: 0; right: 1px; font-size: 8px; line-height: 1; }
-  /* ── THE GARAGE — gear drawn into the room, standing on the floor ── */
-  .kl-garage-scrim { position: absolute; inset: 0; z-index: 2; pointer-events: none;
-    background: linear-gradient(180deg, rgba(10,8,24,0.4) 0%, rgba(10,8,24,0.18) 38%, rgba(10,8,24,0.62) 100%); }
-  .kl-garage-room { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
-    padding: 58px 14px 16px; overflow-y: auto; z-index: 3; }
-  .kl-garage-head { text-align: center; flex: 0 0 auto;
-    text-shadow: 0 2px 8px rgba(0,0,0,0.8); }
-  .kl-garage-title { font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 30px; letter-spacing: 1.5px; color: #fff; }
-  .kl-garage-sub { font-family: 'Barlow', sans-serif; font-size: 14px; color: #e6e2f5; margin: 2px auto 0; }
-  .kl-garage-floor { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end;
-    gap: 8px 18px; max-width: 860px; margin-top: auto; margin-bottom: 6px; }
-  .kl-gobj { background: transparent; border: none; cursor: pointer; padding: 6px 4px; border-radius: 14px;
-    display: flex; flex-direction: column; align-items: center; width: 116px; position: relative;
-    transition: transform 0.12s ease; font-family: inherit; }
-  .kl-gobj:hover:not(.locked) { transform: translateY(-6px); }
-  .kl-gobj-art { position: relative; display: flex; align-items: flex-end; justify-content: center; height: 92px;
-    filter: drop-shadow(0 6px 5px rgba(0,0,0,0.55)); }
-  .kl-gobj-svg { height: 88px; width: auto; }
-  .kl-gobj:hover:not(.locked) .kl-gobj-art { filter: drop-shadow(0 6px 5px rgba(0,0,0,0.55)) drop-shadow(0 0 9px rgba(240,192,64,0.65)); }
-  .kl-gobj-emoji { font-size: 50px; line-height: 1; }
-  .kl-gobj-shadow { width: 64px; height: 10px; border-radius: 50%; background: rgba(0,0,0,0.5); filter: blur(3px); margin: 3px 0 5px; }
-  .kl-gobj-label { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 12.5px; letter-spacing: 0.4px;
-    color: #fff; text-align: center; line-height: 1.1; text-shadow: 0 1px 4px rgba(0,0,0,0.9); }
-  .kl-gobj.locked { cursor: default; }
-  .kl-gobj.locked .kl-gobj-art { filter: grayscale(0.9) brightness(0.55); }
-  .kl-gobj.locked .kl-gobj-label { color: #9a96b4; }
-  .kl-gobj-lock { position: absolute; right: 2px; bottom: 2px; font-size: 22px; }
-  .kl-gobj-check { position: absolute; right: 0; top: -4px; font-size: 16px; }
-  .kl-garage-room .kt-int-leave { flex: 0 0 auto; margin-top: 8px; }
+  /* ── THE GARAGE — one interactive room SVG; gear is clickable in place ── */
+  .kl-garage-scene-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: #100d1f; z-index: 1; }
+  .kl-garage-svg { width: 100%; height: 100%; display: block; }
+  .kl-scene-obj { cursor: pointer; transition: filter 0.12s ease; }
+  .kl-scene-obj:hover { filter: drop-shadow(0 0 10px rgba(240,192,64,0.9)) brightness(1.08); }
+  .kl-scene-obj.locked { cursor: default; opacity: 0.42; filter: grayscale(0.75); }
+  .kl-scene-obj.locked:hover { filter: grayscale(0.75); }
+  .kl-garage-head { position: absolute; top: 52px; left: 0; right: 0; z-index: 4; text-align: center; pointer-events: none;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.9); }
+  .kl-garage-title { font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 28px; letter-spacing: 1.5px; color: #fff; }
+  .kl-garage-sub { font-family: 'Barlow', sans-serif; font-size: 13.5px; color: #e6e2f5; margin-top: 1px; }
+  .kl-garage-back { position: absolute; left: 16px; bottom: 16px; z-index: 6;
+    font-family: 'Barlow', sans-serif; font-size: 15px; font-weight: 700; color: #fff;
+    background: rgba(20,16,40,0.82); border: 1px solid rgba(255,255,255,0.22); border-radius: 12px;
+    padding: 10px 16px; cursor: pointer; backdrop-filter: blur(4px); }
+  .kl-garage-back:hover { background: rgba(40,32,70,0.92); border-color: rgba(255,255,255,0.4); }
   .kl-ear-choice {
     flex: 1 1 40%; min-width: 130px; min-height: 60px; padding: 10px 18px; border-radius: 14px; cursor: pointer;
     font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 19px; letter-spacing: 1px;
@@ -12757,41 +12745,141 @@ const KL_GOBJ_SVG = {
       '<ellipse cx="44" cy="28" rx="4" ry="3" fill="#2dd4bf" transform="rotate(-20 44 28)"/>' +
     '</svg>'
 };
+// ── THE GARAGE as one interactive room: each module IS a piece of gear drawn
+// into the scene at its own spot, clickable in place. One SVG (viewBox 1200×620,
+// preserveAspectRatio meet) so nothing crops on any screen.
+function klGarageScene() {
+  const lbl = (t, cx, y, fs) => '<text x="' + cx + '" y="' + y + '" text-anchor="middle" font-family="Barlow Condensed,sans-serif" font-weight="800" font-size="' + (fs || 18) + '" fill="#fff" style="paint-order:stroke;stroke:#000;stroke-width:3.5px;stroke-linejoin:round;letter-spacing:0.5px;">' + t + '</text>';
+  const badge = (unlocked, done, x, y, w) => (!unlocked
+    ? '<text x="' + (x + w) + '" y="' + y + '" font-size="30" text-anchor="end">🔒</text>'
+    : (done ? '<text x="' + (x + w) + '" y="' + y + '" font-size="22" text-anchor="end" fill="#4ade80">✓</text>' : ''));
+  const wrap = (id, art) => {
+    const m = klModuleDef(id), done = klModuleIsDone(id), unlocked = klModuleUnlocked(m);
+    return '<g class="kl-scene-obj' + (unlocked ? '' : ' locked') + '"' + (unlocked ? ' onclick="klEnterModule(\'' + id + '\')"' : '') + '>' +
+      (unlocked ? '' : '<title>' + klModuleLockReason(m) + '</title>') + art(unlocked, done) + '</g>';
+  };
+
+  // MODE LAB — framed poster on the left wall (bright/dark disc)
+  const mode = wrap('garage:mode', (u, d) =>
+    '<rect x="294" y="92" width="128" height="150" rx="4" fill="#15151b" stroke="#3a3a45" stroke-width="4"/>' +
+    '<circle cx="358" cy="152" r="40" fill="#1b1640" stroke="#3a3470" stroke-width="2"/>' +
+    '<path d="M358 112 A40 40 0 0 1 358 192 Z" fill="#f0c040"/>' +
+    lbl('MODE', 358, 268, 18) + badge(u, d, 294, 110, 128));
+
+  // JAM SESSION — electric guitar leaning on the left amp
+  const jam = wrap('garage:jam', (u, d) =>
+    '<g transform="rotate(-13 250 545)">' +
+      '<rect x="244" y="332" width="11" height="172" rx="3" fill="#5b3f26"/>' +
+      '<rect x="242" y="324" width="15" height="10" rx="2" fill="#3a2614"/>' +
+      '<rect x="247.5" y="360" width="3" height="150" fill="#cdcdcd" opacity="0.6"/>' +
+      '<ellipse cx="249" cy="524" rx="35" ry="41" fill="#c0392b"/>' +
+      '<ellipse cx="249" cy="524" rx="10" ry="10" fill="#2a1a14"/>' +
+    '</g>' +
+    lbl('JAM', 250, 600, 18) + badge(u, d, 210, 360, 90));
+
+  // EAR LAB — headphones draped on a small combo amp, plugged in
+  const ear = wrap('garage:ear', (u, d) =>
+    '<rect x="286" y="506" width="104" height="66" rx="6" fill="#1b1d22" stroke="#33373f" stroke-width="2"/>' +
+    '<rect x="299" y="518" width="78" height="32" rx="3" fill="#2a2d33"/>' +
+    '<circle cx="338" cy="534" r="13" fill="#15171a"/>' +
+    '<circle cx="371" cy="560" r="3" fill="#4ade80"/>' +
+    '<path d="M315 506 V493 a23 23 0 0 1 46 0 V506" fill="none" stroke="#cbd5e1" stroke-width="6" stroke-linecap="round"/>' +
+    '<rect x="308" y="503" width="15" height="22" rx="5" fill="#7c6ff7"/>' +
+    '<rect x="353" y="503" width="15" height="22" rx="5" fill="#7c6ff7"/>' +
+    '<path d="M360 522 q12 14 2 26" fill="none" stroke="#111" stroke-width="2.5"/>' +
+    lbl('EAR', 338, 600, 18) + badge(u, d, 286, 502, 104));
+
+  // CHORD LAB — keyboard on an X-stand
+  const chord = wrap('garage:build', (u, d) =>
+    '<path d="M438 575 L512 500 M512 575 L438 500" stroke="#33373f" stroke-width="7" stroke-linecap="round"/>' +
+    '<rect x="412" y="486" width="160" height="16" rx="3" fill="#33384a"/>' +
+    '<rect x="416" y="492" width="152" height="13" rx="2" fill="#edeef2"/>' +
+    '<g fill="#1a1a22">' + [432, 446, 470, 484, 498, 522, 536].map(x => '<rect x="' + x + '" y="492" width="6" height="8"/>').join('') + '</g>' +
+    '<circle cx="420" cy="490" r="1.8" fill="#7c6ff7"/><circle cx="427" cy="490" r="1.8" fill="#2dd4bf"/>' +
+    lbl('CHORD', 492, 600, 18) + badge(u, d, 412, 484, 160));
+
+  // GROOVE LAB — drum kit, center stage
+  const groove = wrap('garage:tap', (u, d) =>
+    '<ellipse cx="660" cy="566" rx="116" ry="16" fill="rgba(0,0,0,0.4)"/>' +
+    '<line x1="592" y1="430" x2="606" y2="500" stroke="#888" stroke-width="3"/><ellipse cx="590" cy="428" rx="30" ry="7" fill="#f0c040"/>' +
+    '<line x1="735" y1="424" x2="722" y2="500" stroke="#888" stroke-width="3"/><ellipse cx="737" cy="422" rx="32" ry="8" fill="#f0c040"/>' +
+    '<ellipse cx="628" cy="452" rx="26" ry="9" fill="#8fb0e8"/><rect x="602" y="452" width="52" height="20" fill="#5d7fc0"/><ellipse cx="628" cy="472" rx="26" ry="9" fill="#4a6aa8"/>' +
+    '<ellipse cx="700" cy="470" rx="24" ry="8" fill="#fb7185"/><rect x="676" y="470" width="48" height="18" fill="#e0556a"/><ellipse cx="700" cy="488" rx="24" ry="8" fill="#c9485c"/>' +
+    '<circle cx="660" cy="512" r="50" fill="#c084fc" stroke="#a855f7" stroke-width="6"/><circle cx="660" cy="512" r="15" fill="#9333ea"/>' +
+    lbl('GROOVE', 660, 600, 18) + badge(u, d, 600, 420, 120));
+
+  // NOTATION — sheet music on a stand
+  const notation = wrap('garage:notation', (u, d) =>
+    '<line x1="828" y1="508" x2="828" y2="562" stroke="#7b8190" stroke-width="4"/>' +
+    '<path d="M810 576 L828 562 L846 576 M828 562 L828 576" stroke="#7b8190" stroke-width="4" fill="none" stroke-linecap="round"/>' +
+    '<g transform="rotate(-6 828 488)">' +
+      '<rect x="794" y="466" width="68" height="46" rx="3" fill="#fbfaf5"/>' +
+      '<g stroke="#9aa0b5" stroke-width="1">' + [474, 480, 486, 492, 498].map(y => '<line x1="800" y1="' + y + '" x2="856" y2="' + y + '"/>').join('') + '</g>' +
+      '<text x="802" y="496" font-family="Georgia,serif" font-size="22" fill="#c9a43a">\uD834\uDD1E</text>' +
+      '<ellipse cx="838" cy="486" rx="4" ry="3" fill="#2dd4bf"/>' +
+    '</g>' +
+    lbl('NOTATION', 828, 600, 18) + badge(u, d, 794, 466, 68));
+
+  // INSTRUMENT ANATOMY — a workbench with a guitar being worked on + tools
+  const anatomy = wrap('garage:anatomy', (u, d) =>
+    '<rect x="876" y="516" width="168" height="13" rx="2" fill="#6b513a"/>' +
+    '<rect x="884" y="529" width="11" height="40" fill="#43331f"/><rect x="1025" y="529" width="11" height="40" fill="#43331f"/>' +
+    '<ellipse cx="934" cy="506" rx="34" ry="19" fill="#c98a3f"/><ellipse cx="934" cy="506" rx="8" ry="8" fill="#2a1c10"/>' +
+    '<rect x="960" y="500" width="64" height="9" rx="2" fill="#6b4a2c"/><rect x="1022" y="497" width="12" height="15" rx="2" fill="#3a2614"/>' +
+    '<line x1="900" y1="510" x2="888" y2="500" stroke="#9aa0b5" stroke-width="4" stroke-linecap="round"/>' +
+    '<circle cx="1006" cy="512" r="5" fill="none" stroke="#9aa0b5" stroke-width="3"/><line x1="1009" y1="515" x2="1016" y2="512" stroke="#9aa0b5" stroke-width="3"/>' +
+    lbl('ANATOMY', 958, 600, 18) + badge(u, d, 876, 500, 168));
+
+  // ACTIVE LISTENING — big PA speaker on a pole stand
+  const listen = wrap('garage:listen', (u, d) =>
+    '<line x1="1112" y1="470" x2="1112" y2="566" stroke="#3a3f4a" stroke-width="5"/>' +
+    '<path d="M1088 578 L1112 566 L1136 578" stroke="#3a3f4a" stroke-width="5" fill="none" stroke-linecap="round"/>' +
+    '<rect x="1072" y="356" width="80" height="120" rx="7" fill="#15171c" stroke="#33373f" stroke-width="2"/>' +
+    '<circle cx="1112" cy="436" r="25" fill="#26292f" stroke="#5a5f72" stroke-width="3"/><circle cx="1112" cy="436" r="8" fill="#0c0c10"/>' +
+    '<rect x="1094" y="374" width="36" height="22" rx="3" fill="#26292f" stroke="#5a5f72" stroke-width="2"/>' +
+    '<circle cx="1082" cy="366" r="2.6" fill="#4ade80"/>' +
+    lbl('LISTEN', 1112, 600, 18) + badge(u, d, 1072, 356, 80));
+
+  return '<svg class="kl-garage-svg" viewBox="0 0 1200 620" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">' +
+    '<defs>' +
+      '<radialGradient id="gFluo2" cx="50%" cy="0%" r="70%"><stop offset="0%" stop-color="rgba(220,235,245,0.45)"/><stop offset="100%" stop-color="rgba(220,235,245,0)"/></radialGradient>' +
+      '<linearGradient id="gWall2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#272a2e"/><stop offset="100%" stop-color="#191b1e"/></linearGradient>' +
+    '</defs>' +
+    // room shell
+    '<rect x="0" y="0" width="1200" height="470" fill="url(#gWall2)"/>' +
+    '<rect x="0" y="470" width="1200" height="150" fill="#14110e"/>' +
+    '<line x1="0" y1="250" x2="1200" y2="250" stroke="#000" stroke-width="2" opacity="0.18"/>' +
+    '<rect x="430" y="22" width="340" height="14" rx="4" fill="#dfeaf0"/>' +
+    '<ellipse cx="600" cy="60" rx="430" ry="130" fill="url(#gFluo2)"/>' +
+    // right-wall pegboard (decor)
+    '<rect x="980" y="86" width="150" height="150" fill="#3a2f22" opacity="0.5"/>' +
+    '<g fill="#000" opacity="0.22"><circle cx="1002" cy="108" r="3"/><circle cx="1042" cy="108" r="3"/><circle cx="1082" cy="108" r="3"/><circle cx="1002" cy="150" r="3"/><circle cx="1082" cy="150" r="3"/><circle cx="1042" cy="192" r="3"/></g>' +
+    // left amp stack (decor — the guitar leans on it)
+    '<rect x="70" y="320" width="150" height="220" rx="6" fill="#15171a"/><rect x="84" y="336" width="122" height="100" rx="4" fill="#26292d"/><rect x="84" y="446" width="122" height="80" rx="4" fill="#202326"/>' +
+    '<circle cx="98" cy="346" r="4" fill="#e0556a"/>' +
+    '<text x="145" y="404" font-family="Barlow Condensed" font-size="22" font-weight="900" fill="#caa64a" text-anchor="middle" opacity="0.8">amp</text>' +
+    // cables on floor
+    '<path d="M120 575 q200 -28 380 8 t400 -6" stroke="#0c0c0e" stroke-width="6" fill="none" opacity="0.5"/>' +
+    // interactive gear
+    mode + jam + ear + chord + groove + notation + anatomy + listen +
+  '</svg>';
+}
+
 function klRenderInterior(id) {
   klState.devRoom = id; // remembered so dev unlock toggles can re-render this room live
   document.getElementById('kidlab').classList.remove('kl-playing');
   klStopClock(); klStopBeatBar();
   const wrap = document.getElementById('kl-wrap');
   let title = '', art = '', body = '';
-  // THE GARAGE is its own room: the gear stands on the floor, drawn into the scene.
+  // THE GARAGE is its own interactive room: each module IS a piece of gear.
   if (id === 'garage') {
-    const objs = klBuildingModules('garage').map(m => {
-      const done = klModuleIsDone(m.id);
-      const unlocked = klModuleUnlocked(m);
-      const art = KL_GOBJ_SVG[m.id] || ('<div class="kl-gobj-emoji">' + (KL_GARAGE_OBJ[m.id] || m.obj) + '</div>');
-      const inner =
-        '<div class="kl-gobj-art">' + art +
-          (!unlocked ? '<span class="kl-gobj-lock">🔒</span>' : (done ? '<span class="kl-gobj-check">✓</span>' : '')) +
-        '</div>' +
-        '<div class="kl-gobj-shadow"></div>' +
-        '<div class="kl-gobj-label">' + m.name + '</div>';
-      return unlocked
-        ? '<button class="kl-gobj" onclick="klEnterModule(\'' + m.id + '\')">' + inner + '</button>'
-        : '<div class="kl-gobj locked" title="' + klModuleLockReason(m).split('"').join('') + '">' + inner + '</div>';
-    }).join('');
     wrap.innerHTML =
       '<div class="kl-stage kt-interior kt-bg-garage">' +
-        '<div class="kt-scene-art">' + klSceneArt('garage') + '</div>' +
-        '<div class="kl-garage-scrim"></div>' +
         klHudMarkup() +
-        '<div class="kl-garage-room">' +
-          '<div class="kl-garage-head">' +
-            '<div class="kl-garage-title">THE GARAGE</div>' +
-            '<div class="kl-garage-sub">Your turf. Click any piece of gear to train on it.</div>' +
-          '</div>' +
-          '<div class="kl-garage-floor">' + objs + '</div>' +
-          '<button class="kt-int-leave" onclick="klRenderTown()">← Back outside</button>' +
-        '</div>' +
+        '<div class="kl-garage-head"><div class="kl-garage-title">THE GARAGE</div>' +
+        '<div class="kl-garage-sub">Your turf. Click any piece of gear to train on it.</div></div>' +
+        '<div class="kl-garage-scene-wrap">' + klGarageScene() + '</div>' +
+        '<button class="kl-garage-back" onclick="klRenderTown()">← Back outside</button>' +
         (klIsDevAvailable() ? klDevBar() : '') +
       '</div>';
     klFlushNotifications(() => klRenderInterior('garage'));
@@ -17496,7 +17584,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-84'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-85'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
