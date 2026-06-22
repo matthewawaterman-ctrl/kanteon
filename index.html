@@ -27,10 +27,10 @@
 <style>
   :root {
     --bg: #0f0e2a;
-    --space-bg:
-      radial-gradient(ellipse 60% 42% at 28% 24%, rgba(120,60,200,0.22) 0%, transparent 60%),
-      radial-gradient(ellipse 55% 36% at 78% 72%, rgba(40,180,220,0.15) 0%, transparent 55%),
-      #0f0e2a;
+    --neb-layers:
+      radial-gradient(ellipse 60% 40% at 30% 30%, rgba(120,60,200,0.25) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 30% at 75% 60%, rgba(40,180,220,0.18) 0%, transparent 55%);
+    --space-bg: var(--neb-layers), var(--bg);
     --bg2: #17153d;
     --bg3: #1f1c50;
     --bg4: #0a0919;
@@ -109,14 +109,13 @@
   .home-logo {
     display: flex; align-items: baseline; gap: 0;
     font-family: var(--font-display); font-size: 30px; font-weight: 900;
-    line-height: 0.85; letter-spacing: -1px;
+    line-height: 0.9; letter-spacing: 0.5px;
   }
   .home-logo .rock {
-    color: var(--text); transform: skew(-6deg); display: inline-block;
+    color: var(--text); transform: skew(-3deg); display: inline-block;
   }
   .home-logo .ear {
-    color: var(--red); transform: skew(-6deg); display: inline-block;
-    text-shadow: 3px 3px 0 var(--bg), 4px 4px 0 #afa9ec;
+    color: var(--red); transform: skew(-3deg); display: inline-block;
   }
 
   .xp-card {
@@ -3509,9 +3508,7 @@
   #kidlab.kl-playing .kl-nebula { opacity: 0.5; }
   #kidlab .kl-nebula {
     position: absolute; inset: 0; pointer-events: none; z-index: 0;
-    background:
-      radial-gradient(ellipse 60% 40% at 30% 30%, rgba(120,60,200,0.25) 0%, transparent 60%),
-      radial-gradient(ellipse 50% 30% at 75% 60%, rgba(40,180,220,0.18) 0%, transparent 55%);
+    background: var(--neb-layers);
     animation: klNebulaDrift 24s ease-in-out infinite alternate;
   }
   @keyframes klNebulaDrift {
@@ -4993,7 +4990,7 @@
 
   <div class="home-logo-wrap">
     <div class="home-logo">
-      <span class="rock">📖 BOOK OF&nbsp;</span><span class="ear">KNOWLEDGE</span>
+      <span class="rock">📖 LESSON&nbsp;</span><span class="ear">MODE</span>
     </div>
   </div>
 
@@ -5404,7 +5401,6 @@
       <span class="ear-score-stat correct">CORRECT <span class="v" id="ear-score-correct">0</span></span>
       <span class="ear-score-stat wrong">WRONG <span class="v" id="ear-score-wrong">0</span></span>
       <span class="ear-score-stat acc">ACC <span class="v" id="ear-score-acc">—</span></span>
-      <span class="ear-score-stat">XP <span class="v" id="ear-score-xp">0</span></span>
     </div>
 
     <div class="ear-prompt" id="ear-prompt">Listen and identify</div>
@@ -5566,7 +5562,6 @@
       <span class="ear-score-stat correct">CORRECT <span class="v" id="al-score-correct">0</span></span>
       <span class="ear-score-stat wrong">WRONG <span class="v" id="al-score-wrong">0</span></span>
       <span class="ear-score-stat acc">ACC <span class="v" id="al-score-acc">—</span></span>
-      <span class="ear-score-stat">XP <span class="v" id="al-score-xp">0</span></span>
     </div>
 
     <div class="ear-prompt" id="al-prompt">Listen and identify</div>
@@ -5696,7 +5691,6 @@
       <span class="ear-score-stat correct">CORRECT <span class="v" id="build-score-correct">0</span></span>
       <span class="ear-score-stat wrong">WRONG <span class="v" id="build-score-wrong">0</span></span>
       <span class="ear-score-stat acc">ACC <span class="v" id="build-score-acc">—</span></span>
-      <span class="ear-score-stat">XP <span class="v" id="build-score-xp">0</span></span>
     </div>
 
     <div class="build-prompt" id="build-prompt">Build a <span class="v">Major 3rd</span> above <span class="v">C</span></div>
@@ -5919,7 +5913,6 @@
       <span class="ear-score-stat correct">CORRECT <span class="v" id="theory-score-correct">0</span></span>
       <span class="ear-score-stat wrong">WRONG <span class="v" id="theory-score-wrong">0</span></span>
       <span class="ear-score-stat acc">ACC <span class="v" id="theory-score-acc">—</span></span>
-      <span class="ear-score-stat">XP <span class="v" id="theory-score-xp">0</span></span>
     </div>
 
     <div class="theory-prompt" id="theory-prompt">—</div>
@@ -6248,7 +6241,6 @@
       <span class="ear-score-stat correct">CORRECT <span class="v" id="notation-score-correct">0</span></span>
       <span class="ear-score-stat wrong">WRONG <span class="v" id="notation-score-wrong">0</span></span>
       <span class="ear-score-stat acc">ACC <span class="v" id="notation-score-acc">—</span></span>
-      <span class="ear-score-stat">XP <span class="v" id="notation-score-xp">0</span></span>
     </div>
 
     <div class="notation-prompt" id="notation-prompt">Read the notation</div>
@@ -7731,7 +7723,6 @@ function showEarFeedback(isCorrect, xpGain) {
 function refreshEarScore() {
   document.getElementById('ear-score-correct').textContent = earState.score.correct;
   document.getElementById('ear-score-wrong').textContent   = earState.score.wrong;
-  document.getElementById('ear-score-xp').textContent      = earState.score.xp;
   const total = earState.score.correct + earState.score.wrong;
   document.getElementById('ear-score-acc').textContent =
     total > 0 ? Math.round((earState.score.correct / total) * 100) + '%' : '—';
@@ -8340,7 +8331,6 @@ function showBuildFeedback(isCorrect, xpGain, errCents, retryable = false) {
 function refreshBuildScore() {
   document.getElementById('build-score-correct').textContent = buildState.score.correct;
   document.getElementById('build-score-wrong').textContent   = buildState.score.wrong;
-  document.getElementById('build-score-xp').textContent      = buildState.score.xp;
   const total = buildState.score.correct + buildState.score.wrong;
   document.getElementById('build-score-acc').textContent =
     total > 0 ? Math.round((buildState.score.correct / total) * 100) + '%' : '—';
@@ -8977,7 +8967,6 @@ function showTheoryFeedback(isCorrect) {
 function refreshTheoryScore() {
   document.getElementById('theory-score-correct').textContent = theoryState.score.correct;
   document.getElementById('theory-score-wrong').textContent   = theoryState.score.wrong;
-  document.getElementById('theory-score-xp').textContent      = theoryState.score.xp;
   const total = theoryState.score.correct + theoryState.score.wrong;
   document.getElementById('theory-score-acc').textContent =
     total > 0 ? Math.round((theoryState.score.correct / total) * 100) + '%' : '—';
@@ -9302,7 +9291,6 @@ function showAlFeedback(isCorrect, xpGain) {
 function refreshAlScore() {
   document.getElementById('al-score-correct').textContent = alState.score.correct;
   document.getElementById('al-score-wrong').textContent   = alState.score.wrong;
-  document.getElementById('al-score-xp').textContent      = alState.score.xp;
   const total = alState.score.correct + alState.score.wrong;
   document.getElementById('al-score-acc').textContent =
     total > 0 ? Math.round((alState.score.correct / total) * 100) + '%' : '—';
@@ -17563,7 +17551,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-92'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-93'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
@@ -17593,6 +17581,7 @@ function klShowUpdateBanner(liveTag) {
   }
   if (document.readyState === 'complete') setTimeout(run, 1500);
   else window.addEventListener('load', function() { setTimeout(run, 1500); });
+  setInterval(run, 60000); // re-check every minute so an open tab catches a new deploy
 })();
 let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
@@ -22555,7 +22544,6 @@ function showNotationFeedback(isCorrect, xpGain) {
 function refreshNotationScore() {
   document.getElementById('notation-score-correct').textContent = notationState.score.correct;
   document.getElementById('notation-score-wrong').textContent   = notationState.score.wrong;
-  document.getElementById('notation-score-xp').textContent      = notationState.score.xp;
   const total = notationState.score.correct + notationState.score.wrong;
   document.getElementById('notation-score-acc').textContent =
     total > 0 ? Math.round((notationState.score.correct / total) * 100) + '%' : '—';
