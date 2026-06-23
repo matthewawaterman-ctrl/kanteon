@@ -12096,13 +12096,13 @@ const KL_TOWN_SVG = (function(){
   const W=1000,H=520,VPX=500,VPY=212;
   const lerp=(a,b,t)=>a+(b-a)*t, f=n=>(+n).toFixed(1);
   const BLD=[
-    {side:-1,t:0.00,act:"klBusk()",name:"THE PLAZA",kind:"plaza"},
+    {side:-1,t:0.00,act:"klBusk()",name:"PLAZA",kind:"plaza"},
     {side:-1,t:0.30,act:"klEnterBuilding('master')",name:"WADDY'S",kind:"waddy"},
     {side:-1,t:0.56,act:"klEnterBuilding('garage')",name:"GARAGE",kind:"garage"},
     {side:-1,t:0.80,act:"klEnterBuilding('hater')",name:"NEIGHBOR",kind:"neighbor"},
     {side:1,t:0.00,act:"klEnterBuilding('home')",name:"YOUR PLACE",kind:"home"},
-    {side:1,t:0.30,act:"klOpenWorkPlan()",name:"THE FACTORY",kind:"factory"},
-    {side:1,t:0.56,act:"klEnterBuilding('venue')",name:"THE VENUE",kind:"venue"},
+    {side:1,t:0.30,act:"klOpenWorkPlan()",name:"FACTORY",kind:"factory"},
+    {side:1,t:0.56,act:"klEnterBuilding('venue')",name:"VENUE",kind:"venue"},
     {side:1,t:0.80,act:"klEnterBuilding('shop')",name:"SHOP",kind:"shop"},
   ];
   const PAL={plaza:{body:"#4a4660",roof:"#6a6488",win:"#ffe08a",neon:"#7ad9ff"},
@@ -12149,29 +12149,44 @@ const KL_TOWN_SVG = (function(){
     g+=R(x,topY-2*s,w,3*s,p.neon,'opacity="0.85"');
     return `<g class="kt-bld" onclick="${b.act}">${g}</g>`;
   }
-  // ---- WALL SIGNS: a band mounted on the upper outer wall of each building ----
-  function signBox(it){
+  // ---- SIGNS: horizontal wall plaques for the 3 big near buildings; vertical blades for the rest ----
+  const HORIZ=new Set(['plaza','waddy','home']);
+  function horizSign(it){
     const [type,col]=SIGN[it.kind], s=it.s;
-    const sW=it.kind==='plaza'? it.w*1.0 : it.w*0.86;
-    const fz=Math.max(11,Math.min(Math.round(22*s), Math.floor((sW-12)/(it.name.length*0.55))));
+    const sW=it.kind==='plaza'? it.w : it.w*0.8;
+    const fz=Math.max(12,Math.min(Math.round(22*s),Math.floor((sW-12)/(it.name.length*0.55))));
     const sH=fz+8;
-    const cx=it.kind==='plaza'? it.cx : it.x + it.w*0.5;
-    // mount on the upper wall (just under the roofline)
-    let y=it.kind==='plaza'? it.baseY-92*s : it.topY + 8 + (it.rank||0)*20;
-    return {it,type,col,fz,sH,sW,x:cx-sW/2,y,cx};
-  }
-  const boxes=items.map(signBox);
-  function ovl(a,b){return !(a.x+a.sW<=b.x||b.x+b.sW<=a.x||a.y+a.sH<=b.y||b.y+b.sH<=a.y);}
-  [-1,1].forEach(sd=>{const grp=boxes.filter(b=>b.it.side===sd).sort((a,b)=>a.it.t-b.it.t);const placed=[];
-    grp.forEach(b=>{let g=0;while(placed.some(p=>ovl(b,p))&&g++<40){const hit=placed.filter(p=>ovl(b,p)).reduce((a,c)=>c.y>a.y?c:a);b.y=hit.y+hit.sH+4;}if(b.it.kind!=='plaza'){const lo=b.it.topY+6,hi=b.it.baseY-b.it.h*0.3-b.sH;b.y=Math.max(lo,Math.min(b.y,hi));}placed.push(b);});});
-  function renderSign(b){
-    const {it,type,col,fz,sH,sW,x,y,cx}=b;let g='';
+    let cx = it.kind==='plaza'? it.cx : it.kind==='home'? it.x+it.w*0.52 : it.x+it.w*0.46;
+    let x=cx-sW/2, y=it.kind==='plaza'? it.baseY-92*s : it.topY+10;
+    // keep strictly inside the building's own visible wall
+    if(it.side<0 && it.kind!=='plaza') x=Math.min(x, it.inner-8-sW);
+    if(it.side>0) x=Math.max(x, it.inner+8);
+    cx=x+sW/2;
+    let g='';
     if(type==='neon'){g+=R(x-2,y-2,sW+4,sH+4,col,'rx="6" opacity="0.16"');g+=R(x,y,sW,sH,'#171327','rx="4" stroke="'+col+'" stroke-width="2"');}
     else if(type==='wood'){g+=R(x,y,sW,sH,'#5a3f28','rx="3" stroke="#34230f" stroke-width="2"');}
-    else{g+=R(x,y,sW,sH,'#33343c','rx="3" stroke="#62636c" stroke-width="2"');g+='<circle cx="'+f(x+5)+'" cy="'+f(y+5)+'" r="1.5" fill="#8a8b94"/><circle cx="'+f(x+sW-5)+'" cy="'+f(y+5)+'" r="1.5" fill="#8a8b94"/>';}
+    else{g+=R(x,y,sW,sH,'#33343c','rx="3" stroke="#62636c" stroke-width="2"');}
     g+='<text x="'+f(cx)+'" y="'+f(y+sH*0.72)+'" text-anchor="middle" font-family="Barlow Condensed" font-weight="900" font-size="'+fz+'" fill="'+col+'">'+it.name+'</text>';
     return '<g class="kt-bld" onclick="'+it.act+'">'+g+'</g>';
   }
+  function bladeSign(it){
+    const [type,col]=SIGN[it.kind], s=it.s;
+    const fz=Math.max(13,Math.round(19*s)), lineH=fz*0.94;
+    const chars=it.name.split('');
+    const bw=fz+10, bh=chars.length*lineH+12;
+    const edge=it.inner;                       // street-facing edge
+    const x = it.side<0 ? edge-bw-2 : edge+2;    // mounted on its own wall, at the street-facing edge
+    const cx=x+bw/2, y=it.topY+4;
+    let g='';
+    // mounting arm to the building
+    g+=R(it.side<0?edge-1:edge-2,y+2,2,Math.min(bh*0.45,36),col,'opacity="0.45"');
+    if(type==='neon'){g+=R(x-2,y-2,bw+4,bh+4,col,'rx="6" opacity="0.16"');g+=R(x,y,bw,bh,'#171327','rx="5" stroke="'+col+'" stroke-width="2"');}
+    else if(type==='wood'){g+=R(x,y,bw,bh,'#5a3f28','rx="4" stroke="#34230f" stroke-width="2"');}
+    else{g+=R(x,y,bw,bh,'#33343c','rx="3" stroke="#62636c" stroke-width="2"');}
+    chars.forEach((ch,i)=>{g+='<text x="'+f(cx)+'" y="'+f(y+12+i*lineH)+'" text-anchor="middle" font-family="Barlow Condensed" font-weight="900" font-size="'+fz+'" fill="'+col+'">'+ch+'</text>';});
+    return '<g class="kt-bld" onclick="'+it.act+'">'+g+'</g>';
+  }
+  const signs = items.map(it=> HORIZ.has(it.kind)? horizSign(it) : bladeSign(it)).join('');
   // ---- background filler buildings: recede to horizon, fill dead ground (non-clickable) ----
   let filler='';
   for(const sd of [-1,1]){
@@ -12191,7 +12206,7 @@ const KL_TOWN_SVG = (function(){
     +R(0,0,W,H,'url(#ktSky)')+planet
     +`<circle cx="180" cy="70" r="2" fill="rgba(255,255,255,0.6)"/><circle cx="340" cy="48" r="1.5" fill="rgba(255,255,255,0.5)"/><circle cx="660" cy="60" r="1.8" fill="rgba(255,255,255,0.5)"/><circle cx="820" cy="90" r="1.5" fill="rgba(255,255,255,0.5)"/>`
     +R(0,VPY+4,W,H-VPY-4,'#5b5042')+filler+street
-    +sortedArt.map(art).join('')+boxes.map(renderSign).join('')
+    +sortedArt.map(art).join('')+signs
     +`</svg>`;
 })();
 
@@ -17824,7 +17839,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-122'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-123'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
