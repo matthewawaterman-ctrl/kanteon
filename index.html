@@ -1695,8 +1695,48 @@
     .q-body, .ear-session-body { max-width: 880px; margin-left: auto; margin-right: auto; width: 100%; }
   }
 
-  /* Ear Lab session: score bar dropped (Option A) — scoped so lesson siblings keep theirs */
-  #ear-session .ear-score-bar { display: none; }
+  /* ══ b31-138 — UNIFIED DRILL SHELL (Path B reskin) ════════════════════════
+       Ear Lab + Active Listening + Build Mode now share ONE kl-style visual
+       language with the Story puzzle shell. CSS-only — every engine untouched.
+       Ear Lab/AL share the full drill body; Build Mode shares the frame. ════ */
+  /* background → the kl puzzle deep-space twilight (build-session bg set at its
+     own rule below so cascade order can't fight us) */
+  #ear-session, #al-session {
+    background:
+      radial-gradient(circle at 50% 120%, rgba(70,60,120,0.35) 0%, transparent 55%),
+      linear-gradient(180deg, #0d0a22 0%, #181235 32%, #241a47 64%, #2d2152 100%);
+  }
+  /* header → kl chrome: drop the boxy divider, round the back button to .kl-back */
+  #ear-session .module-header, #al-session .module-header, #build-session .module-header {
+    border-bottom: none; padding: 16px 16px 4px;
+  }
+  #ear-session .back-btn, #al-session .back-btn, #build-session .back-btn {
+    background: rgba(255,255,255,0.5); color: #2a1a4a; border: none;
+    width: 52px; height: 52px; border-radius: 18px; font-size: 26px;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.12);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #ear-session .back-btn:hover, #al-session .back-btn:hover, #build-session .back-btn:hover { background: rgba(255,255,255,0.62); }
+  #ear-session .back-btn:active, #al-session .back-btn:active, #build-session .back-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,0.12); }
+  /* score → folded into the header zone: drop the 3-stat bar, keep ONE compact
+     ACC chip docked right (existing JS keeps writing #x-score-acc) */
+  #ear-session .ear-score-bar, #al-session .ear-score-bar, #build-session .ear-score-bar {
+    display: flex; justify-content: flex-end; gap: 0; padding: 0 2px; border: none; background: none;
+  }
+  #ear-session .ear-score-stat.correct, #ear-session .ear-score-stat.wrong,
+  #al-session .ear-score-stat.correct, #al-session .ear-score-stat.wrong,
+  #build-session .ear-score-stat.correct, #build-session .ear-score-stat.wrong { display: none; }
+  #ear-session .ear-score-stat.acc, #al-session .ear-score-stat.acc, #build-session .ear-score-stat.acc {
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 999px; padding: 5px 14px; color: #cfc4ff;
+    font-family: var(--font-display); letter-spacing: 1.5px; font-size: 13px; font-weight: 700;
+  }
+  #ear-session .ear-score-stat.acc .v, #al-session .ear-score-stat.acc .v, #build-session .ear-score-stat.acc .v { color: #fff; font-size: 15px; }
+  /* motion guard — brief feedback animations off when the OS asks */
+  @media (prefers-reduced-motion: reduce) {
+    .ear-hear-btn.playing, .build-hear-btn.playing { animation: none; }
+    .ear-answer-btn.wrong { animation: none; }
+  }
 
   .ear-score-bar {
     display: flex; gap: 12px; justify-content: center;
@@ -1755,7 +1795,11 @@
 
   /* ── BUILD MODE ─────────────────────────────────────────────────────────── */
   #build-config { background: var(--space-bg); }
-  #build-session { background: var(--space-bg); }
+  #build-session { /* b31-138 unified drill bg — matches kl puzzle twilight */
+    background:
+      radial-gradient(circle at 50% 120%, rgba(70,60,120,0.35) 0%, transparent 55%),
+      linear-gradient(180deg, #0d0a22 0%, #181235 32%, #241a47 64%, #2d2152 100%);
+  }
   .build-session-body {
     flex: 1; display: flex; flex-direction: column;
     padding: 16px; gap: 14px;
@@ -18037,7 +18081,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-137'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-138'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
