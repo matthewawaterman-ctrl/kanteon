@@ -12119,7 +12119,7 @@ const KL_TOWN_SVG = (function(){
   const R=(x,y,w,h,fill,ex)=>`<rect x="${f(x)}" y="${f(y)}" width="${f(w)}" height="${f(h)}" ${ex||''} fill="${fill}"/>`;
   // bases pushed LOW (near 506, far 300) and tall, to fill the foreground & cut dead ground
   const items=BLD.map(b=>{
-    const s=lerp(1,0.32,b.t),w=lerp(206,70,b.t),h=lerp(400,150,b.t),baseY=lerp(506,300,b.t);
+    const s=lerp(1,0.32,b.t),w=lerp(206,70,b.t),h=lerp(340,135,b.t),baseY=lerp(506,300,b.t);
     const inner=b.side<0?lerp(244,452,b.t):lerp(756,548,b.t);
     const x=b.side<0?inner-w:inner,topY=baseY-h,cx=x+w/2;
     return {...b,s,w,h,baseY,inner,x,topY,cx};
@@ -12142,11 +12142,11 @@ const KL_TOWN_SVG = (function(){
       g+=`<path d="M${f(x-6*s)} ${f(topY+4)} L${f(cx)} ${f(topY-40*s)} L${f(x+w+6*s)} ${f(topY+4)} Z" fill="${p.roof}"/>`;
       if(b.kind==='waddy')g+=`<text x="${f(cx)}" y="${f(topY-12*s)}" text-anchor="middle" font-size="${f(20*s)}">\u2b50</text>`;
       if(b.kind==='home')g+=`<text x="${f(cx+w*0.32)}" y="${f(topY-6*s)}" text-anchor="middle" font-size="${f(15*s)}">\u266a</text>`;
-    } else g+=R(x,topY,w,8*s,p.roof);
+    } else { g+=R(x-5*s,topY-8*s,w+10*s,8*s,p.roof,'rx="1"'); g+=R(x-5*s,topY-10*s,w+10*s,2.5*s,'rgba(255,255,255,0.16)'); }
     // windows lower so the upper wall is free for the sign
-    g+=R(x+w*0.15,topY+h*0.5,w*0.26,h*0.14,p.win,'opacity="0.92" rx="2"')+R(x+w*0.58,topY+h*0.5,w*0.26,h*0.14,p.win,'opacity="0.5" rx="2"');
+    g+=R(x+w*0.15,topY+h*0.64,w*0.26,h*0.14,p.win,'opacity="0.92" rx="2"')+R(x+w*0.58,topY+h*0.64,w*0.26,h*0.14,p.win,'opacity="0.5" rx="2"');
     g+=R(cx-w*0.12,baseY-h*0.26,w*0.24,h*0.26,'#241c2e','rx="2"');
-    g+=R(x,topY-2*s,w,3*s,p.neon,'opacity="0.85"');
+    if(['waddy','neighbor','home'].includes(b.kind)) g+=R(x,topY-2*s,w,3*s,p.neon,'opacity="0.85"'); else g+=R(x-5*s,topY-11*s,w+10*s,2.5*s,p.neon,'opacity="0.9"');
     return `<g class="kt-bld" onclick="${b.act}">${g}</g>`;
   }
   // ---- SIGNS: horizontal wall plaques for the 3 big near buildings; vertical blades for the rest ----
@@ -12171,9 +12171,11 @@ const KL_TOWN_SVG = (function(){
   }
   function bladeSign(it){
     const [type,col]=SIGN[it.kind], s=it.s;
-    const fz=Math.max(13,Math.round(19*s)), lineH=fz*0.94;
     const chars=it.name.split('');
-    const bw=fz+10, bh=chars.length*lineH+12;
+    const budget=it.h*0.46;
+    let fz=Math.max(12,Math.round(19*s)), lineH=fz*0.94;
+    if(chars.length*lineH>budget){ lineH=budget/chars.length; fz=Math.max(10,Math.round(lineH/0.92)); }
+    const bw=fz+10, bh=chars.length*lineH+10;
     const edge=it.inner;                       // street-facing edge
     const x = it.side<0 ? edge-bw-2 : edge+2;    // mounted on its own wall, at the street-facing edge
     const cx=x+bw/2, y=it.topY+4;
@@ -12191,7 +12193,7 @@ const KL_TOWN_SVG = (function(){
   let filler='';
   for(const sd of [-1,1]){
     for(let k=0;k<5;k++){
-      const t=0.58+k*0.085, s=lerp(1,0.32,t), w=lerp(206,70,t)*0.8, h=lerp(400,150,t)*0.7, baseY=lerp(506,300,t);
+      const t=0.58+k*0.085, s=lerp(1,0.32,t), w=lerp(206,70,t)*0.8, h=lerp(340,135,t)*0.72, baseY=lerp(506,300,t);
       const inner=sd<0?lerp(244,486,t):lerp(756,514,t), x=sd<0?inner-w:inner, topY=baseY-h;
       const shade=sd<0?'#2c2740':'#2a3038';
       filler+=R(x,topY,w,h,shade,'rx="1"')+R(x,topY,w,2,'rgba(120,110,150,0.35)');
@@ -17839,7 +17841,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-123'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-124'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
