@@ -12446,7 +12446,7 @@ function klSetComplete(setId) {
 // busker economics (beginners ~$10–30, pros on prime days $100s).
 const KL_DAYJOB_PAY = 120; // flat wage per day worked — steady, no luck, no scaling
 window.klBusk = function() {
-  const base = 10 + Math.floor(Math.random() * 17);   // $10–26 raw
+  const base = 16 + Math.floor(Math.random() * 19);   // $16–34 raw
   const dayMult = klBuskDayMult();                      // Fri/Sat peak, Mon floor
   const pay = Math.max(1, Math.round(base * dayMult * klGearBuskFactor() * klEarnMult() * klCatalogMult()));
   klState.day++;
@@ -14313,7 +14313,7 @@ function klLevel() { return Math.floor((klState.xp || 0) / 100) + 1; }
 function klXpIntoLevel() { return (klState.xp || 0) % 100; }
 function klXpForLevel() { return 100; }
 // Earnings amplifier: each level above 1 adds +15% to all money earned.
-function klEarnMult() { return 1 + (klLevel() - 1) * 0.20; }
+function klEarnMult() { return 1 + (klLevel() - 1) * 0.28; }
 // Grant XP, persist, and nudge the player. levelUp toast when a threshold is crossed.
 function klAddXp(amount) {
   if (!amount) return;
@@ -17828,7 +17828,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-114'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-115'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
