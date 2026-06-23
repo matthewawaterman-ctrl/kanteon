@@ -12200,7 +12200,7 @@ const KL_TOWN_SVG = (function(){
   // bases pushed LOW (near 506, far 300) and tall, to fill the foreground & cut dead ground
   const items=BLD.map(b=>{
     const s=lerp(1,0.32,b.t),w=lerp(206,70,b.t),h=lerp(340,135,b.t),baseY=lerp(506,300,b.t);
-    const inner=b.side<0?lerp(244,452,b.t):lerp(756,548,b.t);
+    const inner=b.side<0?lerp(250,422,b.t):lerp(750,578,b.t);
     const x=b.side<0?inner-w:inner,topY=baseY-h,cx=x+w/2;
     return {...b,s,w,h,baseY,inner,x,topY,cx};
   });
@@ -12323,8 +12323,8 @@ const KL_TOWN_SVG = (function(){
   // ── PEDESTRIANS (SMIL: walk the sidewalk there-and-back, clickable) ──
   const pedShape = (color) =>
     `<ellipse cx="0" cy="19" rx="8" ry="3" fill="rgba(0,0,0,0.28)"/>`+
-    `<g><animateTransform attributeName="transform" type="rotate" values="-15 0 8;15 0 8;-15 0 8" dur="0.66s" repeatCount="indefinite"/><line x1="0" y1="7" x2="-3" y2="18" stroke="#33333f" stroke-width="3" stroke-linecap="round"/></g>`+
-    `<g><animateTransform attributeName="transform" type="rotate" values="15 0 8;-15 0 8;15 0 8" dur="0.66s" repeatCount="indefinite"/><line x1="0" y1="7" x2="3" y2="18" stroke="#33333f" stroke-width="3" stroke-linecap="round"/></g>`+
+    `<g><animateTransform attributeName="transform" type="rotate" values="-14 0 8;14 0 8;-14 0 8" dur="0.85s" repeatCount="indefinite"/><line x1="0" y1="7" x2="-3" y2="18" stroke="#33333f" stroke-width="3" stroke-linecap="round"/></g>`+
+    `<g><animateTransform attributeName="transform" type="rotate" values="14 0 8;-14 0 8;14 0 8" dur="0.85s" repeatCount="indefinite"/><line x1="0" y1="7" x2="3" y2="18" stroke="#33333f" stroke-width="3" stroke-linecap="round"/></g>`+
     `<path d="M-5 -9 L5 -9 L4 8 L-4 8 Z" fill="${color}"/>`+
     `<circle cx="0" cy="-14" r="5" fill="#e6c4a0"/>`;
   const ped = (path, sc, dur, begin, color, idx) =>
@@ -12332,9 +12332,14 @@ const KL_TOWN_SVG = (function(){
       `<animateMotion path="${path}" dur="${dur}s" begin="${begin}s" repeatCount="indefinite"/>`+
       `<g><animateTransform attributeName="transform" type="scale" values="${sc}" keyTimes="0;0.5;1" dur="${dur}s" begin="${begin}s" repeatCount="indefinite"/>`+pedShape(color)+`</g>`+
     `</g>`;
+  // RED lane = inner half of the sidewalk (street side of the black seam). Negative
+  // begins phase-stagger the loop so peds are spread along the lane, not marching together.
   const peds =
-    ped(`M250 496 L470 236 L250 496`, '1.15;0.32;1.15', 17, 0,   '#5a6fae', 0)+
-    ped(`M758 470 L536 236 L758 470`, '1.05;0.3;1.05',  19, 0, '#a65a7a', 1);
+    ped(`M276 504 L485 233 L276 504`, '1.16;0.30;1.16', 28, 0,   '#5a6fae', 0)+
+    ped(`M292 498 L489 231 L292 498`, '1.12;0.29;1.12', 31, -10, '#7a9a5a', 1)+
+    ped(`M284 508 L487 234 L284 508`, '1.18;0.31;1.18', 26, -19, '#c0894a', 2)+
+    ped(`M724 504 L514 233 L724 504`, '1.14;0.30;1.14', 30, 0,   '#a65a7a', 3)+
+    ped(`M710 500 L510 232 L710 500`, '1.10;0.28;1.10', 33, -16, '#6a5aa8', 4);
   const street=`<path d="M310 ${H} L${VPX-9} ${VPY+4} L${VPX+9} ${VPY+4} L690 ${H} Z" fill="url(#ktGround)"/>`
     +`<line x1="${VPX}" y1="${VPY+22}" x2="${VPX}" y2="${H}" stroke="rgba(235,225,185,0.4)" stroke-width="3" stroke-dasharray="14 20"/>`;
   const planet=`<ellipse cx="500" cy="118" rx="66" ry="66" fill="url(#ktKant)" opacity="0.55"/><circle cx="500" cy="118" r="32" fill="#7b5ec4"/><path d="M470 110 a32 32 0 0 0 60 -6 a38 38 0 0 1 -60 6 Z" fill="#6a4eb0" opacity="0.7"/><ellipse cx="500" cy="118" rx="55" ry="14" fill="none" stroke="#d8c0ff" stroke-width="2.5" opacity="0.75" transform="rotate(-18 500 118)"/><circle cx="490" cy="107" r="8" fill="#a98fe0" opacity="0.6"/>`;
@@ -18002,7 +18007,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-132'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-133'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
