@@ -4608,8 +4608,8 @@
   .kl-dev-cut { background: rgba(250,204,21,0.16) !important; border-color: rgba(250,204,21,0.5) !important; color: #fde68a !important; }
   .kl-devbar.open .kl-dev-tray {
     flex: 1 1 auto; max-height: none; overflow-y: auto;
-    width: 100%; max-width: none; margin: 0;
-    padding: 16px 28px 32px; align-content: flex-start; justify-content: flex-start;
+    width: 100%; max-width: 640px; margin: 0;
+    padding: 16px 26px 32px; align-content: flex-start; justify-content: flex-start;
   }
   .kl-dev-btn {
     min-width: 34px; height: 34px; padding: 0 13px;
@@ -4630,7 +4630,7 @@
     color: #9aa0b5; letter-spacing: 0.5px; margin: 0 2px 0 8px; opacity: 0.85;
   }
   .kl-dev-btn.done { background: rgba(74,222,128,0.16); border-color: rgba(74,222,128,0.5); color: #bbf7d0; }
-  .kl-dev-pz { min-width: 22px; height: 22px; padding: 0 5px; font-size: 12px; opacity: 0.82; }
+  .kl-dev-pz { min-width: 30px; height: 26px; padding: 0 8px; font-size: 13px; opacity: 0.95; }
   .kl-dev-pz:hover { opacity: 1; }
   /* ── BUILD MODE (b31-35) ── */
   .kl-build-hint {
@@ -9564,56 +9564,126 @@ function playPhrase(ctx, t0, notes, timbre, opts) {
 }
 
 // ── Instrument question audio ────────────────────────────────────────────
+// ── KANTEON SAMPLER (b31-130) ───────────────────────────────────────────────
+// Lo-fi sampler: one synthesized one-shot per instrument, pitch-shifted on playback.
+// Placeholder voices use physically-distinct models (pluck vs struck vs saw) so guitar/
+// keys/bass are actually tellable apart. To swap in a REAL recording later, set `url` on
+// the entry (e.g. url:'audio/guitar.wav') — ensureSamples() will fetch+decode it instead.
+let KANTEON_USE_SAMPLER = true;   // dev A/B: set false to hear the old oscillator voices
+const KANTEON_SAMPLES = {
+  guitar: { baseNote: 52, url: null, buffer: null, voice: 'pluckBright', q: 96 },
+  bass:   { baseNote: 33, url: null, buffer: null, voice: 'pluckDeep',   q: 64 },
+  keys:   { baseNote: 60, url: null, buffer: null, voice: 'struck',      q: 110 },
+  synth:  { baseNote: 60, url: null, buffer: null, voice: 'saw',         q: 40 },
+};
+let KANTEON_LOADED = false;
+function ksBuffer(ctx, freq, dur, damp, blend){
+  const sr=ctx.sampleRate, N=Math.max(2,Math.round(sr/freq)), len=Math.floor(sr*dur);
+  const buf=ctx.createBuffer(1,len,sr), out=buf.getChannelData(0), line=new Float32Array(N);
+  for(let i=0;i<N;i++) line[i]=Math.random()*2-1;
+  let idx=0, peak=0;
+  for(let i=0;i<len;i++){
+    const cur=line[idx], nxt=line[(idx+1)%N];
+    out[i]=cur; if(Math.abs(cur)>peak)peak=Math.abs(cur);
+    line[idx]=(cur*blend+nxt*(1-blend))*damp; idx=(idx+1)%N;
+  }
+  if(peak>0) for(let i=0;i<len;i++) out[i]/=peak;
+  return buf;
+}
+function struckBuffer(ctx, freq, dur){
+  const sr=ctx.sampleRate, len=Math.floor(sr*dur), buf=ctx.createBuffer(1,len,sr), out=buf.getChannelData(0);
+  const parts=[1,0.55,0.42,0.28,0.18,0.12,0.08]; let peak=0;
+  for(let i=0;i<len;i++){
+    const tt=i/sr; let v=0;
+    for(let p=0;p<parts.length;p++){ const n=p+1, inh=1+0.0008*n*n;
+      v+=parts[p]*Math.sin(2*Math.PI*freq*n*inh*tt)*Math.exp(-tt*(2.0+n*0.65)); }
+    if(i<sr*0.006) v+=(Math.random()*2-1)*0.5*(1-i/(sr*0.006));   // hammer transient
+    out[i]=v; if(Math.abs(v)>peak)peak=Math.abs(v);
+  }
+  if(peak>0) for(let i=0;i<len;i++) out[i]/=peak;
+  return buf;
+}
+function sawBuffer(ctx, freq, dur){
+  const sr=ctx.sampleRate, len=Math.floor(sr*dur), buf=ctx.createBuffer(1,len,sr), out=buf.getChannelData(0);
+  const det=[1,1.004,0.996]; let peak=0;
+  for(let i=0;i<len;i++){
+    const tt=i/sr; let v=0;
+    for(let d=0;d<det.length;d++){ const ph=(freq*det[d]*tt)%1; v+=(2*ph-1); }
+    v*=Math.exp(-tt*1.3)*0.33; out[i]=v; if(Math.abs(v)>peak)peak=Math.abs(v);
+  }
+  if(peak>0) for(let i=0;i<len;i++) out[i]/=peak;
+  return buf;
+}
+function loFiBake(buf, q){           // bit-crush (quantize) for the PS1/SNES grit
+  const out=buf.getChannelData(0), lv=q||64;
+  for(let i=0;i<out.length;i++) out[i]=Math.round(out[i]*lv)/lv;
+  return buf;
+}
+function genVoice(ctx, sm){
+  const f=midiFreq(sm.baseNote); let b;
+  if(sm.voice==='pluckBright') b=ksBuffer(ctx,f,1.5,0.997,0.5);
+  else if(sm.voice==='pluckDeep') b=ksBuffer(ctx,f,1.4,0.993,0.62);
+  else if(sm.voice==='struck') b=struckBuffer(ctx,f,1.9);
+  else b=sawBuffer(ctx,f,1.3);
+  return loFiBake(b, sm.q);
+}
+function ensureSamples(ctx){
+  if(KANTEON_LOADED) return; KANTEON_LOADED=true;
+  for(const id in KANTEON_SAMPLES){ const sm=KANTEON_SAMPLES[id];
+    try{
+      if(sm.url){ fetch(sm.url).then(r=>r.arrayBuffer()).then(a=>ctx.decodeAudioData(a))
+        .then(b=>{sm.buffer=b;}).catch(()=>{sm.buffer=genVoice(ctx,sm);}); }
+      else { sm.buffer=genVoice(ctx,sm); }
+    }catch(e){}
+  }
+}
+function playSampleNote(ctx, id, midi, t, dur, gain, dest){
+  const sm=KANTEON_SAMPLES[id]; if(!sm||!sm.buffer) return false;
+  try{
+    const src=ctx.createBufferSource(); src.buffer=sm.buffer;
+    src.playbackRate.value=Math.pow(2,(midi-sm.baseNote)/12);
+    const env=ctx.createGain(), lp=ctx.createBiquadFilter();
+    lp.type='lowpass'; lp.frequency.value=7400;
+    src.connect(lp); lp.connect(env); env.connect(dest||ctx.destination);
+    env.gain.setValueAtTime(0,t);
+    env.gain.linearRampToValueAtTime(gain,t+0.008);
+    env.gain.exponentialRampToValueAtTime(0.0008,t+dur);
+    src.start(t); src.stop(t+dur+0.06); return true;
+  }catch(e){ return false; }
+}
+function playSamplePhrase(ctx, t0, notes, id, opts){
+  const beat=opts.beat||0.32, gain=opts.gain||0.5; let ok=true;
+  notes.forEach((m,i)=>{ if(!playSampleNote(ctx,id,m,t0+i*beat,beat*1.9,gain)) ok=false; });
+  return ok ? notes.length*beat*1000+300 : 0;
+}
+
 function playInstrumentDemo(ctx, t0, instrumentId) {
-  const majorPent = [0, 2, 4, 7, 9, 12];
-  const rootMid = 36; // C2 area — adjust per instrument
-
-  const configs = {
-    bass: {
-      root: randPitch(28, 36),
-      timbre: 'bass',
-      phrase: () => {
-        const r = randPitch(28, 36);
-        return [r, r+5, r+7, r+5, r, r+5, r+7, r+12];
-      },
-      beat: 0.35, gain: 0.32,
-    },
-    leadGuitar: {
-      timbre: 'distGuitar',
-      phrase: () => buildPhrase(randPitch(52, 60), [0,2,4,5,7,9,11], 6),
-      beat: 0.32, gain: 0.18,
-    },
-    keys: {
-      special: 'pianoChordMelody',
-    },
-    synth: {
-      timbre: 'synth',
-      phrase: () => buildPhrase(randPitch(60, 67), [0,3,5,7,10], 6),
-      beat: 0.3, gain: 0.20,
-    },
-    drums: {
-      special: 'drums',
-    },
-  };
-
-  const c = configs[instrumentId];
-  if (!c) return 1500;
-
-  if (c.special === 'pianoChordMelody') {
-    // Left hand chord + right hand melody
-    const r = randPitch(48, 55);
-    const chord = [r, r+4, r+7]; // major triad
-    const melody = buildPhrase(r + 12, [0,2,4,7,9], 5);
+  if (KANTEON_USE_SAMPLER) ensureSamples(ctx);
+  if (instrumentId === 'drums') return playDrumLoop(ctx, t0, 0.4, 4, {});
+  if (instrumentId === 'keys') {
+    const r = randPitch(48, 55), chord = [r, r+4, r+7], melody = buildPhrase(r + 12, [0,2,4,7,9], 5);
+    if (KANTEON_USE_SAMPLER && KANTEON_SAMPLES.keys.buffer) {
+      let ok = true;
+      chord.forEach(m => { if (!playSampleNote(ctx, 'keys', m, t0, 1.8, 0.17)) ok = false; });
+      melody.forEach((m, i) => { if (!playSampleNote(ctx, 'keys', m, t0 + 0.2 + i * 0.32, 0.5, 0.26)) ok = false; });
+      if (ok) return 2200;
+    }
     chord.forEach(m => playTone(midiFreq(m), t0, 1.6, ctx, 0.14, 'piano'));
     melody.forEach((m, i) => playTone(midiFreq(m), t0 + 0.2 + i * 0.32, 0.3, ctx, 0.22, 'piano'));
     return 2200;
   }
-  if (c.special === 'drums') {
-    return playDrumLoop(ctx, t0, 0.4, 4, {});
+  const cfg = {
+    bass:       { samp: 'bass',   phrase: () => { const r = randPitch(28, 36); return [r, r+5, r+7, r+5, r, r+5, r+7, r+12]; }, beat: 0.35, sgain: 0.55, timbre: 'bass',       ogain: 0.32 },
+    leadGuitar: { samp: 'guitar', phrase: () => buildPhrase(randPitch(52, 60), [0,2,4,5,7,9,11], 6),                            beat: 0.32, sgain: 0.45, timbre: 'distGuitar', ogain: 0.18 },
+    synth:      { samp: 'synth',  phrase: () => buildPhrase(randPitch(60, 67), [0,3,5,7,10], 6),                                beat: 0.30, sgain: 0.40, timbre: 'synth',      ogain: 0.20 },
+  }[instrumentId];
+  if (!cfg) return 1500;
+  const notes = cfg.phrase();
+  if (KANTEON_USE_SAMPLER && KANTEON_SAMPLES[cfg.samp].buffer) {
+    const ms = playSamplePhrase(ctx, t0, notes, cfg.samp, { beat: cfg.beat, gain: cfg.sgain });
+    if (ms) return ms;
   }
-
-  const notes = c.phrase();
-  return playPhrase(ctx, t0, notes, c.timbre, { beat: c.beat, gain: c.gain });
+  return playPhrase(ctx, t0, notes, cfg.timbre, { beat: cfg.beat, gain: cfg.ogain });
 }
 
 // Drum loop generator — kick on 1+3, snare on 2+4, hihat 8ths
@@ -16055,6 +16125,21 @@ function klDevBarMarkup() {
   s += btn("klDevGo('shop')", '🏪 Shop', 'Music Shop');
   s += btn("klDevGo('hater')", '🏚 Neighbor', 'the music-hater neighbor');
 
+  // ── LESSON / ARCADE — jump straight into the other game modes ──
+  s += lbl('nav', '📖 LESSON · 🎧 ARCADE');
+  s += btn("klShowModeSelect()", '🎛 Mode Select', 'the 3-mode landing');
+  s += btn("klOpenTools('modes')", '📖 Lesson Home', 'Lesson Mode home grid');
+  s += btn("openMixtape()", '🎧 Arcade', 'Arcade / Mixtape');
+  s += btn("selectModule('ear_training')", '👂 Ear Lab', 'Lesson: Ear Lab');
+  s += btn("selectModule('active_listening')", '🔊 Active Listening', 'Lesson: Active Listening');
+  s += btn("selectModule('build_mode')", '🛠 Chord Lab', 'Lesson: Chord Lab');
+  s += btn("selectModule('transcription_lab')", '🎹 Jam Session', 'Lesson: Jam Session');
+  s += btn("selectModule('rhythm_comprehension')", '🥁 Groove Lab', 'Lesson: Groove Lab');
+  s += btn("selectModule('notation')", '📖 Notation', 'Lesson: Notation');
+  s += btn("selectModule('theory')", '🎼 Mode Lab', 'Lesson: Mode Lab');
+  s += btn("selectModule('instrument_anatomy')", '🎸 Instrument Anatomy', 'Lesson: Instrument Anatomy');
+  s += btn("selectModule('studio')", '🎚 Studio', 'Lesson: Studio');
+
   // ── STATIONS — enter the REAL module, PLUS a direct jump to every puzzle ──
   const pzBtns = m => m.indices.map(idx => {
     const pp = KL_PUZZLES[idx];
@@ -17854,7 +17939,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-128'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-130'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
