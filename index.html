@@ -12092,138 +12092,79 @@ const KL_HERO_SVG =
 // hint of space in the sky (the lore: uncultured hometown, Kanteon faint above).
 // This is also the reusable PLANET-DIRECTORY shell — every planet later gets a
 // landing scene with hotspots in this exact pattern.
-const KL_TOWN_SVG =
-  '<svg viewBox="0 0 480 640" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" ' +
-  'xmlns="http://www.w3.org/2000/svg" style="display:block;">' +
-    '<defs>' +
-      '<linearGradient id="ktSky" x1="0" y1="0" x2="0" y2="1">' +
-        '<stop offset="0%" stop-color="#2a2350"/><stop offset="42%" stop-color="#5b4a7a"/>' +
-        '<stop offset="70%" stop-color="#c98a6a"/><stop offset="100%" stop-color="#e0a878"/>' +
-      '</linearGradient>' +
-      '<linearGradient id="ktGround" x1="0" y1="0" x2="0" y2="1">' +
-        '<stop offset="0%" stop-color="#8a7d6a"/><stop offset="100%" stop-color="#6b5f4f"/>' +
-      '</linearGradient>' +
-      '<radialGradient id="ktKant" cx="50%" cy="50%" r="50%">' +
-        '<stop offset="0%" stop-color="#ffe9fb"/><stop offset="55%" stop-color="#b98cff"/>' +
-        '<stop offset="100%" stop-color="#5a3aa0" stop-opacity="0"/>' +
-      '</radialGradient>' +
-    '</defs>' +
-    // dusk strip-mall sky
-    '<rect x="0" y="0" width="480" height="640" fill="url(#ktSky)"/>' +
-    // faint Kanteon glow high in the sky — barely there, ominous
-    '<circle cx="320" cy="70" r="34" fill="url(#ktKant)" opacity="0.55"/>' +
-    '<circle cx="320" cy="70" r="7" fill="#e8d4ff" opacity="0.7"/>' +
-    // a few cold stars in the upper (space) band
-    '<circle cx="60" cy="48" r="1.6" fill="rgba(255,255,255,0.6)"/>' +
-    '<circle cx="140" cy="32" r="1.2" fill="rgba(255,255,255,0.5)"/>' +
-    '<circle cx="250" cy="40" r="1.4" fill="rgba(255,255,255,0.55)"/>' +
-    // distant flat horizon — power lines, the uncultured sprawl
-    '<rect x="0" y="372" width="480" height="6" fill="rgba(40,30,50,0.25)"/>' +
-    '<line x1="20" y1="320" x2="20" y2="372" stroke="rgba(30,20,40,0.4)" stroke-width="2"/>' +
-    '<line x1="20" y1="330" x2="380" y2="346" stroke="rgba(30,20,40,0.3)" stroke-width="1"/>' +
-    '<line x1="380" y1="318" x2="380" y2="372" stroke="rgba(30,20,40,0.4)" stroke-width="2"/>' +
-    // ground / cracked asphalt street
-    '<path d="M0 378 L480 378 L480 640 L0 640 Z" fill="url(#ktGround)"/>' +
-    '<path d="M40 640 L150 392 L250 392 L360 640 Z" fill="rgba(40,34,28,0.35)"/>' + // road
-    '<line x1="200" y1="410" x2="200" y2="470" stroke="rgba(230,220,180,0.5)" stroke-width="3" stroke-dasharray="10 12"/>' +
-    '<line x1="200" y1="490" x2="200" y2="600" stroke="rgba(230,220,180,0.5)" stroke-width="4" stroke-dasharray="14 16"/>' +
-    // === ECONOMY: BUILDINGS ON THE HORIZON — START ===
-    // Five clickable buildings standing on the horizon line (no bottom cards).
-    // 🧙 SWEET WADDY'S — crooked wizard hut, purple roof + star
-    '<g class="kt-bld" onclick="klEnterBuilding(\'master\')">' +
-      '<rect x="16" y="322" width="58" height="52" rx="3" fill="#4a3b66"/>' +
-      '<path d="M10 326 L45 286 L82 326 Z" fill="#6d4fa8"/>' +
-      '<text x="45" y="306" text-anchor="middle" font-size="14">⭐</text>' +
-      '<rect x="38" y="346" width="16" height="28" rx="2" fill="#2a2138"/>' +
-      '<rect x="22" y="332" width="12" height="12" rx="2" fill="#ffd97a" opacity="0.85"/>' +
-      '<text x="45" y="390" text-anchor="middle" class="kt-bld-name">WADDY\u2019S</text>' +
-    '</g>' +
-    // 🎸 THE GARAGE — flat box, big door
-    '<g class="kt-bld" onclick="klEnterBuilding(\'garage\')">' +
-      '<rect x="100" y="330" width="62" height="44" rx="3" fill="#5a5347"/>' +
-      '<rect x="106" y="340" width="50" height="34" rx="2" fill="#3a352d"/>' +
-      '<line x1="106" y1="349" x2="156" y2="349" stroke="#5a5347" stroke-width="2"/>' +
-      '<line x1="106" y1="358" x2="156" y2="358" stroke="#5a5347" stroke-width="2"/>' +
-      '<text x="131" y="390" text-anchor="middle" class="kt-bld-name">GARAGE</text>' +
-    '</g>' +
-    // 🎤 THE VENUE — marquee
-    '<g class="kt-bld" onclick="klEnterBuilding(\'venue\')">' +
-      '<rect x="178" y="318" width="64" height="56" rx="3" fill="#3b2f55"/>' +
-      '<rect x="172" y="310" width="76" height="16" rx="4" fill="#ffd97a"/>' +
-      '<text x="210" y="322" text-anchor="middle" font-family="Barlow Condensed" font-weight="900" font-size="11" fill="#3a2a10">VENUE</text>' +
-      '<rect x="200" y="348" width="20" height="26" rx="2" fill="#241c38"/>' +
-      '<circle cx="186" cy="334" r="3" fill="#ff7ad9" opacity="0.9"/>' +
-      '<circle cx="234" cy="334" r="3" fill="#7ad9ff" opacity="0.9"/>' +
-      '<text x="210" y="390" text-anchor="middle" class="kt-bld-name">THE VENUE</text>' +
-    '</g>' +
-    // 🏪 MUSIC SHOP — storefront with awning
-    '<g class="kt-bld" onclick="klEnterBuilding(\'shop\')">' +
-      '<rect x="258" y="326" width="60" height="48" rx="3" fill="#465a4e"/>' +
-      '<path d="M254 332 L322 332 L316 344 L260 344 Z" fill="#7ab98a"/>' +
-      '<rect x="266" y="350" width="18" height="16" rx="2" fill="#ffd97a" opacity="0.8"/>' +
-      '<rect x="292" y="350" width="14" height="24" rx="2" fill="#2c3a30"/>' +
-      '<text x="288" y="390" text-anchor="middle" class="kt-bld-name">SHOP</text>' +
-    '</g>' +
-    // 🏚 THE NEIGHBOR — small grumpy house
-    '<g class="kt-bld" onclick="klEnterBuilding(\'hater\')">' +
-      '<rect x="334" y="336" width="48" height="38" rx="3" fill="#5e4a44"/>' +
-      '<path d="M330 340 L358 314 L386 340 Z" fill="#7a5a50"/>' +
-      '<rect x="350" y="352" width="13" height="22" rx="2" fill="#33261f"/>' +
-      '<rect x="368" y="344" width="10" height="10" rx="1" fill="#caa84a" opacity="0.5"/>' +
-      '<text x="358" y="390" text-anchor="middle" class="kt-bld-name">NEIGHBOR</text>' +
-    '</g>' +
-    // 🏠 YOUR PLACE — the player's house, on the horizon to the right (next to the grumpy neighbor)
-    '<g class="kt-bld" onclick="klEnterBuilding(\'home\')">' +
-      '<rect x="406" y="334" width="58" height="40" rx="3" fill="#2f6f7a"/>' +              // wall (teal)
-      '<path d="M400 338 L435 306 L470 338 Z" fill="#48aebe"/>' +                           // roof
-      '<rect x="451" y="316" width="9" height="22" fill="#275c66"/>' +                      // chimney
-      '<rect x="414" y="346" width="13" height="12" rx="2" fill="#ffe08a" opacity="0.92"/>' + // window L (lit)
-      '<rect x="443" y="346" width="13" height="12" rx="2" fill="#ffe08a" opacity="0.92"/>' + // window R (lit)
-      '<rect x="428" y="356" width="14" height="18" rx="2" fill="#7a4a2a"/>' +              // door (wood)
-      '<circle cx="439" cy="366" r="1.6" fill="#ffd97a"/>' +                                // knob
-      '<text x="435" y="328" text-anchor="middle" font-size="12">🎵</text>' +              // note
-      '<text x="435" y="390" text-anchor="middle" class="kt-bld-name">YOUR PLACE</text>' +
-    '</g>' +
-    // THE PLAZA — foreground busking square: busker, lamppost, small crowd (lifted into visible band)
-    '<g class=\"kt-bld\" onclick=\"klBusk()\">' +
-      '<ellipse cx=\"76\" cy=\"426\" rx=\"76\" ry=\"12\" fill=\"rgba(255,200,120,0.13)\"/>' +
-      '<rect x=\"44\" y=\"362\" width=\"3.5\" height=\"52\" fill=\"#33302b\"/>' +
-      '<circle cx=\"45.7\" cy=\"360\" r=\"11\" fill=\"rgba(255,224,138,0.22)\"/>' +
-      '<circle cx=\"45.7\" cy=\"360\" r=\"5\" fill=\"#ffe08a\"/>' +
-      '<path d=\"M8 428 L24 404 L128 404 L144 428 Z\" fill=\"#5b5450\"/>' +
-      '<line x1=\"48\" y1=\"428\" x2=\"55\" y2=\"406\" stroke=\"rgba(0,0,0,0.16)\" stroke-width=\"1.4\"/>' +
-      '<line x1=\"88\" y1=\"428\" x2=\"90\" y2=\"406\" stroke=\"rgba(0,0,0,0.16)\" stroke-width=\"1.4\"/>' +
-      '<circle cx=\"60\" cy=\"418\" r=\"5\" fill=\"#6a6275\"/>' +
-      '<circle cx=\"49\" cy=\"421\" r=\"4\" fill=\"#5a5468\"/>' +
-      '<line x1=\"110\" y1=\"416\" x2=\"93\" y2=\"408\" stroke=\"#5a3a1a\" stroke-width=\"2.3\"/>' +
-      '<ellipse cx=\"114\" cy=\"421\" rx=\"7\" ry=\"5\" fill=\"#8a5a2a\"/>' +
-      '<circle cx=\"96\" cy=\"406\" r=\"5.5\" fill=\"#caa37a\"/>' +
-      '<rect x=\"90\" y=\"411\" width=\"12\" height=\"16\" rx=\"4\" fill=\"#3a4a7a\"/>' +
-      '<rect x=\"118\" y=\"421\" width=\"15\" height=\"6\" rx=\"2\" fill=\"#4a3a2a\"/>' +
-      '<circle cx=\"123\" cy=\"423\" r=\"1.6\" fill=\"#ffd97a\"/>' +
-      '<circle cx=\"129\" cy=\"424\" r=\"1.6\" fill=\"#ffd97a\"/>' +
-      '<text x=\"78\" y=\"400\" text-anchor=\"middle\" class=\"kt-bld-name\">THE PLAZA</text>' +
-    '</g>' +
-    // THE FACTORY — foreground day-job: tall smokestacks, grimy block (lifted into visible band)
-    '<g class=\"kt-bld\" onclick=\"klOpenWorkPlan()\">' +
-      '<rect x=\"360\" y=\"350\" width=\"13\" height=\"50\" fill=\"#544f47\"/>' +
-      '<rect x=\"360\" y=\"350\" width=\"13\" height=\"6\" fill=\"#2f2c27\"/>' +
-      '<rect x=\"382\" y=\"340\" width=\"13\" height=\"60\" fill=\"#544f47\"/>' +
-      '<rect x=\"382\" y=\"340\" width=\"13\" height=\"6\" fill=\"#2f2c27\"/>' +
-      '<circle cx=\"366\" cy=\"344\" r=\"8\" fill=\"rgba(122,118,112,0.42)\"/>' +
-      '<circle cx=\"378\" cy=\"333\" r=\"10\" fill=\"rgba(122,118,112,0.38)\"/>' +
-      '<circle cx=\"392\" cy=\"330\" r=\"9\" fill=\"rgba(112,108,102,0.38)\"/>' +
-      '<rect x=\"320\" y=\"398\" width=\"152\" height=\"6\" fill=\"#37332d\"/>' +
-      '<rect x=\"320\" y=\"404\" width=\"152\" height=\"24\" rx=\"2\" fill=\"#46423b\"/>' +
-      '<rect x=\"330\" y=\"410\" width=\"13\" height=\"10\" fill=\"#5f5d50\" opacity=\"0.5\"/>' +
-      '<rect x=\"350\" y=\"410\" width=\"13\" height=\"10\" fill=\"#5f5d50\" opacity=\"0.5\"/>' +
-      '<rect x=\"422\" y=\"410\" width=\"13\" height=\"10\" fill=\"#5f5d50\" opacity=\"0.5\"/>' +
-      '<rect x=\"442\" y=\"410\" width=\"13\" height=\"10\" fill=\"#5f5d50\" opacity=\"0.5\"/>' +
-      '<rect x=\"388\" y=\"412\" width=\"20\" height=\"16\" rx=\"1\" fill=\"#2c2924\"/>' +
-      '<text x=\"396\" y=\"394\" text-anchor=\"middle\" class=\"kt-bld-name\">THE FACTORY</text>' +
-    '</g>' +
-    // === ECONOMY: BUILDINGS ON THE HORIZON — END ===
-  '</svg>';
+const KL_TOWN_SVG = (function(){
+  const W=1000,H=520,VPX=500,VPY=210;
+  const lerp=(a,b,t)=>a+(b-a)*t;
+  const f=n=>(+n).toFixed(1);
+  const BLD=[
+    {side:-1,t:0.00,act:"klBusk()",name:"THE PLAZA",kind:"plaza"},
+    {side:-1,t:0.34,act:"klEnterBuilding('master')",name:"WADDY'S",kind:"waddy"},
+    {side:-1,t:0.62,act:"klEnterBuilding('garage')",name:"GARAGE",kind:"garage"},
+    {side:-1,t:0.85,act:"klEnterBuilding('hater')",name:"NEIGHBOR",kind:"neighbor"},
+    {side:1,t:0.00,act:"klEnterBuilding('home')",name:"YOUR PLACE",kind:"home"},
+    {side:1,t:0.34,act:"klOpenWorkPlan()",name:"THE FACTORY",kind:"factory"},
+    {side:1,t:0.62,act:"klEnterBuilding('venue')",name:"THE VENUE",kind:"venue"},
+    {side:1,t:0.85,act:"klEnterBuilding('shop')",name:"SHOP",kind:"shop"},
+  ];
+  const PAL={plaza:{body:"#4a4660",roof:"#6a6488",win:"#ffe08a",neon:"#7ad9ff"},
+    waddy:{body:"#4a3b66",roof:"#6d4fa8",win:"#ffd97a",neon:"#b98cff"},
+    garage:{body:"#4f4a40",roof:"#5a5347",win:"#9fd3ff",neon:"#9fd3ff"},
+    neighbor:{body:"#5a4640",roof:"#7a5a50",win:"#caa84a",neon:"#ff9a7a"},
+    home:{body:"#2f6f7a",roof:"#48aebe",win:"#ffe08a",neon:"#6ff0e0"},
+    factory:{body:"#46423b",roof:"#37332d",win:"#7d8a6a",neon:"#a6ff7a"},
+    venue:{body:"#3b2f55",roof:"#ffd97a",win:"#ff7ad9",neon:"#ff7ad9"},
+    shop:{body:"#3f5a4e",roof:"#7ab98a",win:"#ffe0a0",neon:"#7affb0"}};
+  const R=(x,y,w,h,fill,ex)=>`<rect x="${f(x)}" y="${f(y)}" width="${f(w)}" height="${f(h)}" ${ex||''} fill="${fill}"/>`;
+  function bld(b){
+    const s=lerp(1,0.30,b.t), w=lerp(200,64,b.t), h=lerp(350,70,b.t), baseY=lerp(470,262,b.t);
+    const inner=b.side<0?lerp(252,476,b.t):lerp(748,524,b.t);
+    const x=b.side<0?inner-w:inner, topY=baseY-h, cx=x+w/2, p=PAL[b.kind];
+    let g=`<ellipse cx="${f(cx)}" cy="${f(baseY+5)}" rx="${f(w*0.6)}" ry="${f(8*s+4)}" fill="rgba(0,0,0,0.20)"/>`;
+    if(b.kind==='plaza'){
+      g+=`<path d="M${f(cx-w*0.6)} ${f(baseY)} L${f(cx-w*0.42)} ${f(baseY-20*s)} L${f(cx+w*0.42)} ${f(baseY-20*s)} L${f(cx+w*0.6)} ${f(baseY)} Z" fill="#5b5450"/>`;
+      g+=R(cx-2*s,baseY-72*s,4*s,72*s,'#33302b');
+      g+=`<circle cx="${f(cx)}" cy="${f(baseY-74*s)}" r="${f(14*s)}" fill="rgba(255,224,138,0.25)"/><circle cx="${f(cx)}" cy="${f(baseY-74*s)}" r="${f(6*s)}" fill="#ffe08a"/>`;
+      g+=`<circle cx="${f(cx+16*s)}" cy="${f(baseY-34*s)}" r="${f(7*s)}" fill="#caa37a"/>`+R(cx+10*s,baseY-27*s,13*s,23*s,'#3a4a7a','rx="4"');
+      g+=`<ellipse cx="${f(cx+32*s)}" cy="${f(baseY-16*s)}" rx="${f(9*s)}" ry="${f(6*s)}" fill="#8a5a2a"/>`;
+      g+=`<circle cx="${f(cx-24*s)}" cy="${f(baseY-12*s)}" r="${f(6*s)}" fill="#6a6275"/>`;
+    } else if(b.kind==='factory'){
+      g+=R(cx-28*s,topY-44*s,15*s,44*s,'#544f47')+R(cx-2*s,topY-60*s,15*s,60*s,'#544f47');
+      g+=`<circle cx="${f(cx-20*s)}" cy="${f(topY-50*s)}" r="${f(11*s)}" fill="rgba(122,118,112,0.4)"/><circle cx="${f(cx+6*s)}" cy="${f(topY-68*s)}" r="${f(13*s)}" fill="rgba(122,118,112,0.34)"/>`;
+      g+=R(x,topY,w,h,p.body,'rx="2"')+R(x,topY,w,8*s,p.roof);
+      for(let r=0;r<2;r++)for(let c=0;c<3;c++)g+=R(x+w*0.14+c*w*0.27,topY+20*s+r*28*s,w*0.16,12*s,p.win,'opacity="0.5"');
+      g+=R(cx-12*s,baseY-38*s,24*s,38*s,'#2c2924','rx="1"');
+    } else {
+      g+=R(x,topY,w,h,p.body,'rx="2"');
+      if(b.kind==='waddy'||b.kind==='neighbor'||b.kind==='home'){
+        g+=`<path d="M${f(x-6*s)} ${f(topY+4)} L${f(cx)} ${f(topY-42*s)} L${f(x+w+6*s)} ${f(topY+4)} Z" fill="${p.roof}"/>`;
+        if(b.kind==='waddy')g+=`<text x="${f(cx)}" y="${f(topY-14*s)}" text-anchor="middle" font-size="${f(20*s)}">⭐</text>`;
+        if(b.kind==='home')g+=`<text x="${f(cx+w*0.3)}" y="${f(topY-8*s)}" text-anchor="middle" font-size="${f(15*s)}">🎵</text>`;
+      } else { g+=R(x,topY,w,9*s,p.roof); }
+      if(b.kind==='venue'){g+=R(x-6*s,topY-13*s,w+12*s,19*s,'#ffd97a','rx="4"');g+=`<text x="${f(cx)}" y="${f(topY+1)}" text-anchor="middle" font-family="Barlow Condensed" font-weight="900" font-size="${f(12*s)}" fill="#3a2a10">VENUE</text>`;}
+      g+=R(x+w*0.15,topY+h*0.26,w*0.26,h*0.17,p.win,'opacity="0.92" rx="2"');
+      g+=R(x+w*0.58,topY+h*0.26,w*0.26,h*0.17,p.win,'opacity="0.5" rx="2"');
+      g+=R(cx-w*0.12,baseY-h*0.3,w*0.24,h*0.3,'#241c2e','rx="2"');
+    }
+    if(b.kind!=='plaza')g+=R(x,topY-2*s,w,3*s,p.neon,'opacity="0.85"');
+    const fz=Math.max(11,Math.round(24*s)), ly=Math.min(baseY+Math.max(15,22*s),502);
+    g+=`<text x="${f(cx)}" y="${f(ly)}" text-anchor="middle" class="kt-bld-name" style="font-size:${fz}px">${b.name}</text>`;
+    return `<g class="kt-bld" onclick="${b.act}">${g}</g>`;
+  }
+  const sorted=BLD.slice().sort((a,b)=>b.t-a.t);
+  const street=`<path d="M150 ${H} L${VPX-10} ${VPY+6} L${VPX+10} ${VPY+6} L850 ${H} Z" fill="url(#ktGround)"/>`
+    +`<line x1="${VPX}" y1="${VPY+24}" x2="${VPX}" y2="${H}" stroke="rgba(235,225,185,0.4)" stroke-width="3" stroke-dasharray="14 20"/>`;
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="display:block;">`
+    +`<defs><linearGradient id="ktSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#221a3e"/><stop offset="48%" stop-color="#4a3a6a"/><stop offset="76%" stop-color="#b07a8a"/><stop offset="100%" stop-color="#cf9e6e"/></linearGradient>`
+    +`<linearGradient id="ktGround" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#7a6f5e"/><stop offset="100%" stop-color="#9a8c76"/></linearGradient>`
+    +`<radialGradient id="ktKant" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffe9fb"/><stop offset="55%" stop-color="#b98cff"/><stop offset="100%" stop-color="#5a3aa0" stop-opacity="0"/></radialGradient></defs>`
+    +R(0,0,W,H,'url(#ktSky)')
+    +`<circle cx="772" cy="118" r="46" fill="url(#ktKant)" opacity="0.6"/><circle cx="772" cy="118" r="10" fill="#e8d4ff" opacity="0.7"/>`
+    +`<circle cx="200" cy="80" r="2" fill="rgba(255,255,255,0.6)"/><circle cx="380" cy="52" r="1.5" fill="rgba(255,255,255,0.5)"/><circle cx="600" cy="66" r="1.8" fill="rgba(255,255,255,0.5)"/>`
+    +R(0,VPY+6,W,H-VPY-6,'#5b5042')
+    +street
+    +sorted.map(bld).join('')
+    +`</svg>`;
+})();
 
 // Building hotspots — positioned over the scene as clickable cards. Each: an
 // emoji sign + label, mapped to an entry handler.
@@ -17854,7 +17795,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-118'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-119'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
