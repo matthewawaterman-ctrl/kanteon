@@ -16216,8 +16216,20 @@ window.klDevUnlock = function(id) {
 window.klDevCompleteAll = function() {
   if (!klIsDevAvailable() || !klDevBecomeMatt()) return;
   if (!klState.modDone) klState.modDone = {};
+  if (!klState.solved) klState.solved = [];
   let total = 0, newly = 0;
-  KL_MODULE_DEFS.forEach(m => { if (!klState.modDone[m.id]) newly++; total += klMarkModuleDone(m.id, true); });
+  KL_MODULE_DEFS.forEach(m => {
+    if (!klState.modDone[m.id]) newly++;
+    total += klMarkModuleDone(m.id, true);
+    // Also grant the per-puzzle first-clear trickle for every puzzle in the module,
+    // so dev "Complete ALL" reflects the SAME total a player earns clearing them for
+    // real (module milestone + per-puzzle XP). Idempotent via the ledger — no double-dip.
+    (m.indices || []).forEach(idx => {
+      if (!klState.solved.includes(idx)) klState.solved.push(idx);
+      const p = KL_PUZZLES[idx];
+      total += klAwardXp('puz:' + (p && p.id != null ? p.id : idx), 10, true);
+    });
+  });
   klState.day += newly; // one day per module, same as clearing them for real
   klSaveProgress();
   klRenderTown();
@@ -17816,7 +17828,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-113'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-114'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
