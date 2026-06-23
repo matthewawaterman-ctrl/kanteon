@@ -3772,6 +3772,7 @@
   /* === ECONOMY CSS — START === */
   .kt-bld { cursor: pointer; }
   .kt-bld:hover { filter: brightness(1.25) drop-shadow(0 0 8px rgba(255,220,140,0.45)); }
+  .kt-sign { pointer-events: none; }  /* signs are permanently-lit decals, not buttons; clicks pass through to the building */
   .kt-bld-name {
     font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 11px;
     letter-spacing: 1px; fill: rgba(255,250,235,0.92);
@@ -12179,7 +12180,7 @@ const KL_TOWN_SVG = (function(){
     else if(type==='wood'){g+=R(x,y,sW,sH,'#5a3f28','rx="3" stroke="#34230f" stroke-width="2"');}
     else{g+=R(x,y,sW,sH,'#33343c','rx="3" stroke="#62636c" stroke-width="2"');}
     g+='<text x="'+f(cx)+'" y="'+f(y+sH*0.72)+'" text-anchor="middle" font-family="Barlow Condensed" font-weight="900" font-size="'+fz+'" fill="'+col+'">'+it.name+'</text>';
-    return '<g class="kt-bld" onclick="'+it.act+'">'+g+'</g>';
+    return '<g class="kt-sign" style="filter:drop-shadow(0 0 4px '+col+') drop-shadow(0 0 8px '+col+')">'+g+'</g>';
   }
   function bladeSign(it){
     const [type,col]=SIGN[it.kind], s=it.s;
@@ -12198,7 +12199,7 @@ const KL_TOWN_SVG = (function(){
     else if(type==='wood'){g+=R(x,y,bw,bh,'#5a3f28','rx="4" stroke="#34230f" stroke-width="2"');}
     else{g+=R(x,y,bw,bh,'#33343c','rx="3" stroke="#62636c" stroke-width="2"');}
     chars.forEach((ch,i)=>{g+='<text x="'+f(cx)+'" y="'+f(y+12+i*lineH)+'" text-anchor="middle" font-family="Barlow Condensed" font-weight="900" font-size="'+fz+'" fill="'+col+'">'+ch+'</text>';});
-    return '<g class="kt-bld" onclick="'+it.act+'">'+g+'</g>';
+    return '<g class="kt-sign" style="filter:drop-shadow(0 0 4px '+col+') drop-shadow(0 0 8px '+col+')">'+g+'</g>';
   }
   const signs = items.map(it=> HORIZ.has(it.kind)? horizSign(it) : bladeSign(it)).join('');
   // ---- background filler buildings: recede to horizon, fill dead ground (non-clickable) ----
@@ -17853,7 +17854,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-125'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-126'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
