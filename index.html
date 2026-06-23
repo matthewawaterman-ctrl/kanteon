@@ -12184,6 +12184,48 @@ const KL_TOWN_SVG =
       '<text x="435" y="328" text-anchor="middle" font-size="12">🎵</text>' +              // note
       '<text x="435" y="390" text-anchor="middle" class="kt-bld-name">YOUR PLACE</text>' +
     '</g>' +
+    // THE PLAZA — foreground busking square: warm, lively, a busker working a small crowd
+    '<g class=\"kt-bld\" onclick=\"klBusk()\">' +
+      '<ellipse cx=\"96\" cy=\"558\" rx=\"90\" ry=\"20\" fill=\"rgba(255,200,120,0.10)\"/>' +
+      '<path d=\"M22 562 L44 518 L150 518 L172 562 Z\" fill=\"#5b5450\"/>' +
+      '<path d=\"M150 518 L172 562 L150 562 Z\" fill=\"#4f4844\"/>' +
+      '<line x1=\"62\" y1=\"562\" x2=\"73\" y2=\"522\" stroke=\"rgba(0,0,0,0.16)\" stroke-width=\"1.5\"/>' +
+      '<line x1=\"100\" y1=\"562\" x2=\"104\" y2=\"522\" stroke=\"rgba(0,0,0,0.16)\" stroke-width=\"1.5\"/>' +
+      '<line x1=\"138\" y1=\"562\" x2=\"133\" y2=\"522\" stroke=\"rgba(0,0,0,0.16)\" stroke-width=\"1.5\"/>' +
+      '<rect x=\"40\" y=\"476\" width=\"4\" height=\"50\" rx=\"1\" fill=\"#33302b\"/>' +
+      '<circle cx=\"42\" cy=\"472\" r=\"12\" fill=\"rgba(255,224,138,0.22)\"/>' +
+      '<circle cx=\"42\" cy=\"472\" r=\"6\" fill=\"#ffe08a\"/>' +
+      '<circle cx=\"66\" cy=\"540\" r=\"6\" fill=\"#6a6275\"/>' +
+      '<circle cx=\"54\" cy=\"545\" r=\"5\" fill=\"#5a5468\"/>' +
+      '<line x1=\"118\" y1=\"514\" x2=\"101\" y2=\"505\" stroke=\"#5a3a1a\" stroke-width=\"2.5\"/>' +
+      '<ellipse cx=\"122\" cy=\"522\" rx=\"8\" ry=\"6\" fill=\"#8a5a2a\"/>' +
+      '<circle cx=\"110\" cy=\"500\" r=\"7\" fill=\"#caa37a\"/>' +
+      '<rect x=\"102\" y=\"507\" width=\"15\" height=\"24\" rx=\"5\" fill=\"#3a4a7a\"/>' +
+      '<rect x=\"126\" y=\"542\" width=\"24\" height=\"9\" rx=\"2\" fill=\"#4a3a2a\"/>' +
+      '<circle cx=\"132\" cy=\"545\" r=\"2\" fill=\"#ffd97a\"/>' +
+      '<circle cx=\"140\" cy=\"547\" r=\"2\" fill=\"#ffd97a\"/>' +
+      '<text x=\"96\" y=\"586\" text-anchor=\"middle\" class=\"kt-bld-name\">THE PLAZA</text>' +
+    '</g>' +
+    // THE FACTORY — foreground day-job: dreary grey block, smokestacks, grimy windows
+    '<g class=\"kt-bld\" onclick=\"klOpenWorkPlan()\">' +
+      '<rect x=\"348\" y=\"450\" width=\"13\" height=\"40\" fill=\"#544f47\"/>' +
+      '<rect x=\"348\" y=\"450\" width=\"13\" height=\"6\" fill=\"#2f2c27\"/>' +
+      '<rect x=\"372\" y=\"440\" width=\"13\" height=\"50\" fill=\"#544f47\"/>' +
+      '<rect x=\"372\" y=\"440\" width=\"13\" height=\"6\" fill=\"#2f2c27\"/>' +
+      '<circle cx=\"354\" cy=\"444\" r=\"8\" fill=\"rgba(122,118,112,0.42)\"/>' +
+      '<circle cx=\"366\" cy=\"433\" r=\"10\" fill=\"rgba(122,118,112,0.38)\"/>' +
+      '<circle cx=\"381\" cy=\"429\" r=\"9\" fill=\"rgba(112,108,102,0.38)\"/>' +
+      '<circle cx=\"393\" cy=\"435\" r=\"7\" fill=\"rgba(112,108,102,0.32)\"/>' +
+      '<rect x=\"330\" y=\"486\" width=\"122\" height=\"8\" fill=\"#37332d\"/>' +
+      '<rect x=\"330\" y=\"492\" width=\"122\" height=\"70\" rx=\"2\" fill=\"#46423b\"/>' +
+      '<rect x=\"340\" y=\"504\" width=\"14\" height=\"11\" fill=\"#5f5d50\" opacity=\"0.5\"/>' +
+      '<rect x=\"360\" y=\"504\" width=\"14\" height=\"11\" fill=\"#5f5d50\" opacity=\"0.5\"/>' +
+      '<rect x=\"410\" y=\"504\" width=\"14\" height=\"11\" fill=\"#5f5d50\" opacity=\"0.5\"/>' +
+      '<rect x=\"430\" y=\"504\" width=\"14\" height=\"11\" fill=\"#5f5d50\" opacity=\"0.5\"/>' +
+      '<rect x=\"380\" y=\"528\" width=\"24\" height=\"34\" rx=\"1\" fill=\"#2c2924\"/>' +
+      '<line x1=\"392\" y1=\"528\" x2=\"392\" y2=\"562\" stroke=\"#3a362f\" stroke-width=\"1.5\"/>' +
+      '<text x=\"391\" y=\"586\" text-anchor=\"middle\" class=\"kt-bld-name\">THE FACTORY</text>' +
+    '</g>' +
     // === ECONOMY: BUILDINGS ON THE HORIZON — END ===
   '</svg>';
 
@@ -12206,18 +12248,6 @@ function klRenderTown() {
       '<div class="kl-scene">' + KL_TOWN_SVG + '</div>' +
       klHudMarkup() +
       '<div class="kt-town-title-top">HOMETOWN</div>' +
-      '<div class="kt-hustle">' +
-        '<button class="kt-hustle-btn busk" onclick="klBusk()">' +
-          '<span class="kt-hustle-emoji">🎸</span>' +
-          '<span class="kt-hustle-lbl">Busk</span>' +
-          '<span class="kt-hustle-sub">' + (klBuskDayMult() >= 1.3 ? 'big crowd today!' : klBuskDayMult() < 0.8 ? 'slow day · 1 day' : 'tips · 1 day') + '</span>' +
-        '</button>' +
-        '<button class="kt-hustle-btn job" onclick="klOpenWorkPlan()">' +
-          '<span class="kt-hustle-emoji">💼</span>' +
-          '<span class="kt-hustle-lbl">Day Job</span>' +
-          '<span class="kt-hustle-sub">$' + KL_DAYJOB_PAY + '/day · pick days</span>' +
-        '</button>' +
-      '</div>' +
       '<button class="kl-back kt-town-back" onclick="klLeaveTown()" title="Leave">←</button>' +
       (klIsDevAvailable() ? klDevBar() : '') +
     '</div>';
@@ -14457,7 +14487,7 @@ function klHypeMult() { return 1 + klPromoHype(); }
 // multiplier to BUSKING and SHOW payouts, stacking on top of hype. No cap — a deep
 // bank of good songs is lasting income. Grows later: performing specific songs,
 // recording, royalties, decay, etc.
-const KL_SONG_WEIGHT = 0.05; // a perfect (100) song = +5% to busk & show pay; a 50 = +2.5%
+const KL_SONG_WEIGHT = 0.08; // a perfect (100) song = +8% to busk & show pay; a 50 = +4%
 // Quality roll: mostly skill (your level sets the range), a bit of pure luck.
 function klSongRollScore() {
   const lvl = klLevel();
@@ -17828,7 +17858,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-115'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-117'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
