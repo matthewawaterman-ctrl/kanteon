@@ -3968,12 +3968,12 @@
       linear-gradient(180deg, rgba(190,205,215,0.07) 0%, transparent 18%),
       linear-gradient(180deg, #2e3338 0%, #383e44 60%, #23272b 82%, #181b1e 100%);
   }
-  .kt-bg-venue { /* dark club: magenta/cyan beams + warm stage glow */
+  .kt-bg-venue { /* warm restaurant: candlelit dining room, amber glow, wood tones */
     background:
-      linear-gradient(115deg, transparent 38%, rgba(255,80,180,0.13) 46%, transparent 54%),
-      linear-gradient(65deg, transparent 40%, rgba(80,200,255,0.11) 48%, transparent 56%),
-      radial-gradient(ellipse at 50% 100%, rgba(255,180,80,0.14) 0%, transparent 46%),
-      linear-gradient(180deg, #0d0a14 0%, #171022 70%, #0a070f 100%);
+      radial-gradient(ellipse at 50% 14%, rgba(255,196,120,0.18) 0%, transparent 44%),
+      radial-gradient(circle at 22% 72%, rgba(255,150,70,0.10) 0%, transparent 40%),
+      radial-gradient(circle at 78% 72%, rgba(255,150,70,0.10) 0%, transparent 40%),
+      linear-gradient(180deg, #2a1c14 0%, #3a2820 45%, #2c1e16 80%, #1c130d 100%);
   }
   .kt-bg-shop { /* warm wood retail: tan walls, slat shelving hint */
     background:
@@ -12240,7 +12240,7 @@ const KL_TOWN_SVG = (function(){
     {side:1,t:0.30,act:"klEnterBuilding('hater')",name:"NEIGHBOR",kind:"neighbor"},
     {side:1,t:0.00,act:"klEnterBuilding('home')",name:"YOUR PLACE",kind:"home"},
     {side:-1,t:0.80,act:"klOpenWorkPlan()",name:"FACTORY",kind:"factory"},
-    {side:1,t:0.56,act:"klEnterBuilding('venue')",name:"VENUE",kind:"venue"},
+    {side:1,t:0.56,act:"klEnterBuilding('venue')",name:"RESTAURANT",kind:"venue"},
     {side:1,t:0.80,act:"klEnterBuilding('shop')",name:"SHOP",kind:"shop"},
   ];
   const PAL={plaza:{body:"#4a4660",roof:"#6a6488",win:"#ffe08a",neon:"#8ee8ff"},
@@ -12422,7 +12422,7 @@ function klRenderTown() {
   klExpirePromo();           // clear any promotion whose run has ended
   const wrap = document.getElementById('kl-wrap');
   const showHint = klState.bookedDay
-    ? (klState.day >= klState.bookedDay ? '🎤 SHOW NIGHT — get to the venue!' : '🎤 show booked · day ' + klState.bookedDay)
+    ? (klState.day >= klState.bookedDay ? '🍽️ SHOW NIGHT — get to the Restaurant!' : '🍽️ show booked · day ' + klState.bookedDay)
     : '';
   wrap.innerHTML =
     '<div class="kl-stage kt-stage">' +
@@ -12437,7 +12437,7 @@ function klRenderTown() {
 window.klRenderTown = klRenderTown; // inline onclick handlers need it global
 // Pedestrian flavor (placeholder lines) — clicked peds say one at random.
 const KL_PED_QUOTES = [
-  "Heard you're trying to play the Venue. Bold.",
+  "Heard you're trying to play the Restaurant. Bold.",
   "This whole town runs on rhythm, kid.",
   "Spare a credit? ...kidding. Go practice.",
   "The fountain's been glitching since the last patch.",
@@ -12647,14 +12647,14 @@ function klSetComplete(setId) {
     const awarded = klGrantWaddyMilestone();
     klSaveProgress();
     klNotify('🧙', 'Sweet Waddy\u2019s — done!', awarded
-      ? '"That\u2019s everything I\u2019ve got, kid." (+60 XP — you earn more now!) Head to the Garage.'
-      : '"Back already? Head to the Garage."');
+      ? '"That\u2019s everything I\u2019ve got, kid." (+60 XP — you earn more now!) The old chef at the Restaurant might hear you out now — and the Garage is open too.'
+      : '"Back already? The chef\u2019s ready to talk now. Hit the Garage next, too."');
   } else {
     const awarded = klGrantGarageMilestone();
     klSaveProgress();
     klNotify('🎸', 'The Garage — cleared!', awarded
-      ? '(+80 XP — you earn even more now!) Book a show at the Venue.'
-      : 'Book a show at the Venue.');
+      ? '(+80 XP — you earn even more now!) Book a show at the Restaurant.'
+      : 'Book a show at the Restaurant.');
   }
   klRenderTown();
 }
@@ -12856,37 +12856,51 @@ function klSceneArt(id) {
     );
   }
   if (id === 'venue') {
-    // dark club: lighting truss + par cans, colored spotlight beams, PA stacks,
-    // a stage with a drum riser, and a crowd silhouette down front.
+    // the last restaurant: warm dining room with a back kitchen pass (heat lamps,
+    // steaming plates), hanging pendant lamps, a chalkboard menu, framed sign, and
+    // two cloth-covered tables set with plates and candles.
     return svg(
       '<defs>' +
-        '<linearGradient id="beamA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(255,80,180,0.30)"/><stop offset="100%" stop-color="rgba(255,80,180,0)"/></linearGradient>' +
-        '<linearGradient id="beamB" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(80,200,255,0.28)"/><stop offset="100%" stop-color="rgba(80,200,255,0)"/></linearGradient>' +
-        '<linearGradient id="beamC" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(255,200,120,0.22)"/><stop offset="100%" stop-color="rgba(255,200,120,0)"/></linearGradient>' +
+        '<radialGradient id="rGlow" cx="50%" cy="0%" r="75%"><stop offset="0%" stop-color="rgba(255,200,120,0.42)"/><stop offset="100%" stop-color="rgba(255,200,120,0)"/></radialGradient>' +
+        '<radialGradient id="rLamp" cx="50%" cy="38%" r="60%"><stop offset="0%" stop-color="rgba(255,205,135,0.85)"/><stop offset="100%" stop-color="rgba(255,170,80,0)"/></radialGradient>' +
+        '<linearGradient id="rWall" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4a3526"/><stop offset="100%" stop-color="#33241a"/></linearGradient>' +
       '</defs>' +
-      '<rect x="0" y="0" width="1200" height="620" fill="#0a0710"/>' +
-      // lighting truss + par cans
-      '<rect x="60" y="40" width="1080" height="14" rx="4" fill="#1a1a22"/>' +
-      '<g fill="#2a2a36">' +
-        '<rect x="180" y="54" width="26" height="20" rx="3"/><rect x="420" y="54" width="26" height="20" rx="3"/><rect x="740" y="54" width="26" height="20" rx="3"/><rect x="980" y="54" width="26" height="20" rx="3"/>' +
-      '</g>' +
-      // beams
-      '<polygon points="300,60 360,60 240,520 120,520" fill="url(#beamA)"/>' +
-      '<polygon points="900,60 840,60 960,520 1080,520" fill="url(#beamB)"/>' +
-      '<polygon points="560,60 640,60 720,470 480,470" fill="url(#beamC)"/>' +
-      // PA speaker stacks flanking the stage
-      '<rect x="60" y="330" width="120" height="190" rx="6" fill="#0e0e14"/><circle cx="120" cy="380" r="30" fill="#1c1c26"/><circle cx="120" cy="460" r="22" fill="#1c1c26"/>' +
-      '<rect x="1020" y="330" width="120" height="190" rx="6" fill="#0e0e14"/><circle cx="1080" cy="380" r="30" fill="#1c1c26"/><circle cx="1080" cy="460" r="22" fill="#1c1c26"/>' +
-      // stage + drum riser
-      '<rect x="0" y="470" width="1200" height="150" fill="#0b0810"/>' +
-      '<rect x="430" y="430" width="340" height="44" rx="4" fill="#161020"/>' +
-      '<circle cx="600" cy="430" r="40" fill="#241a30"/><ellipse cx="540" cy="424" rx="28" ry="10" fill="#2e2238"/><ellipse cx="660" cy="424" rx="28" ry="10" fill="#2e2238"/>' +
-      // crowd silhouette down front
-      '<g fill="#050308">' +
-        '<circle cx="120" cy="600" r="34"/><circle cx="230" cy="608" r="38"/><circle cx="350" cy="598" r="34"/><circle cx="470" cy="610" r="40"/><circle cx="600" cy="600" r="36"/><circle cx="730" cy="610" r="40"/><circle cx="850" cy="598" r="34"/><circle cx="970" cy="608" r="38"/><circle cx="1080" cy="600" r="34"/>' +
-      '</g>' +
-      // a couple of raised hands
-      '<g stroke="#050308" stroke-width="10" stroke-linecap="round"><line x1="300" y1="600" x2="290" y2="555"/><line x1="660" y1="600" x2="672" y2="552"/></g>'
+      '<rect x="0" y="0" width="1200" height="430" fill="url(#rWall)"/>' +
+      '<rect x="0" y="430" width="1200" height="190" fill="#241712"/>' +        // wood floor
+      '<rect x="0" y="396" width="1200" height="38" fill="#3a2a1e"/>' +          // wainscot rail
+      '<ellipse cx="600" cy="36" rx="640" ry="220" fill="url(#rGlow)"/>' +       // warm ambient glow
+      // back kitchen pass (center) — dark kitchen, heat-lamp bar, warm spill
+      '<rect x="430" y="248" width="340" height="160" rx="6" fill="#1e1410"/>' +
+      '<rect x="430" y="248" width="340" height="16" fill="#52392a"/>' +
+      '<rect x="470" y="262" width="260" height="8" rx="4" fill="#ff9a3c" opacity="0.85"/>' +
+      '<ellipse cx="600" cy="300" rx="190" ry="74" fill="rgba(255,150,60,0.18)"/>' +
+      '<rect x="430" y="386" width="340" height="24" fill="#6b4a32"/>' +         // pass ledge
+      // two steaming plates on the pass
+      '<ellipse cx="540" cy="392" rx="34" ry="10" fill="#cfc3b0"/><ellipse cx="540" cy="390" rx="22" ry="6" fill="#e7ddca"/>' +
+      '<ellipse cx="660" cy="392" rx="34" ry="10" fill="#cfc3b0"/><ellipse cx="660" cy="390" rx="22" ry="6" fill="#e7ddca"/>' +
+      '<path d="M540 384 q-9 -18 3 -34 q-9 -16 3 -32" stroke="rgba(255,255,255,0.26)" stroke-width="4" fill="none" stroke-linecap="round"/>' +
+      '<path d="M660 384 q9 -18 -3 -34 q9 -16 -3 -32" stroke="rgba(255,255,255,0.22)" stroke-width="4" fill="none" stroke-linecap="round"/>' +
+      // hanging pendant lamps (two), warm cones
+      '<line x1="300" y1="0" x2="300" y2="66" stroke="#2a1b12" stroke-width="4"/><path d="M270 66 h60 l-15 34 h-30 z" fill="#caa24a"/><ellipse cx="300" cy="150" rx="92" ry="124" fill="url(#rLamp)" opacity="0.5"/>' +
+      '<line x1="900" y1="0" x2="900" y2="66" stroke="#2a1b12" stroke-width="4"/><path d="M870 66 h60 l-15 34 h-30 z" fill="#caa24a"/><ellipse cx="900" cy="150" rx="92" ry="124" fill="url(#rLamp)" opacity="0.5"/>' +
+      // chalkboard menu (left wall)
+      '<rect x="70" y="92" width="150" height="190" rx="6" fill="#15140f" stroke="#5a4632" stroke-width="8"/>' +
+      '<text x="145" y="126" font-family="Barlow Condensed" font-size="22" font-weight="900" fill="#e7c873" text-anchor="middle">MENU</text>' +
+      '<g stroke="rgba(231,221,202,0.5)" stroke-width="3" stroke-linecap="round"><line x1="92" y1="152" x2="198" y2="152"/><line x1="92" y1="180" x2="184" y2="180"/><line x1="92" y1="208" x2="198" y2="208"/><line x1="92" y1="236" x2="168" y2="236"/></g>' +
+      // framed sign (right wall)
+      '<rect x="980" y="102" width="150" height="108" fill="#3a2a1e" stroke="#6b4a32" stroke-width="6"/><rect x="998" y="120" width="114" height="72" fill="#5a4330"/>' +
+      '<text x="1055" y="150" font-family="Barlow Condensed" font-size="15" font-weight="800" fill="#e7c873" text-anchor="middle">THE LAST</text>' +
+      '<text x="1055" y="174" font-family="Barlow Condensed" font-size="15" font-weight="800" fill="#e7c873" text-anchor="middle">KITCHEN</text>' +
+      // dining table (front-left): cloth, plate, candle, two chairs
+      '<rect x="150" y="470" width="240" height="118" rx="8" fill="#b9ad97"/><rect x="150" y="470" width="240" height="18" fill="#cfc4ad"/>' +
+      '<ellipse cx="270" cy="500" rx="44" ry="14" fill="#efe7d6"/><ellipse cx="270" cy="500" rx="28" ry="8" fill="#ffffff"/>' +
+      '<rect x="318" y="476" width="6" height="36" fill="#e8dcc0"/><ellipse cx="321" cy="470" rx="5" ry="10" fill="#ffcf5e"/><ellipse cx="321" cy="473" rx="2.5" ry="6" fill="#ff7a3c"/>' +
+      '<rect x="172" y="560" width="40" height="52" rx="4" fill="#3a2a1e"/><rect x="328" y="560" width="40" height="52" rx="4" fill="#3a2a1e"/>' +
+      // dining table (front-right)
+      '<rect x="810" y="470" width="240" height="118" rx="8" fill="#b9ad97"/><rect x="810" y="470" width="240" height="18" fill="#cfc4ad"/>' +
+      '<ellipse cx="930" cy="500" rx="44" ry="14" fill="#efe7d6"/><ellipse cx="930" cy="500" rx="28" ry="8" fill="#ffffff"/>' +
+      '<rect x="978" y="476" width="6" height="36" fill="#e8dcc0"/><ellipse cx="981" cy="470" rx="5" ry="10" fill="#ffcf5e"/><ellipse cx="981" cy="473" rx="2.5" ry="6" fill="#ff7a3c"/>' +
+      '<rect x="832" y="560" width="40" height="52" rx="4" fill="#3a2a1e"/><rect x="988" y="560" width="40" height="52" rx="4" fill="#3a2a1e"/>'
     );
   }
   if (id === 'hater') {
@@ -12954,6 +12968,14 @@ const KL_HATER_LINES = [
   '"I\u2019m counting the days till you and that racket LEAVE."',
   '"Don\u2019t you have homework?"',
 ];
+const KL_CHEF_LINES = [
+  '"Food\u2019s just music you can taste, kid. Both went out of style."',
+  '"They optimized flavor out of everything. I kept the old recipes anyway."',
+  '"A Velion shake hits your macros. It doesn\u2019t hit your soul."',
+  '"Last kitchen on the planet. No pressure."',
+  '"I cooked for rooms that forgot how to sit and eat. You\u2019ll play for rooms that forgot how to listen. Same job."',
+  '"Prove me wrong about music. I\u2019d like to be wrong, for once."',
+];
 let klTalkIdx = 0;
 
 // Music-shop owner — simple standing artwork (idle bob + occasional blink). The
@@ -12989,7 +13011,7 @@ const KL_SHOPKEEP_SVG =
 let klShownLevel = null; // last level the HUD painted — used to flash the meter on level-up
 function klHudMarkup() {
   const showHint = klState.bookedDay
-    ? (klState.day >= klState.bookedDay ? '🎤 SHOW NIGHT — get to the venue!' : '🎤 show booked · day ' + klState.bookedDay)
+    ? (klState.day >= klState.bookedDay ? '🍽️ SHOW NIGHT — get to the Restaurant!' : '🍽️ show booked · day ' + klState.bookedDay)
     : '';
   const rentOwed = klRentOwed();
   const daysLeft = klRentDaysLeft();
@@ -13253,20 +13275,19 @@ function klRenderInterior(id) {
       '<p class="kt-int-line">Your turf. Cables everywhere. Jam Session opens once you\u2019ve nailed Drums, Bass &amp; Melody at Waddy\u2019s — the rest unlocks as you level up each skill.</p>' +
       '<div class="kl-station-grid">' + stations + '</div>';
   } else if (id === 'venue') {
-    title = 'THE VENUE'; art = '🎤';
-    if (!(klState.waddyDone && klState.garageDone)) {
-      // LOCKED: the venue won't book a no-name. Must clear both sets first.
-      const need = [];
-      if (!klState.waddyDone) need.push('Sweet Waddy\u2019s');
-      if (!klState.garageDone) need.push('the Garage');
+    title = 'THE RESTAURANT'; art = '🍽️';
+    if (!klState.waddyDone) {
+      // LOCKED: the old chef won't book an unproven musician — clear Waddy's first.
       body =
-        '<p class="kt-int-line">The booker doesn\u2019t even look up. "Come back when you can actually play. Clear ' + need.join(' AND ') + ' first."</p>' +
-        '<p class="kt-int-note">🔒 The Venue is locked.</p>';
+        '<p class="kt-int-line">The old chef doesn\u2019t look up from his cutting board. \u201cMusic? Nobody\u2019s played in this town since before you were born \u2014 half of \u2019em think it\u2019s a myth.\u201d He slides a bowl of something that actually <i>steams</i> across the pass. \u201cI run the last kitchen left on this rock. Everyone else lives on Velion paste through a straw. So I know a thing or two about keeping a dead art breathing \u2014 and I know a poser when one walks in. Prove you can really play. Clear every station at Sweet Waddy\u2019s, and maybe I\u2019ll let you make noise in my dining room.\u201d</p>' +
+        '<button class="kt-int-sub" onclick="klTalkTo(\'venue\')">💬 Talk to the chef</button>' +
+        '<p class="kt-npc-line" id="kt-npc-line"></p>' +
+        '<p class="kt-int-note">🔒 The chef won\u2019t book a no-name.</p>';
     } else if (klState.bookedDay && klState.day > klState.bookedDay) {
       // MISSED SHOW: you blew past the date. Promoter's furious — pay a fine to book again.
       const fine = 50;
       body =
-        '<p class="kt-int-line">The booker is fuming. "You no-showed Day ' + klState.bookedDay + '! You think dates grow on trees? Pay the $' + fine + ' kill fee or get out."</p>' +
+        '<p class="kt-int-line">The chef\u2019s jaw tightens. \u201cYou no-showed Day ' + klState.bookedDay + '. I held a table, plated for a full house, and watched it all go cold. Pay the $' + fine + ' or get out of my kitchen.\u201d</p>' +
         '<button class="kl-listen kt-int-btn" ' + (klState.money < fine ? 'disabled' : '') + ' onclick="klPayFine(' + fine + ')">💸 Pay $' + fine + ' fine</button>' +
         (klState.money < fine ? '<p class="kt-int-note">Not enough cash — go earn it.</p>' : '');
     } else if (!klState.bookedDay) {
@@ -13275,7 +13296,9 @@ function klRenderInterior(id) {
       const enableTo = today + 56;                        // two full seasons ahead
       const seasons = Math.ceil((enableTo - fsStart + 1) / 28);
       body =
-        '<p class="kt-int-line">"Twenty-five holds a date. Book a Friday or Saturday (🔥) if you want a crowd — you can hold a night up to two seasons out."</p>' +
+        '<p class="kt-int-line">The chef wipes his hands and studies you a moment. \u201cWaddy says you put in the reps. Alright \u2014 one night. Folks come for the food; maybe this time they stay for the music. Twenty-five holds a date \u2014 book a Friday or Saturday (🔥) if you want a full room. You can hold a night up to two seasons out.\u201d</p>' +
+        '<button class="kt-int-sub" onclick="klTalkTo(\'venue\')">💬 Talk to the chef</button>' +
+        '<p class="kt-npc-line" id="kt-npc-line"></p>' +
         '<p class="kt-int-note">Booking costs $25 · pick a night:</p>' +
         klCalendarGrid({ fromDay: fsStart, seasons: seasons, enableFrom: today + 1, enableTo: enableTo, selStart: 0, selEnd: 0, today: today, hotWeekends: true, onPick: 'klBookShowDay', theme: 'book' });
     } else if (klState.day < klState.bookedDay) {
@@ -13283,7 +13306,7 @@ function klRenderInterior(id) {
       const dn = klDayName(klState.bookedDay);
       const hot = klShowDayMult(klState.bookedDay) >= 1.3;
       body =
-        '<p class="kt-int-line">Booked for <b>Day ' + klState.bookedDay + ' (' + dn + ')</b>' + (hot ? ' — great night for it!' : '') + '. Promote it at the Shop to pump the hype.</p>' +
+        '<p class="kt-int-line">Booked for <b>Day ' + klState.bookedDay + ' (' + dn + ')</b>' + (hot ? ' — great night for it!' : '') + '. The chef\u2019s already planning the menu. Promote it at the Shop to pump the hype.</p>' +
         '<div style="width:min(300px,80%);margin:6px auto 12px;">' +
           '<div style="display:flex;justify-content:space-between;font-weight:800;font-size:14px;margin-bottom:4px;">' +
             '<span>🔥 HYPE</span><span>×' + klHypeMult().toFixed(2) + '</span></div>' +
@@ -13295,7 +13318,7 @@ function klRenderInterior(id) {
     } else {
       const dn = klDayName(klState.bookedDay);
       body =
-        '<p class="kt-int-line">It\u2019s show night (' + dn + '). Hype <b>×' + klHypeMult().toFixed(2) + '</b>. Two mistakes and you\u2019re booed off.</p>' +
+        '<p class="kt-int-line">It\u2019s show night (' + dn + '). The dining room\u2019s packed and the chef\u2019s watching from the pass. Hype <b>×' + klHypeMult().toFixed(2) + '</b>. Two mistakes and you\u2019re booed off.</p>' +
         '<button class="kl-listen kt-int-btn" onclick="klStartShow()">🎤 START THE SHOW</button>';
     }
   } else if (id === 'shop') {
@@ -13443,7 +13466,7 @@ function klRenderInterior(id) {
 
 window.klTalkTo = function(who) {
   klTalkIdx++;
-  const lines = who === 'waddy' ? KL_WADDY_LINES : KL_HATER_LINES;
+  const lines = who === 'waddy' ? KL_WADDY_LINES : who === 'venue' ? KL_CHEF_LINES : KL_HATER_LINES;
   const el = document.getElementById('kt-npc-line');
   if (el) { el.textContent = lines[klTalkIdx % lines.length]; }
   else klToast(lines[klTalkIdx % lines.length]);
@@ -15244,8 +15267,8 @@ const KL_STORY = {
   },
   venue_soon: {
     art: '🎤',
-    title: 'The Venue',
-    line: '[SOON: Play shows here. Earn money. Buy the van. That\u2019s how you get off this rock.]',
+    title: 'The Restaurant',
+    line: '[SOON: Play shows here for the old chef. Earn money. Buy the van. That\u2019s how you get off this rock.]',
   },
   shop_soon: {
     art: '🏪',
@@ -16263,7 +16286,7 @@ function klDevBarMarkup() {
   s += btn("klDevGo('town')", '🏠 Town', 'town map');
   s += btn("klDevGo('master')", '🧙 Waddy\u2019s', 'Sweet Waddy\u2019s — station select');
   s += btn("klDevGo('garage')", '🎸 Garage', 'The Garage — station select');
-  s += btn("klDevGo('venue')", '🎤 Venue', 'The Venue');
+  s += btn("klDevGo('venue')", '🍽️ Restaurant', 'The Restaurant');
   s += btn("klDevGo('shop')", '🏪 Shop', 'Music Shop');
   s += btn("klDevGo('hater')", '🏚 Neighbor', 'the music-hater neighbor');
 
@@ -16338,7 +16361,7 @@ function klDevBarMarkup() {
   // module's COMPLETION (✓). Completing upstream auto-unlocks downstream and feeds
   // the milestones; Complete ALL finishes everything (opens the Venue); Reset wipes.
   s += lbl('tools', '✅ COMPLETE');
-  s += btn("klDevCompleteAll()", '✅ Complete ALL', 'mark every module done — opens the Venue', 'done');
+  s += btn("klDevCompleteAll()", '✅ Complete ALL', 'mark every module done — opens the Restaurant', 'done');
   s += btn("klDevLockAll()", '🔒 Reset', 'clear all completions (fresh ladder)', 'danger');
   const unlockBtn = m => {
     const done = klModuleIsDone(m.id);
@@ -16350,7 +16373,7 @@ function klDevBarMarkup() {
   s += sub('Milestones (auto):');
   s += '<span class="kl-dev-btn" style="cursor:default;min-width:200px;color:#9ca3af;">Waddy ' +
     (klState.waddyDone ? '✓' : '✗') + ' · Garage ' + (klState.garageDone ? '✓' : '✗') +
-    ' · Venue ' + ((klState.waddyDone && klState.garageDone) ? 'OPEN' : 'locked') + '</span>';
+    ' · Restaurant ' + (klState.waddyDone ? 'OPEN' : 'locked') + '</span>';
 
   return '<div class="kl-devbar' + (klState.devOpen ? ' open' : '') + '" id="kl-devbar">' +
     '<button class="kl-dev-toggle" onclick="klToggleDevBar()" title="DEV menu (hotkey: ` )">' +
@@ -18081,7 +18104,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-138'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-139'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
@@ -18783,9 +18806,9 @@ function klWin() {
           klState.activeModule = null;
           klSaveProgress();
           if (buildingDone && building === 'waddy') {
-            klNotify('🎸', 'SWEET WADDY\u2019S — DONE!', 'You\u2019ve cleared every station here' + (xpGained ? ' (+' + xpGained + ' XP)' : '') + '. The Garage is open now — that\u2019s where the real band comes together.');
+            klNotify('🎸', 'SWEET WADDY\u2019S — DONE!', 'You\u2019ve cleared every station here' + (xpGained ? ' (+' + xpGained + ' XP)' : '') + '. The old chef will book you now — head to the Restaurant. (The Garage is open too.)');
           } else if (buildingDone && building === 'garage') {
-            klNotify('🤘', 'THE GARAGE — DONE!', 'Every station cleared' + (xpGained ? ' (+' + xpGained + ' XP)' : '') + '. You\u2019re ready to book a real show at the Venue.');
+            klNotify('🤘', 'THE GARAGE — DONE!', 'Every station cleared' + (xpGained ? ' (+' + xpGained + ' XP)' : '') + '. You\u2019re ready to book a real show at the Restaurant.');
           } else {
             klNotify('✅', mod.name + ' cleared!', (xpGained ? '+' + xpGained + ' XP. ' : '') + 'A day of practice passes — it\u2019s now Day ' + klState.day + ' (' + klDayName() + ' · ' + klSeasonLabel() + ').');
           }
