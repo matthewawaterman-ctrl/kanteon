@@ -12107,15 +12107,15 @@ const KL_TOWN_SVG = (function(){
     {side:1,t:0.80,act:"klEnterBuilding('shop')",name:"SHOP",kind:"shop"},
   ];
   const PAL={plaza:{body:"#4a4660",roof:"#6a6488",win:"#ffe08a",neon:"#8ee8ff"},
-    waddy:{body:"#5e4d8a",roof:"#8a6cd0",win:"#ffe8a2",neon:"#caa6ff"},
+    waddy:{body:"#6a589c",roof:"#8a6cd0",win:"#ffe8a2",neon:"#caa6ff"},
     garage:{body:"#4f4a40",roof:"#5a5347",win:"#9fd3ff",neon:"#9fd3ff"},
     neighbor:{body:"#5a4640",roof:"#7a5a50",win:"#caa84a",neon:"#ff9a7a"},
     home:{body:"#2f6f7a",roof:"#48aebe",win:"#ffe08a",neon:"#6ff0e0"},
     factory:{body:"#46423b",roof:"#37332d",win:"#7d8a6a",neon:"#a6ff7a"},
     venue:{body:"#3b2f55",roof:"#ffd97a",win:"#ff7ad9",neon:"#ff7ad9"},
     shop:{body:"#3f5a4e",roof:"#7ab98a",win:"#ffe0a0",neon:"#7affb0"}};
-  const SIGN={plaza:["neon","#7ad9ff"],waddy:["wood","#d8b888"],garage:["metal","#9fd3ff"],
-    neighbor:["wood","#c89a78"],home:["neon","#6ff0e0"],factory:["metal","#a6ff7a"],
+  const SIGN={plaza:["neon","#8ee8ff"],waddy:["wood","#ffe2b4"],garage:["metal","#9fd3ff"],
+    neighbor:["wood","#ecc59a"],home:["neon","#6ff0e0"],factory:["metal","#a6ff7a"],
     venue:["neon","#ff7ad9"],shop:["neon","#7affb0"]};
   const R=(x,y,w,h,fill,ex)=>`<rect x="${f(x)}" y="${f(y)}" width="${f(w)}" height="${f(h)}" ${ex||''} fill="${fill}"/>`;
   // bases pushed LOW (near 506, far 300) and tall, to fill the foreground & cut dead ground
@@ -12127,9 +12127,9 @@ const KL_TOWN_SVG = (function(){
   });
   [-1,1].forEach(sd=>{items.filter(i=>i.side===sd).sort((a,b)=>a.t-b.t).forEach((it,r)=>{it.rank=r;});});
   function art(b){
+    const sgn = HORIZ.has(b.kind)? horizSign(b) : bladeSign(b);
     const {s,w,h,baseY,x,topY,cx}=b,p=PAL[b.kind];
     let g=`<ellipse cx="${f(cx)}" cy="${f(baseY+5)}" rx="${f(w*0.6)}" ry="${f(8*s+4)}" fill="rgba(0,0,0,0.22)"/>`;
-    if(b.kind==='waddy') g+=`<ellipse cx="${f(cx)}" cy="${f(topY+h*0.4)}" rx="${f(w*0.72)}" ry="${f(h*0.56)}" fill="rgba(150,120,225,0.20)"/>`;
     if(b.kind==='plaza'){
       const fx=cx, fb=baseY;
       g+=`<ellipse cx="${f(fx)}" cy="${f(fb-34)}" rx="74" ry="64" fill="url(#ktFount)" opacity="0.78"/>`;
@@ -12146,7 +12146,7 @@ const KL_TOWN_SVG = (function(){
       g+=`<line x1="${f(fx-44)}" y1="${f(fb-6)}" x2="${f(fx-44)}" y2="${f(fb-24)}" stroke="rgba(150,242,255,0.5)" stroke-width="2"/>`;
       g+=`<line x1="${f(fx+44)}" y1="${f(fb-6)}" x2="${f(fx+44)}" y2="${f(fb-24)}" stroke="rgba(150,242,255,0.5)" stroke-width="2"/>`;
       g+=`<circle cx="${f(fx-52)}" cy="${f(fb-30)}" r="6" fill="#caa37a"/>`+R(fx-58,fb-25,12,18,'#3a4a7a','rx="4"')+`<ellipse cx="${f(fx-40)}" cy="${f(fb-18)}" rx="7" ry="5" fill="#8a5a2a"/>`;
-      return `<g class="kt-bld" onclick="${b.act}">${g}</g>`;
+      return `<g class="kt-bld" onclick="${b.act}">${g}${sgn}</g>`;
     }
     if(b.kind==='factory'){
       g+=R(cx-28*s,topY-44*s,15*s,44*s,'#544f47')+R(cx-2*s,topY-60*s,15*s,60*s,'#544f47')+`<circle cx="${f(cx-20*s)}" cy="${f(topY-50*s)}" r="${f(11*s)}" fill="rgba(122,118,112,0.4)"/><circle cx="${f(cx+6*s)}" cy="${f(topY-68*s)}" r="${f(13*s)}" fill="rgba(122,118,112,0.34)"/>`;
@@ -12161,7 +12161,7 @@ const KL_TOWN_SVG = (function(){
     g+=R(x+w*0.15,topY+h*0.64,w*0.26,h*0.14,p.win,'opacity="0.92" rx="2"')+R(x+w*0.58,topY+h*0.64,w*0.26,h*0.14,p.win,'opacity="0.5" rx="2"');
     g+=R(cx-w*0.12,baseY-h*0.26,w*0.24,h*0.26,'#241c2e','rx="2"');
     if(['waddy','neighbor','home'].includes(b.kind)) g+=R(x,topY-2*s,w,3*s,p.neon,'opacity="0.85"'); else g+=R(x-5*s,topY-11*s,w+10*s,2.5*s,p.neon,'opacity="0.9"');
-    return `<g class="kt-bld" onclick="${b.act}">${g}</g>`;
+    return `<g class="kt-bld" onclick="${b.act}">${g}${sgn}</g>`;
   }
   // ---- SIGNS: horizontal wall plaques for the 3 big near buildings; vertical blades for the rest ----
   const HORIZ=new Set(['plaza','waddy','home']);
@@ -12178,7 +12178,7 @@ const KL_TOWN_SVG = (function(){
     cx=x+sW/2;
     let g='';
     if(type==='neon'){g+=R(x-2,y-2,sW+4,sH+4,col,'rx="6" opacity="0.16"');g+=R(x,y,sW,sH,'#171327','rx="4" stroke="'+col+'" stroke-width="2"');}
-    else if(type==='wood'){g+=R(x,y,sW,sH,'#5a3f28','rx="3" stroke="#34230f" stroke-width="2"');}
+    else if(type==='wood'){g+=R(x,y,sW,sH,'#7a5a38','rx="3" stroke="#4a3418" stroke-width="2"');}
     else{g+=R(x,y,sW,sH,'#33343c','rx="3" stroke="#62636c" stroke-width="2"');}
     g+='<text x="'+f(cx)+'" y="'+f(y+sH*0.72)+'" text-anchor="middle" font-family="Barlow Condensed" font-weight="900" font-size="'+fz+'" fill="'+col+'">'+it.name+'</text>';
     return '<g class="kt-sign" style="filter:drop-shadow(0 0 4px '+col+') drop-shadow(0 0 8px '+col+')">'+g+'</g>';
@@ -12197,12 +12197,11 @@ const KL_TOWN_SVG = (function(){
     // mounting arm to the building
     g+=R(it.side<0?edge-1:edge-2,y+2,2,Math.min(bh*0.45,36),col,'opacity="0.45"');
     if(type==='neon'){g+=R(x-2,y-2,bw+4,bh+4,col,'rx="6" opacity="0.16"');g+=R(x,y,bw,bh,'#171327','rx="5" stroke="'+col+'" stroke-width="2"');}
-    else if(type==='wood'){g+=R(x,y,bw,bh,'#5a3f28','rx="4" stroke="#34230f" stroke-width="2"');}
+    else if(type==='wood'){g+=R(x,y,bw,bh,'#7a5a38','rx="4" stroke="#4a3418" stroke-width="2"');}
     else{g+=R(x,y,bw,bh,'#33343c','rx="3" stroke="#62636c" stroke-width="2"');}
     chars.forEach((ch,i)=>{g+='<text x="'+f(cx)+'" y="'+f(y+12+i*lineH)+'" text-anchor="middle" font-family="Barlow Condensed" font-weight="900" font-size="'+fz+'" fill="'+col+'">'+ch+'</text>';});
     return '<g class="kt-sign" style="filter:drop-shadow(0 0 4px '+col+') drop-shadow(0 0 8px '+col+')">'+g+'</g>';
   }
-  const signs = items.map(it=> HORIZ.has(it.kind)? horizSign(it) : bladeSign(it)).join('');
   // ---- background filler buildings: recede to horizon, fill dead ground (non-clickable) ----
   let filler='';
   for(const sd of [-1,1]){
@@ -12222,7 +12221,7 @@ const KL_TOWN_SVG = (function(){
     +R(0,0,W,H,'url(#ktSky)')+planet
     +`<circle cx="180" cy="70" r="2" fill="rgba(255,255,255,0.6)"/><circle cx="340" cy="48" r="1.5" fill="rgba(255,255,255,0.5)"/><circle cx="660" cy="60" r="1.8" fill="rgba(255,255,255,0.5)"/><circle cx="820" cy="90" r="1.5" fill="rgba(255,255,255,0.5)"/>`
     +R(0,VPY+4,W,H-VPY-4,'#5b5042')+filler+street
-    +sortedArt.map(art).join('')+signs
+    +sortedArt.map(art).join('')
     +`</svg>`;
 })();
 
@@ -17855,7 +17854,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-127'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-128'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
