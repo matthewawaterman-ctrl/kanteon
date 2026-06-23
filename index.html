@@ -12106,8 +12106,8 @@ const KL_TOWN_SVG = (function(){
     {side:1,t:0.56,act:"klEnterBuilding('venue')",name:"VENUE",kind:"venue"},
     {side:1,t:0.80,act:"klEnterBuilding('shop')",name:"SHOP",kind:"shop"},
   ];
-  const PAL={plaza:{body:"#4a4660",roof:"#6a6488",win:"#ffe08a",neon:"#7ad9ff"},
-    waddy:{body:"#4a3b66",roof:"#6d4fa8",win:"#ffd97a",neon:"#b98cff"},
+  const PAL={plaza:{body:"#4a4660",roof:"#6a6488",win:"#ffe08a",neon:"#8ee8ff"},
+    waddy:{body:"#5e4d8a",roof:"#8a6cd0",win:"#ffe8a2",neon:"#caa6ff"},
     garage:{body:"#4f4a40",roof:"#5a5347",win:"#9fd3ff",neon:"#9fd3ff"},
     neighbor:{body:"#5a4640",roof:"#7a5a50",win:"#caa84a",neon:"#ff9a7a"},
     home:{body:"#2f6f7a",roof:"#48aebe",win:"#ffe08a",neon:"#6ff0e0"},
@@ -12129,12 +12129,13 @@ const KL_TOWN_SVG = (function(){
   function art(b){
     const {s,w,h,baseY,x,topY,cx}=b,p=PAL[b.kind];
     let g=`<ellipse cx="${f(cx)}" cy="${f(baseY+5)}" rx="${f(w*0.6)}" ry="${f(8*s+4)}" fill="rgba(0,0,0,0.22)"/>`;
+    if(b.kind==='waddy') g+=`<ellipse cx="${f(cx)}" cy="${f(topY+h*0.4)}" rx="${f(w*0.72)}" ry="${f(h*0.56)}" fill="rgba(150,120,225,0.20)"/>`;
     if(b.kind==='plaza'){
       const fx=cx, fb=baseY;
-      g+=`<ellipse cx="${f(fx)}" cy="${f(fb-34)}" rx="62" ry="56" fill="url(#ktFount)" opacity="0.5"/>`;
+      g+=`<ellipse cx="${f(fx)}" cy="${f(fb-34)}" rx="74" ry="64" fill="url(#ktFount)" opacity="0.78"/>`;
       g+=`<ellipse cx="${f(fx)}" cy="${f(fb)}" rx="72" ry="17" fill="#16242f"/>`;
-      g+=`<ellipse cx="${f(fx)}" cy="${f(fb-2)}" rx="72" ry="16" fill="none" stroke="#38e0ff" stroke-width="2" opacity="0.8"/>`;
-      g+=`<ellipse cx="${f(fx)}" cy="${f(fb-3)}" rx="52" ry="11" fill="rgba(56,224,255,0.30)"/>`;
+      g+=`<ellipse cx="${f(fx)}" cy="${f(fb-2)}" rx="72" ry="16" fill="none" stroke="#5ce8ff" stroke-width="2.5" opacity="0.95"/>`;
+      g+=`<ellipse cx="${f(fx)}" cy="${f(fb-3)}" rx="52" ry="11" fill="rgba(70,232,255,0.42)"/>`;
       g+=`<ellipse cx="${f(fx)}" cy="${f(fb-3)}" rx="52" ry="11" fill="none" stroke="#9af2ff" stroke-width="1"/>`;
       g+=`<path d="M${f(fx-9)} ${f(fb-4)} L${f(fx-5)} ${f(fb-56)} L${f(fx+5)} ${f(fb-56)} L${f(fx+9)} ${f(fb-4)} Z" fill="#1d3340"/>`;
       g+=`<path d="M${f(fx-4)} ${f(fb-4)} L${f(fx-2)} ${f(fb-56)} L${f(fx+1)} ${f(fb-56)} L${f(fx)} ${f(fb-4)} Z" fill="rgba(140,240,255,0.55)"/>`;
@@ -12217,7 +12218,7 @@ const KL_TOWN_SVG = (function(){
     +`<line x1="${VPX}" y1="${VPY+22}" x2="${VPX}" y2="${H}" stroke="rgba(235,225,185,0.4)" stroke-width="3" stroke-dasharray="14 20"/>`;
   const planet=`<ellipse cx="500" cy="118" rx="66" ry="66" fill="url(#ktKant)" opacity="0.55"/><circle cx="500" cy="118" r="32" fill="#7b5ec4"/><path d="M470 110 a32 32 0 0 0 60 -6 a38 38 0 0 1 -60 6 Z" fill="#6a4eb0" opacity="0.7"/><ellipse cx="500" cy="118" rx="55" ry="14" fill="none" stroke="#d8c0ff" stroke-width="2.5" opacity="0.75" transform="rotate(-18 500 118)"/><circle cx="490" cy="107" r="8" fill="#a98fe0" opacity="0.6"/>`;
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="display:block;">`
-    +`<defs><linearGradient id="ktSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1b1436"/><stop offset="52%" stop-color="#3f3160"/><stop offset="82%" stop-color="#a8748a"/><stop offset="100%" stop-color="#caa06e"/></linearGradient><linearGradient id="ktGround" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#7a6f5e"/><stop offset="100%" stop-color="#9a8c76"/></linearGradient><radialGradient id="ktFount" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#9af2ff"/><stop offset="60%" stop-color="#38c0ff"/><stop offset="100%" stop-color="#1060a0" stop-opacity="0"/></radialGradient><radialGradient id="ktKant" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffe9fb"/><stop offset="55%" stop-color="#b98cff"/><stop offset="100%" stop-color="#5a3aa0" stop-opacity="0"/></radialGradient></defs>`
+    +`<defs><linearGradient id="ktSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1b1436"/><stop offset="52%" stop-color="#3f3160"/><stop offset="82%" stop-color="#a8748a"/><stop offset="100%" stop-color="#caa06e"/></linearGradient><linearGradient id="ktGround" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#7a6f5e"/><stop offset="100%" stop-color="#9a8c76"/></linearGradient><radialGradient id="ktFount" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#c6f8ff"/><stop offset="60%" stop-color="#4fd4ff"/><stop offset="100%" stop-color="#1060a0" stop-opacity="0"/></radialGradient><radialGradient id="ktKant" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffe9fb"/><stop offset="55%" stop-color="#b98cff"/><stop offset="100%" stop-color="#5a3aa0" stop-opacity="0"/></radialGradient></defs>`
     +R(0,0,W,H,'url(#ktSky)')+planet
     +`<circle cx="180" cy="70" r="2" fill="rgba(255,255,255,0.6)"/><circle cx="340" cy="48" r="1.5" fill="rgba(255,255,255,0.5)"/><circle cx="660" cy="60" r="1.8" fill="rgba(255,255,255,0.5)"/><circle cx="820" cy="90" r="1.5" fill="rgba(255,255,255,0.5)"/>`
     +R(0,VPY+4,W,H-VPY-4,'#5b5042')+filler+street
@@ -17854,7 +17855,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-126'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-127'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
