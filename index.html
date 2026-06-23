@@ -12099,9 +12099,9 @@ const KL_TOWN_SVG = (function(){
     {side:-1,t:0.00,act:"klBusk()",name:"PLAZA",kind:"plaza"},
     {side:-1,t:0.30,act:"klEnterBuilding('master')",name:"WADDY'S",kind:"waddy"},
     {side:-1,t:0.56,act:"klEnterBuilding('garage')",name:"GARAGE",kind:"garage"},
-    {side:-1,t:0.80,act:"klEnterBuilding('hater')",name:"NEIGHBOR",kind:"neighbor"},
+    {side:1,t:0.30,act:"klEnterBuilding('hater')",name:"NEIGHBOR",kind:"neighbor"},
     {side:1,t:0.00,act:"klEnterBuilding('home')",name:"YOUR PLACE",kind:"home"},
-    {side:1,t:0.30,act:"klOpenWorkPlan()",name:"FACTORY",kind:"factory"},
+    {side:-1,t:0.80,act:"klOpenWorkPlan()",name:"FACTORY",kind:"factory"},
     {side:1,t:0.56,act:"klEnterBuilding('venue')",name:"VENUE",kind:"venue"},
     {side:1,t:0.80,act:"klEnterBuilding('shop')",name:"SHOP",kind:"shop"},
   ];
@@ -12129,9 +12129,21 @@ const KL_TOWN_SVG = (function(){
     const {s,w,h,baseY,x,topY,cx}=b,p=PAL[b.kind];
     let g=`<ellipse cx="${f(cx)}" cy="${f(baseY+5)}" rx="${f(w*0.6)}" ry="${f(8*s+4)}" fill="rgba(0,0,0,0.22)"/>`;
     if(b.kind==='plaza'){
-      g+=`<path d="M${f(cx-w*0.6)} ${f(baseY)} L${f(cx-w*0.42)} ${f(baseY-20*s)} L${f(cx+w*0.42)} ${f(baseY-20*s)} L${f(cx+w*0.6)} ${f(baseY)} Z" fill="#5b5450"/>`;
-      g+=R(cx-2*s,baseY-72*s,4*s,72*s,'#33302b')+`<circle cx="${f(cx)}" cy="${f(baseY-74*s)}" r="${f(14*s)}" fill="rgba(255,224,138,0.25)"/><circle cx="${f(cx)}" cy="${f(baseY-74*s)}" r="${f(6*s)}" fill="#ffe08a"/>`;
-      g+=`<circle cx="${f(cx+16*s)}" cy="${f(baseY-34*s)}" r="${f(7*s)}" fill="#caa37a"/>`+R(cx+10*s,baseY-27*s,13*s,23*s,'#3a4a7a','rx="4"')+`<ellipse cx="${f(cx+32*s)}" cy="${f(baseY-16*s)}" rx="${f(9*s)}" ry="${f(6*s)}" fill="#8a5a2a"/><circle cx="${f(cx-24*s)}" cy="${f(baseY-12*s)}" r="${f(6*s)}" fill="#6a6275"/>`;
+      const fx=cx, fb=baseY;
+      g+=`<ellipse cx="${f(fx)}" cy="${f(fb-34)}" rx="62" ry="56" fill="url(#ktFount)" opacity="0.5"/>`;
+      g+=`<ellipse cx="${f(fx)}" cy="${f(fb)}" rx="72" ry="17" fill="#16242f"/>`;
+      g+=`<ellipse cx="${f(fx)}" cy="${f(fb-2)}" rx="72" ry="16" fill="none" stroke="#38e0ff" stroke-width="2" opacity="0.8"/>`;
+      g+=`<ellipse cx="${f(fx)}" cy="${f(fb-3)}" rx="52" ry="11" fill="rgba(56,224,255,0.30)"/>`;
+      g+=`<ellipse cx="${f(fx)}" cy="${f(fb-3)}" rx="52" ry="11" fill="none" stroke="#9af2ff" stroke-width="1"/>`;
+      g+=`<path d="M${f(fx-9)} ${f(fb-4)} L${f(fx-5)} ${f(fb-56)} L${f(fx+5)} ${f(fb-56)} L${f(fx+9)} ${f(fb-4)} Z" fill="#1d3340"/>`;
+      g+=`<path d="M${f(fx-4)} ${f(fb-4)} L${f(fx-2)} ${f(fb-56)} L${f(fx+1)} ${f(fb-56)} L${f(fx)} ${f(fb-4)} Z" fill="rgba(140,240,255,0.55)"/>`;
+      g+=`<ellipse cx="${f(fx)}" cy="${f(fb-58)}" rx="22" ry="6" fill="#1d3340"/>`;
+      g+=`<ellipse cx="${f(fx)}" cy="${f(fb-59)}" rx="22" ry="6" fill="none" stroke="#38e0ff" stroke-width="1.5"/>`;
+      g+=`<ellipse cx="${f(fx)}" cy="${f(fb-59)}" rx="15" ry="4" fill="rgba(122,240,255,0.6)"/>`;
+      for(let i=-3;i<=3;i++){ const wx=fx+i*6; g+=`<line x1="${f(wx)}" y1="${f(fb-56)}" x2="${f(wx)}" y2="${f(fb-8)}" stroke="rgba(150,242,255,${(0.5-Math.abs(i)*0.05).toFixed(2)})" stroke-width="${i%2?1.4:2}"/>`; }
+      g+=`<line x1="${f(fx-44)}" y1="${f(fb-6)}" x2="${f(fx-44)}" y2="${f(fb-24)}" stroke="rgba(150,242,255,0.5)" stroke-width="2"/>`;
+      g+=`<line x1="${f(fx+44)}" y1="${f(fb-6)}" x2="${f(fx+44)}" y2="${f(fb-24)}" stroke="rgba(150,242,255,0.5)" stroke-width="2"/>`;
+      g+=`<circle cx="${f(fx-52)}" cy="${f(fb-30)}" r="6" fill="#caa37a"/>`+R(fx-58,fb-25,12,18,'#3a4a7a','rx="4"')+`<ellipse cx="${f(fx-40)}" cy="${f(fb-18)}" rx="7" ry="5" fill="#8a5a2a"/>`;
       return `<g class="kt-bld" onclick="${b.act}">${g}</g>`;
     }
     if(b.kind==='factory'){
@@ -12204,7 +12216,7 @@ const KL_TOWN_SVG = (function(){
     +`<line x1="${VPX}" y1="${VPY+22}" x2="${VPX}" y2="${H}" stroke="rgba(235,225,185,0.4)" stroke-width="3" stroke-dasharray="14 20"/>`;
   const planet=`<ellipse cx="500" cy="118" rx="66" ry="66" fill="url(#ktKant)" opacity="0.55"/><circle cx="500" cy="118" r="32" fill="#7b5ec4"/><path d="M470 110 a32 32 0 0 0 60 -6 a38 38 0 0 1 -60 6 Z" fill="#6a4eb0" opacity="0.7"/><ellipse cx="500" cy="118" rx="55" ry="14" fill="none" stroke="#d8c0ff" stroke-width="2.5" opacity="0.75" transform="rotate(-18 500 118)"/><circle cx="490" cy="107" r="8" fill="#a98fe0" opacity="0.6"/>`;
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="display:block;">`
-    +`<defs><linearGradient id="ktSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1b1436"/><stop offset="52%" stop-color="#3f3160"/><stop offset="82%" stop-color="#a8748a"/><stop offset="100%" stop-color="#caa06e"/></linearGradient><linearGradient id="ktGround" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#7a6f5e"/><stop offset="100%" stop-color="#9a8c76"/></linearGradient><radialGradient id="ktKant" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffe9fb"/><stop offset="55%" stop-color="#b98cff"/><stop offset="100%" stop-color="#5a3aa0" stop-opacity="0"/></radialGradient></defs>`
+    +`<defs><linearGradient id="ktSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1b1436"/><stop offset="52%" stop-color="#3f3160"/><stop offset="82%" stop-color="#a8748a"/><stop offset="100%" stop-color="#caa06e"/></linearGradient><linearGradient id="ktGround" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#7a6f5e"/><stop offset="100%" stop-color="#9a8c76"/></linearGradient><radialGradient id="ktFount" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#9af2ff"/><stop offset="60%" stop-color="#38c0ff"/><stop offset="100%" stop-color="#1060a0" stop-opacity="0"/></radialGradient><radialGradient id="ktKant" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffe9fb"/><stop offset="55%" stop-color="#b98cff"/><stop offset="100%" stop-color="#5a3aa0" stop-opacity="0"/></radialGradient></defs>`
     +R(0,0,W,H,'url(#ktSky)')+planet
     +`<circle cx="180" cy="70" r="2" fill="rgba(255,255,255,0.6)"/><circle cx="340" cy="48" r="1.5" fill="rgba(255,255,255,0.5)"/><circle cx="660" cy="60" r="1.8" fill="rgba(255,255,255,0.5)"/><circle cx="820" cy="90" r="1.5" fill="rgba(255,255,255,0.5)"/>`
     +R(0,VPY+4,W,H-VPY-4,'#5b5042')+filler+street
@@ -17841,7 +17853,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-124'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-125'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
