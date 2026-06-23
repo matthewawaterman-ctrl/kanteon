@@ -1411,15 +1411,15 @@
   /* Mode selector: horizontal row of [toggle | LABEL = tab | count] groups */
   .ear-mode-list {
     display: flex; flex-direction: row;
-    padding: 8px 12px;
+    padding: 12px 18px;
     border-bottom: 1px solid var(--border);
-    gap: 4px;
+    gap: 8px;
     flex-wrap: wrap;
   }
   .ear-mode-row {
-    display: flex; align-items: center; gap: 8px;
-    padding: 6px 10px;
-    border-radius: 4px;
+    display: flex; align-items: center; gap: 11px;
+    padding: 11px 14px;
+    border-radius: 8px;
     transition: background 0.1s;
     flex: 1;
     min-width: 0;
@@ -1427,13 +1427,13 @@
   .ear-mode-row.active-tab {
     background: rgba(232,25,44,0.08);
     border-left: 3px solid var(--red);
-    padding-left: 7px;
+    padding-left: 11px;
   }
   .ear-mode-label {
     flex: 1;
     background: transparent; border: none;
-    color: var(--text2); padding: 6px 0;
-    font-family: var(--font-display); font-size: var(--fs-label); font-weight: 800;
+    color: var(--text2); padding: 7px 0;
+    font-family: var(--font-display); font-size: 18px; font-weight: 800;
     letter-spacing: 1px; cursor: pointer;
     text-align: left;
     transition: color 0.1s;
@@ -1447,9 +1447,9 @@
     color: var(--text);
   }
   .ear-mode-count {
-    font-family: var(--font-display); font-size: 13px; font-weight: 800;
+    font-family: var(--font-display); font-size: 17px; font-weight: 800;
     color: var(--text3); letter-spacing: 1px;
-    min-width: 20px; text-align: right;
+    min-width: 26px; text-align: right;
     flex-shrink: 0;
   }
   .ear-mode-row:has(.ear-include-tog.on) .ear-mode-count {
@@ -1457,29 +1457,30 @@
   }
 
   .ear-config-section {
-    padding: 10px 16px;
+    padding: 16px 20px;
     border-bottom: 1px solid var(--border);
   }
   .ear-section-title {
-    font-family: var(--font-display); font-size: var(--fs-label); font-weight: 800;
-    color: var(--text2); letter-spacing: 2px; text-transform: uppercase;
-    margin-bottom: 8px;
+    font-family: var(--font-display); font-size: 18px; font-weight: 800;
+    color: var(--text2); letter-spacing: 2.5px; text-transform: uppercase;
+    margin-bottom: 12px;
   }
   .ear-section-title .ear-count {
     float: right; color: var(--gold); font-weight: 700;
   }
 
   .ear-item-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
   }
   .ear-item-btn {
     background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.16);
-    color: var(--text2); padding: 12px 10px;
-    font-family: var(--font-display); font-size: var(--fs-item); font-weight: 700;
-    letter-spacing: 1px; cursor: pointer; border-radius: 12px;
+    color: var(--text2); padding: 18px 16px; min-height: 60px;
+    font-family: var(--font-display); font-size: 19px; font-weight: 800;
+    letter-spacing: 1px; cursor: pointer; border-radius: 14px;
     transition: background 0.1s, border-color 0.1s, color 0.1s, transform 0.05s;
     text-align: center;
     user-select: none;
+    display: flex; align-items: center; justify-content: center;
   }
   .ear-item-btn:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.28); }
   .ear-item-btn:active { transform: scale(0.97); }
@@ -1523,13 +1524,13 @@
     user-select: none;
   }
   .ear-toggle-track {
-    width: 38px; height: 20px; background: var(--bg3);
+    width: 48px; height: 26px; background: var(--bg3);
     border: 1px solid var(--border); border-radius: 999px;
     position: relative; transition: background 0.15s, border-color 0.15s;
   }
   .ear-toggle-thumb {
     position: absolute; top: 2px; left: 2px;
-    width: 14px; height: 14px; border-radius: 50%;
+    width: 20px; height: 20px; border-radius: 50%;
     background: var(--text2); transition: left 0.15s, background 0.15s;
   }
   .ear-toggle.on .ear-toggle-track {
@@ -1537,19 +1538,19 @@
     border-color: rgba(124,111,247,0.6);
   }
   .ear-toggle.on .ear-toggle-thumb {
-    left: 20px; background: #9b8fff;
+    left: 24px; background: #9b8fff;
   }
 
   .ear-start-bar {
-    padding: 10px 16px 12px; position: sticky; bottom: 0;
+    padding: 14px 18px 16px; position: sticky; bottom: 0;
     background: linear-gradient(to top, var(--bg) 70%, rgba(13,13,15,0));
   }
   .ear-start-btn {
-    width: 100%; padding: 15px;
+    width: 100%; padding: 20px;
     background: linear-gradient(160deg, #ffe27a, #f59e0b);
-    border: none; border-radius: 16px;
+    border: none; border-radius: 18px;
     color: #5a3a00; font-family: var(--font-display); font-weight: 900;
-    font-size: 17px; letter-spacing: 2px; cursor: pointer;
+    font-size: 22px; letter-spacing: 2.5px; cursor: pointer;
     text-shadow: none;
     box-shadow: 0 6px 0 #b45309, 0 10px 20px rgba(0,0,0,0.25);
     transition: filter 0.1s, transform 0.1s, box-shadow 0.1s;
@@ -1559,13 +1560,13 @@
   .ear-start-btn:disabled { filter: grayscale(0.7) brightness(0.6); cursor: not-allowed; }
 
   .ear-quick-actions {
-    display: flex; gap: 6px; margin-top: 8px;
+    display: flex; gap: 8px; margin-top: 8px;
   }
   .ear-quick-btn {
     flex: 1; background: var(--bg2); border: 1px solid var(--border);
-    color: var(--text2); padding: 9px;
-    font-family: var(--font-display); font-size: var(--fs-badge); font-weight: 800;
-    letter-spacing: 1.5px; cursor: pointer; border-radius: 4px;
+    color: var(--text2); padding: 13px;
+    font-family: var(--font-display); font-size: 16px; font-weight: 800;
+    letter-spacing: 1.5px; cursor: pointer; border-radius: 6px;
     transition: background 0.1s, color 0.1s;
   }
   .ear-quick-btn:hover { background: var(--bg3); color: var(--text); }
@@ -1573,29 +1574,29 @@
   /* Combined options bar */
   .ear-options-bar {
     display: flex; align-items: center;
-    padding: 12px 16px;
+    padding: 16px 18px;
     border-bottom: 1px solid var(--border);
-    gap: 0; flex-wrap: wrap;
+    gap: 0; flex-wrap: wrap; row-gap: 10px;
   }
   .ear-options-group {
-    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+    display: flex; align-items: center; gap: 11px; flex-shrink: 0;
   }
   .ear-options-group-label {
-    font-family: var(--font-display); font-size: 14px; font-weight: 900;
+    font-family: var(--font-display); font-size: 17px; font-weight: 900;
     color: var(--text2); letter-spacing: 1.5px; white-space: nowrap;
   }
   .ear-options-group-controls {
-    display: flex; align-items: center; gap: 6px;
+    display: flex; align-items: center; gap: 8px;
   }
   .ear-options-divider {
-    width: 1px; height: 28px; background: rgba(255,255,255,0.1);
-    margin: 0 14px; flex-shrink: 0;
+    width: 1px; height: 34px; background: rgba(255,255,255,0.1);
+    margin: 0 16px; flex-shrink: 0;
   }
   .ear-opt-btn {
     background: var(--bg2); border: 1px solid var(--border);
-    color: var(--text2); padding: 7px 14px;
-    font-family: var(--font-display); font-size: 13px; font-weight: 800;
-    letter-spacing: 1px; cursor: pointer; border-radius: 4px;
+    color: var(--text2); padding: 11px 18px;
+    font-family: var(--font-display); font-size: 16px; font-weight: 800;
+    letter-spacing: 1px; cursor: pointer; border-radius: 6px;
     transition: background 0.1s, border-color 0.1s, color 0.1s;
     white-space: nowrap;
   }
@@ -1604,6 +1605,22 @@
     background: rgba(124,111,247,0.2);
     border-color: rgba(124,111,247,0.6);
     color: var(--text);
+  }
+
+  /* Config screens: phone dial-back so the bigger menus stay tidy */
+  @media (max-width: 599px) {
+    .ear-mode-list { gap: 5px; padding: 9px 12px; }
+    .ear-mode-row { padding: 9px 11px; gap: 9px; }
+    .ear-mode-label { font-size: 15px; }
+    .ear-mode-count { font-size: 14px; }
+    .ear-config-section { padding: 12px 14px; }
+    .ear-item-grid { gap: 8px; }
+    .ear-item-btn { padding: 14px 12px; min-height: 50px; font-size: 16px; }
+    .ear-quick-btn { font-size: 14px; padding: 11px; }
+    .ear-opt-btn { font-size: 14px; padding: 9px 14px; }
+    .ear-options-group-label { font-size: 15px; }
+    .ear-options-divider { margin: 0 10px; }
+    .ear-start-btn { font-size: 19px; padding: 16px; }
   }
 
   /* ── EAR TRAINING SESSION ─────────────────────────────────────────────── */
@@ -3761,28 +3778,36 @@
     paint-order: stroke; stroke: rgba(20,12,30,0.65); stroke-width: 3px;
   }
   .kt-hud {
-    position: absolute; top: 14px; right: 14px; z-index: 5;
-    display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end;
+    position: absolute; top: 16px; right: 16px; z-index: 5;
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end;
   }
   .kl-fs-btn {
-    padding: 0; width: 30px; height: 30px; border-radius: 8px;
+    padding: 0; width: 40px; height: 40px; border-radius: 10px;
     border: 1px solid rgba(255,255,255,0.18); background: rgba(20,16,40,0.5);
-    color: rgba(255,255,255,0.85); font-size: 15px; line-height: 1; cursor: pointer;
+    color: rgba(255,255,255,0.85); font-size: 20px; line-height: 1; cursor: pointer;
     display: inline-flex; align-items: center; justify-content: center;
     transition: background 0.12s, color 0.12s;
   }
   .kl-fs-btn:hover { background: rgba(48,38,84,0.85); color: #fff; }
   .kl-fs-btn:active { transform: scale(0.94); }
   .kt-hud-item {
-    font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 15px;
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 22px;
     color: #fff; background: rgba(20,12,30,0.55); border: 1px solid rgba(255,255,255,0.2);
-    padding: 5px 11px; border-radius: 999px;
+    padding: 8px 16px; border-radius: 999px;
   }
   .kt-hud-show { color: #ffd97a; }
-  .kt-hud-level { display: inline-flex; align-items: center; gap: 7px; }
-  .kt-xpbar { width: 48px; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.16); overflow: hidden; }
+  .kt-hud-level { display: inline-flex; align-items: center; gap: 10px; }
+  .kt-xpbar { width: 84px; height: 10px; border-radius: 999px; background: rgba(255,255,255,0.16); overflow: hidden; }
   .kt-xpbar-fill { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #fcd34d, #fbbf24); transition: width 0.4s ease; }
-  .kt-xp-num { font-size: 11.5px; opacity: 0.72; font-weight: 700; }
+  .kt-xp-num { font-size: 16px; opacity: 0.72; font-weight: 700; }
+  /* Phones: dial the bigger HUD back so it doesn't wrap into a wall */
+  @media (max-width: 599px) {
+    .kt-hud { gap: 7px; top: 10px; right: 10px; }
+    .kt-hud-item { font-size: 17px; padding: 6px 12px; }
+    .kt-xpbar { width: 60px; height: 8px; }
+    .kt-xp-num { font-size: 13px; }
+    .kl-fs-btn { width: 34px; height: 34px; font-size: 17px; }
+  }
   .kt-hud-level.leveled { animation: ktLevelPop 0.9s ease; }
   .kt-hud-level.leveled .kt-xpbar-fill { animation: ktXpFlash 0.9s ease; }
   @keyframes ktLevelPop {
@@ -3807,9 +3832,9 @@
   .kt-int-card { position: relative; z-index: 2; }
   .kt-interior > .kl-devbar { z-index: 60; }
   .kt-int-card {
-    width: min(440px, 92vw); text-align: center;
+    width: min(560px, 94vw); text-align: center;
     background: rgba(26,18,44,0.92); border: 1.5px solid rgba(255,255,255,0.18);
-    border-radius: 22px; padding: 26px 22px;
+    border-radius: 26px; padding: 34px 30px;
     box-shadow: 0 18px 50px rgba(0,0,0,0.5);
   }
   /* ── MUSIC SHOP: shopkeeper + content side by side ── */
@@ -3830,25 +3855,25 @@
     .kt-keeper { width: 132px; }
     .kt-shop-card { flex: none; width: min(440px, 92vw); }
   }
-  .kt-int-art { font-size: 56px; line-height: 1; }
+  .kt-int-art { font-size: 74px; line-height: 1; }
   .kt-int-title {
-    font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 26px;
-    letter-spacing: 2px; color: #fff; margin: 6px 0 2px;
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 34px;
+    letter-spacing: 2.5px; color: #fff; margin: 8px 0 4px;
   }
-  .kt-int-line { font-family: 'Barlow', sans-serif; font-size: 16.5px; line-height: 1.5; color: rgba(240,234,255,0.94); margin: 11px 0; }
-  .kt-int-note { font-family: 'Barlow', sans-serif; font-size: 14px; line-height: 1.45; color: rgba(228,220,255,0.78); margin: 8px 0; }
-  .kt-int-btn { width: 100%; margin: 8px 0 2px; }
-  .kt-int-row { display: flex; gap: 8px; justify-content: center; margin: 8px 0; flex-wrap: wrap; }
+  .kt-int-line { font-family: 'Barlow', sans-serif; font-size: 20px; line-height: 1.5; color: rgba(240,234,255,0.94); margin: 14px 0; }
+  .kt-int-note { font-family: 'Barlow', sans-serif; font-size: 16.5px; line-height: 1.45; color: rgba(228,220,255,0.78); margin: 10px 0; }
+  .kt-int-btn { width: 100%; margin: 10px 0 2px; }
+  .kt-int-row { display: flex; gap: 10px; justify-content: center; margin: 10px 0; flex-wrap: wrap; }
   .kt-int-sub {
-    font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 14px;
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px;
     color: #fff; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25);
-    padding: 8px 16px; border-radius: 999px; cursor: pointer;
+    padding: 12px 22px; border-radius: 999px; cursor: pointer;
   }
   .kt-int-sub:disabled { opacity: 0.35; cursor: default; }
   .kt-int-sub:not(:disabled):hover { background: rgba(255,255,255,0.2); }
   .kt-int-leave {
-    display: block; margin: 16px auto 0; background: none; border: none; cursor: pointer;
-    font-family: 'Barlow', sans-serif; font-size: 13px; color: rgba(220,210,255,0.6);
+    display: block; margin: 18px auto 0; background: none; border: none; cursor: pointer;
+    font-family: 'Barlow', sans-serif; font-size: 16px; color: rgba(220,210,255,0.6);
   }
   .kt-int-leave:hover { color: #fff; }
   .kt-shop-grid { display: flex; flex-direction: column; gap: 7px; margin-top: 8px; }
@@ -3862,8 +3887,8 @@
   .kt-shop-own { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 13px; color: #8ef0c8; }
   .kt-shop-extra { font-family: 'Barlow', sans-serif; font-size: 13.5px; color: rgba(255,221,140,0.95); }
   .kt-shop-divider {
-    font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 15px;
-    letter-spacing: 1.2px; color: rgba(236,229,255,0.88); margin: 15px 0 3px; text-align: left;
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 18.5px;
+    letter-spacing: 1.4px; color: rgba(236,229,255,0.88); margin: 18px 0 5px; text-align: left;
     text-transform: uppercase;
   }
   .kt-npc-line { font-size: 16px; font-style: italic; min-height: 44px; }
@@ -3958,7 +3983,7 @@
     background: linear-gradient(180deg,#a78bfa,#7c4ddb); color: #fff; font-weight: 900; font-size: 15px; cursor: pointer; }
   .kt-char-panel { display: flex; align-items: center; gap: 14px; background: rgba(0,0,0,0.2);
     border-radius: 14px; padding: 10px 14px; margin: 4px 0 10px; }
-  .kt-char-art { width: 76px; height: 76px; flex: 0 0 auto; border-radius: 12px;
+  .kt-char-art { width: 96px; height: 96px; flex: 0 0 auto; border-radius: 14px;
     background: radial-gradient(ellipse at 50% 38%, rgba(120,200,255,0.16), rgba(255,255,255,0.03) 70%);
     display: flex; align-items: center; justify-content: center; }
   .kt-char-panel .kt-int-sub { flex: 1 1 auto; }
@@ -7233,6 +7258,12 @@ const EAR_CHORDS = [
   { id: 'augMaj7',   label: 'Aug-Maj 7',    ints: [0, 4, 8, 11],        mnemonic: 'Augmented triad with a major 7 on top.' },
   { id: 'maj6',      label: 'Major 6',      ints: [0, 4, 7, 9],         mnemonic: 'Sweet, vintage swing-era chord.' },
   { id: 'min6',      label: 'Minor 6',      ints: [0, 3, 7, 9],         mnemonic: 'Minor triad with a major 6 — Pink Panther theme.' },
+  { id: 'add9',      label: 'Add 9',        ints: [0, 4, 7, 14],        mnemonic: 'Major triad plus a 9th — open and bright, no 7th.' },
+  { id: 'maj9',      label: 'Major 9',      ints: [0, 4, 7, 11, 14],    mnemonic: 'Lush jazz/lounge color — maj7 with a 9 on top.' },
+  { id: 'dom9',      label: 'Dominant 9',   ints: [0, 4, 7, 10, 14],    mnemonic: 'Funky and bluesy — the James Brown stab.' },
+  { id: 'min9',      label: 'Minor 9',      ints: [0, 3, 7, 10, 14],    mnemonic: 'Smooth, moody jazz-minor color.' },
+  { id: 'sixNine',   label: '6/9',          ints: [0, 4, 7, 9, 14],     mnemonic: 'Sweet and resolved — vintage, no 7th tension.' },
+  { id: 'dom7sus4',  label: '7sus4',        ints: [0, 5, 7, 10],        mnemonic: 'Suspended dominant — gospel/pop pre-chorus lift.' },
 ];
 
 const EAR_ROOT_NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -7252,6 +7283,10 @@ const EAR_SCALES = [
   { id: 'major_pent',    label: 'Major Pentatonic',   semis: [0,2,4,7,9,12],       mnemonic: 'Five-note major — country/rock classic.' },
   { id: 'minor_pent',    label: 'Minor Pentatonic',   semis: [0,3,5,7,10,12],      mnemonic: 'The blues/rock soloing scale.' },
   { id: 'blues',         label: 'Blues',              semis: [0,3,5,6,7,10,12],    mnemonic: 'Minor pentatonic + the flat-5 blues note.' },
+  { id: 'whole_tone',    label: 'Whole Tone',         semis: [0,2,4,6,8,10,12],    mnemonic: 'Dreamy and unmoored — no leading tone (Debussy).' },
+  { id: 'octatonic',     label: 'Diminished (W–H)',   semis: [0,2,3,5,6,8,9,11,12],mnemonic: 'Symmetrical and tense — alternating whole/half steps.' },
+  { id: 'bebop_dom',     label: 'Bebop Dominant',     semis: [0,2,4,5,7,9,10,11,12],mnemonic: 'Mixolydian with a passing natural 7 — jazz line tool.' },
+  { id: 'hungarian_min', label: 'Hungarian Minor',    semis: [0,2,3,6,7,8,11,12],  mnemonic: 'Exotic and dramatic — two augmented 2nds.' },
 ];
 
 // ── DIATONIC CHORDS for progressions (Roman numerals in major key) ────────
@@ -13141,7 +13176,7 @@ function klRenderInterior(id) {
     body =
       '<p class="kt-int-line">Home base. Pay the landlord here, and write songs \u2014 your Song Bank multiplies what you earn busking and playing shows.</p>' +
       '<div class="kt-char-panel">' +
-        '<div class="kt-char-art">' + klAvatarSVG(klState.avatar || klAvatarDefault(), 76) + '</div>' +
+        '<div class="kt-char-art">' + klAvatarSVG(klState.avatar || klAvatarDefault(), 96) + '</div>' +
         '<button class="kt-int-sub" onclick="klOpenAvatar(\'edit\', function(){ klRenderInterior(\'home\'); })">🎨 Style Your Look</button>' +
       '</div>' +
       rentBlock +
@@ -13631,6 +13666,14 @@ const KL_BUILD_DEFS = [
   { id: 206, building: 'garage', name: 'SUS CHORD',   hint: 'stack steps 1 + 4 + 5',       degrees: [0, 3, 4] },
   { id: 207, building: 'garage', name: 'MAJOR 7th',   hint: 'major triad + step 7',        degrees: [0, 2, 4, 6] },
   { id: 208, building: 'garage', name: 'BIG CHORD',   hint: 'steps 1 + 3 + 5 + 8',         degrees: [0, 2, 4, 7] },
+  { id: 209, building: 'garage', name: 'MINOR TRIAD', hint: 'a minor chord — steps 2 + 4 + 6', degrees: [1, 3, 5] },
+  { id: 210, building: 'garage', name: 'ANOTHER MINOR', hint: 'minor again — steps 3 + 5 + 7', degrees: [2, 4, 6] },
+  { id: 211, building: 'garage', name: 'SIXTH CHORD', hint: 'major triad plus the 6th — steps 1 + 3 + 5 + 6', degrees: [0, 2, 4, 5] },
+  { id: 212, building: 'garage', name: 'SUBDOMINANT', hint: 'a major chord — steps 4 + 6 + 8', degrees: [3, 5, 7] },
+  { id: 213, building: 'garage', name: 'MINOR 7th',   hint: 'four notes — steps 2 + 4 + 6 + 8', degrees: [1, 3, 5, 7] },
+  { id: 214, building: 'waddy',  name: 'MAJOR 2nd',   hint: 'stack scale-steps 1 + 2',     degrees: [0, 1] },
+  { id: 215, building: 'waddy',  name: 'MAJOR 6th',   hint: 'stack scale-steps 1 + 6',     degrees: [0, 5] },
+  { id: 216, building: 'waddy',  name: 'MAJOR 7th',   hint: 'stack scale-steps 1 + 7',     degrees: [0, 6] },
 ];
 const KL_BUILD_START = KL_PUZZLES.length;
 KL_BUILD_DEFS.forEach((b, i) => {
@@ -13686,6 +13729,17 @@ const KL_GROOVE_DEFS = [
   // Advanced: a different time signature. Three beats per bar — a waltz.
   { id: 317, name: 'WALTZ TIME',        hint: 'three beats per bar — count 1-2-3', sub: 1, ts: [3, 4], events: [{d:1},{d:1},{d:1}] },
   { id: 318, name: 'WALTZ SWAY',        hint: 'a rest on beat 2, in 3/4',          sub: 1, ts: [3, 4], events: [{d:1},{d:1,rest:true},{d:1}] },
+  { id: 319, name: 'DOTTED PUSH',       hint: 'a dotted quarter, then an eighth',   sub: 0.5, events: [{d:1.5},{d:0.5},{d:1},{d:1}] },
+  { id: 320, name: 'SIXTEENTH KICKOFF', hint: 'four fast sixteenths to start',       sub: 0.25, events: [{d:0.25},{d:0.25},{d:0.25},{d:0.25},{d:1},{d:1},{d:1}] },
+  { id: 321, name: 'GALLOP',            hint: 'long-short-short, then steady',       sub: 0.25, events: [{d:0.5},{d:0.25},{d:0.25},{d:1},{d:1},{d:1}] },
+  { id: 322, name: 'OFFBEAT POP',       hint: 'an eighth pushing into beat 2',       sub: 0.5, events: [{d:0.5},{d:1},{d:0.5},{d:1},{d:1}] },
+  { id: 323, name: 'LONG THEN SHORT',   hint: 'a half note, then two quarters',      sub: 1, events: [{d:2},{d:1},{d:1}] },
+  { id: 324, name: 'DOTTED-EIGHTH FEEL',hint: 'dotted-eighth + sixteenth, twice',    sub: 0.25, events: [{d:0.75},{d:0.25},{d:0.75},{d:0.25},{d:1},{d:1}] },
+  { id: 325, name: 'REST ON ONE',       hint: 'silence on beat 1 — come in on 2',    sub: 1, events: [{d:1,rest:true},{d:1},{d:1},{d:1}] },
+  { id: 326, name: 'SIXTEENTH CLUSTER', hint: 'a quarter, then a sixteenth burst',   sub: 0.25, events: [{d:1},{d:0.25},{d:0.25},{d:0.25},{d:0.25},{d:1},{d:1}] },
+  { id: 327, name: 'WALTZ LILT',        hint: 'dotted quarter + eighth in 3/4',      sub: 0.5, ts: [3, 4], events: [{d:1.5},{d:0.5},{d:1}] },
+  { id: 328, name: 'QUICK TWO',         hint: 'two eighths and a quarter, in 2/4',   sub: 0.5, ts: [2, 4], events: [{d:0.5},{d:0.5},{d:1}] },
+  { id: 329, name: 'FIVE FEEL',         hint: 'count five even beats per bar',       sub: 1, ts: [5, 4], events: [{d:1},{d:1},{d:1},{d:1},{d:1}] },
 ];
 const KL_GROOVE_START = KL_PUZZLES.length;
 KL_GROOVE_DEFS.forEach((gd, i) => {
@@ -13712,6 +13766,12 @@ const KL_EAR_DEFS = [
   { id: 404, building: 'garage', name: 'MAJOR TRIAD', degrees: [0, 2, 4],    choices: ['MAJOR TRIAD', 'SUS CHORD', 'MAJOR 7th'] },
   { id: 405, building: 'garage', name: 'SUS CHORD',   degrees: [0, 3, 4],    choices: ['MAJOR TRIAD', 'SUS CHORD', 'MAJOR 7th'] },
   { id: 406, building: 'garage', name: 'MAJOR 7th',   degrees: [0, 2, 4, 6], choices: ['MAJOR TRIAD', 'SUS CHORD', 'MAJOR 7th'] },
+  { id: 407, building: 'waddy',  name: 'MAJOR 2nd',   degrees: [0, 1],       choices: ['MAJOR 2nd', 'PERFECT 5th'] },
+  { id: 408, building: 'waddy',  name: 'MAJOR 6th',   degrees: [0, 5],       choices: ['MAJOR 3rd', 'MAJOR 6th', 'OCTAVE'] },
+  { id: 409, building: 'garage', name: 'MINOR TRIAD', degrees: [1, 3, 5],    choices: ['MAJOR TRIAD', 'MINOR TRIAD', 'SUS CHORD'] },
+  { id: 410, building: 'garage', name: 'SIXTH CHORD', degrees: [0, 2, 4, 5], choices: ['MAJOR TRIAD', 'SIXTH CHORD', 'MAJOR 7th'] },
+  { id: 411, building: 'garage', name: 'MINOR 7th',   degrees: [1, 3, 5, 7], choices: ['MAJOR 7th', 'MINOR 7th', 'MAJOR TRIAD'] },
+  { id: 412, building: 'garage', name: 'SUBDOMINANT', degrees: [3, 5, 7],    choices: ['MINOR TRIAD', 'SUBDOMINANT', 'MAJOR TRIAD'] },
 ];
 const KL_EAR_START = KL_PUZZLES.length;
 KL_EAR_DEFS.forEach((ed, i) => {
@@ -13871,7 +13931,7 @@ KL_MODE_DEFS.forEach((md, i) => KL_PUZZLES.push({ id: md.id, type: 'mode', dot: 
 // ── NOTATION — read notes on the staff (b31-83). Treble clef, name the note.
 // "step" = position on the staff: 0 = bottom line (E4), +1 per line/space going up,
 // negative going down. Even steps land on lines; odd steps on spaces.
-const KL_NOTE_FREQ = { '-2': 261.63, '-1': 293.66, '0': 329.63, '1': 349.23, '2': 392.00, '3': 440.00, '4': 493.88, '5': 523.25, '6': 587.33, '7': 659.25, '8': 698.46, '9': 783.99 };
+const KL_NOTE_FREQ = { '-4': 220.00, '-3': 246.94, '-2': 261.63, '-1': 293.66, '0': 329.63, '1': 349.23, '2': 392.00, '3': 440.00, '4': 493.88, '5': 523.25, '6': 587.33, '7': 659.25, '8': 698.46, '9': 783.99, '10': 880.00, '11': 987.77 };
 const KL_NOTATION_DEFS = [
   { id: 801, step: 0,  answer: 'E', choices: ['E', 'G', 'B'] },        // E4 — bottom line
   { id: 802, step: 2,  answer: 'G', choices: ['E', 'G', 'B'] },        // G4 — line
@@ -13882,7 +13942,13 @@ const KL_NOTATION_DEFS = [
   { id: 807, step: 6,  answer: 'D', choices: ['C', 'D', 'E', 'F'] },   // D5 — line
   { id: 808, step: 7,  answer: 'E', choices: ['D', 'E', 'F', 'G'] },   // E5 — space
   { id: 809, step: 8,  answer: 'F', choices: ['D', 'E', 'F', 'G'] },   // F5 — top line
-  { id: 810, step: -2, answer: 'C', choices: ['C', 'D', 'E', 'B'] }    // C4 — middle C, ledger below
+  { id: 810, step: -2, answer: 'C', choices: ['C', 'D', 'E', 'B'] },   // C4 — middle C, ledger below
+  { id: 811, step: 9,  answer: 'G', choices: ['F', 'G', 'A'] },        // G5 — above the staff
+  { id: 812, step: -1, answer: 'D', choices: ['C', 'D', 'E'] },        // D4 — just below the staff
+  { id: 813, step: -3, answer: 'B', choices: ['A', 'B', 'C'] },        // B3 — ledger below
+  { id: 814, step: -4, answer: 'A', choices: ['G', 'A', 'B'] },        // A3 — ledger below
+  { id: 815, step: 10, answer: 'A', choices: ['G', 'A', 'B'] },        // A5 — ledger above
+  { id: 816, step: 11, answer: 'B', choices: ['A', 'B', 'C'] }         // B5 — ledger above
 ];
 const KL_NOTATION_START = KL_PUZZLES.length;
 KL_NOTATION_DEFS.forEach((nd, i) => KL_PUZZLES.push({ id: nd.id, type: 'notation', dot: 180 + i, ndef: nd }));
@@ -14247,7 +14313,7 @@ function klLevel() { return Math.floor((klState.xp || 0) / 100) + 1; }
 function klXpIntoLevel() { return (klState.xp || 0) % 100; }
 function klXpForLevel() { return 100; }
 // Earnings amplifier: each level above 1 adds +15% to all money earned.
-function klEarnMult() { return 1 + (klLevel() - 1) * 0.15; }
+function klEarnMult() { return 1 + (klLevel() - 1) * 0.20; }
 // Grant XP, persist, and nudge the player. levelUp toast when a threshold is crossed.
 function klAddXp(amount) {
   if (!amount) return;
@@ -17750,7 +17816,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-109'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-113'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
@@ -18357,7 +18423,13 @@ function klWin() {
   const p = KL_PUZZLES[klState.puzzleIdx];
   klState.score++; // silent instrumentation only
   // === SAVE/LOAD — START ===
-  if (!klState.solved.includes(klState.puzzleIdx)) klState.solved.push(klState.puzzleIdx);
+  if (!klState.solved.includes(klState.puzzleIdx)) {
+    klState.solved.push(klState.puzzleIdx);
+    // Per-puzzle first-clear XP (idempotent ledger). Makes the garage library a
+    // real XP engine: more puzzles solved = more busking level. Module-completion
+    // milestone (+25) still stacks on top via klMarkModuleDone.
+    klAwardXp('puz:' + (p && p.id != null ? p.id : klState.puzzleIdx), 10, true);
+  }
   klSaveProgress();
   // === SAVE/LOAD — END ===
 
