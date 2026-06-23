@@ -12094,8 +12094,7 @@ const KL_HERO_SVG =
 // landing scene with hotspots in this exact pattern.
 const KL_TOWN_SVG = (function(){
   const W=1000,H=520,VPX=500,VPY=210;
-  const lerp=(a,b,t)=>a+(b-a)*t;
-  const f=n=>(+n).toFixed(1);
+  const lerp=(a,b,t)=>a+(b-a)*t, f=n=>(+n).toFixed(1);
   const BLD=[
     {side:-1,t:0.00,act:"klBusk()",name:"THE PLAZA",kind:"plaza"},
     {side:-1,t:0.34,act:"klEnterBuilding('master')",name:"WADDY'S",kind:"waddy"},
@@ -12114,55 +12113,89 @@ const KL_TOWN_SVG = (function(){
     factory:{body:"#46423b",roof:"#37332d",win:"#7d8a6a",neon:"#a6ff7a"},
     venue:{body:"#3b2f55",roof:"#ffd97a",win:"#ff7ad9",neon:"#ff7ad9"},
     shop:{body:"#3f5a4e",roof:"#7ab98a",win:"#ffe0a0",neon:"#7affb0"}};
+  const SIGN={plaza:["neon","#7ad9ff"],waddy:["wood","#d8b888"],garage:["metal","#9fd3ff"],
+    neighbor:["wood","#c89a78"],home:["neon","#6ff0e0"],factory:["metal","#a6ff7a"],
+    venue:["neon","#ff7ad9"],shop:["neon","#7affb0"]};
   const R=(x,y,w,h,fill,ex)=>`<rect x="${f(x)}" y="${f(y)}" width="${f(w)}" height="${f(h)}" ${ex||''} fill="${fill}"/>`;
-  function bld(b){
-    const s=lerp(1,0.30,b.t), w=lerp(200,64,b.t), h=lerp(350,70,b.t), baseY=lerp(470,262,b.t);
+  const items=BLD.map(b=>{
+    const s=lerp(1,0.30,b.t),w=lerp(200,64,b.t),h=lerp(350,70,b.t),baseY=lerp(470,262,b.t);
     const inner=b.side<0?lerp(252,476,b.t):lerp(748,524,b.t);
-    const x=b.side<0?inner-w:inner, topY=baseY-h, cx=x+w/2, p=PAL[b.kind];
-    let g=`<ellipse cx="${f(cx)}" cy="${f(baseY+5)}" rx="${f(w*0.6)}" ry="${f(8*s+4)}" fill="rgba(0,0,0,0.20)"/>`;
+    const x=b.side<0?inner-w:inner,topY=baseY-h,cx=x+w/2;
+    return {...b,s,w,h,baseY,inner,x,topY,cx};
+  });
+  function art(b){
+    const {s,w,h,baseY,x,topY,cx,inner}=b,p=PAL[b.kind];
+    let g=`<ellipse cx="${f(cx)}" cy="${f(baseY+5)}" rx="${f(w*0.6)}" ry="${f(8*s+4)}" fill="rgba(0,0,0,0.22)"/>`;
     if(b.kind==='plaza'){
       g+=`<path d="M${f(cx-w*0.6)} ${f(baseY)} L${f(cx-w*0.42)} ${f(baseY-20*s)} L${f(cx+w*0.42)} ${f(baseY-20*s)} L${f(cx+w*0.6)} ${f(baseY)} Z" fill="#5b5450"/>`;
-      g+=R(cx-2*s,baseY-72*s,4*s,72*s,'#33302b');
-      g+=`<circle cx="${f(cx)}" cy="${f(baseY-74*s)}" r="${f(14*s)}" fill="rgba(255,224,138,0.25)"/><circle cx="${f(cx)}" cy="${f(baseY-74*s)}" r="${f(6*s)}" fill="#ffe08a"/>`;
-      g+=`<circle cx="${f(cx+16*s)}" cy="${f(baseY-34*s)}" r="${f(7*s)}" fill="#caa37a"/>`+R(cx+10*s,baseY-27*s,13*s,23*s,'#3a4a7a','rx="4"');
-      g+=`<ellipse cx="${f(cx+32*s)}" cy="${f(baseY-16*s)}" rx="${f(9*s)}" ry="${f(6*s)}" fill="#8a5a2a"/>`;
-      g+=`<circle cx="${f(cx-24*s)}" cy="${f(baseY-12*s)}" r="${f(6*s)}" fill="#6a6275"/>`;
+      g+=R(cx-2*s,baseY-72*s,4*s,72*s,'#33302b')+`<circle cx="${f(cx)}" cy="${f(baseY-74*s)}" r="${f(14*s)}" fill="rgba(255,224,138,0.25)"/><circle cx="${f(cx)}" cy="${f(baseY-74*s)}" r="${f(6*s)}" fill="#ffe08a"/>`;
+      g+=`<circle cx="${f(cx+16*s)}" cy="${f(baseY-34*s)}" r="${f(7*s)}" fill="#caa37a"/>`+R(cx+10*s,baseY-27*s,13*s,23*s,'#3a4a7a','rx="4"')+`<ellipse cx="${f(cx+32*s)}" cy="${f(baseY-16*s)}" rx="${f(9*s)}" ry="${f(6*s)}" fill="#8a5a2a"/><circle cx="${f(cx-24*s)}" cy="${f(baseY-12*s)}" r="${f(6*s)}" fill="#6a6275"/>`;
     } else if(b.kind==='factory'){
-      g+=R(cx-28*s,topY-44*s,15*s,44*s,'#544f47')+R(cx-2*s,topY-60*s,15*s,60*s,'#544f47');
-      g+=`<circle cx="${f(cx-20*s)}" cy="${f(topY-50*s)}" r="${f(11*s)}" fill="rgba(122,118,112,0.4)"/><circle cx="${f(cx+6*s)}" cy="${f(topY-68*s)}" r="${f(13*s)}" fill="rgba(122,118,112,0.34)"/>`;
+      g+=R(cx-28*s,topY-44*s,15*s,44*s,'#544f47')+R(cx-2*s,topY-60*s,15*s,60*s,'#544f47')+`<circle cx="${f(cx-20*s)}" cy="${f(topY-50*s)}" r="${f(11*s)}" fill="rgba(122,118,112,0.4)"/><circle cx="${f(cx+6*s)}" cy="${f(topY-68*s)}" r="${f(13*s)}" fill="rgba(122,118,112,0.34)"/>`;
       g+=R(x,topY,w,h,p.body,'rx="2"')+R(x,topY,w,8*s,p.roof);
       for(let r=0;r<2;r++)for(let c=0;c<3;c++)g+=R(x+w*0.14+c*w*0.27,topY+20*s+r*28*s,w*0.16,12*s,p.win,'opacity="0.5"');
       g+=R(cx-12*s,baseY-38*s,24*s,38*s,'#2c2924','rx="1"');
     } else {
       g+=R(x,topY,w,h,p.body,'rx="2"');
-      if(b.kind==='waddy'||b.kind==='neighbor'||b.kind==='home'){
+      if(['waddy','neighbor','home'].includes(b.kind)){
         g+=`<path d="M${f(x-6*s)} ${f(topY+4)} L${f(cx)} ${f(topY-42*s)} L${f(x+w+6*s)} ${f(topY+4)} Z" fill="${p.roof}"/>`;
-        if(b.kind==='waddy')g+=`<text x="${f(cx)}" y="${f(topY-14*s)}" text-anchor="middle" font-size="${f(20*s)}">⭐</text>`;
-        if(b.kind==='home')g+=`<text x="${f(cx+w*0.3)}" y="${f(topY-8*s)}" text-anchor="middle" font-size="${f(15*s)}">🎵</text>`;
-      } else { g+=R(x,topY,w,9*s,p.roof); }
-      if(b.kind==='venue'){g+=R(x-6*s,topY-13*s,w+12*s,19*s,'#ffd97a','rx="4"');g+=`<text x="${f(cx)}" y="${f(topY+1)}" text-anchor="middle" font-family="Barlow Condensed" font-weight="900" font-size="${f(12*s)}" fill="#3a2a10">VENUE</text>`;}
-      g+=R(x+w*0.15,topY+h*0.26,w*0.26,h*0.17,p.win,'opacity="0.92" rx="2"');
-      g+=R(x+w*0.58,topY+h*0.26,w*0.26,h*0.17,p.win,'opacity="0.5" rx="2"');
-      g+=R(cx-w*0.12,baseY-h*0.3,w*0.24,h*0.3,'#241c2e','rx="2"');
+        if(b.kind==='waddy')g+=`<text x="${f(cx)}" y="${f(topY-14*s)}" text-anchor="middle" font-size="${f(20*s)}">‚≠ê</text>`.replace('‚≠ê','\u2b50');
+        if(b.kind==='home')g+=`<text x="${f(cx+w*0.3)}" y="${f(topY-8*s)}" text-anchor="middle" font-size="${f(15*s)}">\u266a</text>`;
+      } else g+=R(x,topY,w,9*s,p.roof);
+      g+=R(x+w*0.15,topY+h*0.26,w*0.26,h*0.17,p.win,'opacity="0.92" rx="2"')+R(x+w*0.58,topY+h*0.26,w*0.26,h*0.17,p.win,'opacity="0.5" rx="2"')+R(cx-w*0.12,baseY-h*0.3,w*0.24,h*0.3,'#241c2e','rx="2"');
     }
     if(b.kind!=='plaza')g+=R(x,topY-2*s,w,3*s,p.neon,'opacity="0.85"');
-    const fz=Math.max(11,Math.round(24*s)), ly=Math.min(baseY+Math.max(15,22*s),502);
-    g+=`<text x="${f(cx)}" y="${f(ly)}" text-anchor="middle" class="kt-bld-name" style="font-size:${fz}px">${b.name}</text>`;
     return `<g class="kt-bld" onclick="${b.act}">${g}</g>`;
   }
-  const sorted=BLD.slice().sort((a,b)=>b.t-a.t);
+  function stripCenter(it){
+    const nearer=items.filter(o=>o.side===it.side&&o.t<it.t);
+    if(!nearer.length)return it.cx;
+    const n=nearer.reduce((a,b)=>b.t>a.t?b:a);
+    if(it.side<0)return (Math.max(n.inner,it.x)+it.inner)/2;
+    return (it.inner+Math.min(n.inner,it.x+it.w))/2;
+  }
+  function sign(it){
+    const [type,col]=SIGN[it.kind], s=it.s;
+    const fz=Math.max(12,Math.round(20*s)), sH=fz+9, pad=10;
+    const sW=it.name.length*fz*0.56+pad*2;
+    const cx=stripCenter(it);
+    let sy = it.kind==='plaza'? it.baseY-96*s
+           : ['waddy','neighbor','home'].includes(it.kind)? it.topY-42*s-sH-6
+           : it.topY-sH-6;
+    sy=Math.max(46,sy);
+    const x=cx-sW/2, y=sy;
+    let g='';
+    if(type==='neon'){
+      g+=R(x-3,y-3,sW+6,sH+6,col,`rx="7" opacity="0.18"`);
+      g+=R(x,y,sW,sH,'#171327',`rx="5" stroke="${col}" stroke-width="2"`);
+      g+=`<text x="${f(cx)}" y="${f(y+sH*0.7)}" text-anchor="middle" font-family="Barlow Condensed" font-weight="900" font-size="${fz}" fill="${col}" style="letter-spacing:1px">${it.name}</text>`;
+    } else if(type==='wood'){
+      g+=R(x,y,sW,sH,'#5a3f28',`rx="4" stroke="#34230f" stroke-width="2"`);
+      g+=`<text x="${f(cx)}" y="${f(y+sH*0.7)}" text-anchor="middle" font-family="Barlow Condensed" font-weight="900" font-size="${fz}" fill="${col}" style="letter-spacing:1px">${it.name}</text>`;
+    } else {
+      g+=R(x,y,sW,sH,'#33343c',`rx="3" stroke="#62636c" stroke-width="2"`);
+      g+=`<circle cx="${f(x+5)}" cy="${f(y+5)}" r="1.6" fill="#8a8b94"/><circle cx="${f(x+sW-5)}" cy="${f(y+5)}" r="1.6" fill="#8a8b94"/>`;
+      g+=`<text x="${f(cx)}" y="${f(y+sH*0.7)}" text-anchor="middle" font-family="Barlow Condensed" font-weight="900" font-size="${fz}" fill="${col}" style="letter-spacing:1px">${it.name}</text>`;
+    }
+    return `<g class="kt-bld" onclick="${it.act}">${g}</g>`;
+  }
+  const sortedArt=items.slice().sort((a,b)=>b.t-a.t);
   const street=`<path d="M150 ${H} L${VPX-10} ${VPY+6} L${VPX+10} ${VPY+6} L850 ${H} Z" fill="url(#ktGround)"/>`
     +`<line x1="${VPX}" y1="${VPY+24}" x2="${VPX}" y2="${H}" stroke="rgba(235,225,185,0.4)" stroke-width="3" stroke-dasharray="14 20"/>`;
+  const planet=`<ellipse cx="500" cy="116" rx="70" ry="70" fill="url(#ktKant)" opacity="0.55"/>`
+    +`<circle cx="500" cy="116" r="34" fill="#7b5ec4"/>`
+    +`<path d="M468 108 a34 34 0 0 0 64 -6 a40 40 0 0 1 -64 6 Z" fill="#6a4eb0" opacity="0.7"/>`
+    +`<ellipse cx="500" cy="116" rx="58" ry="15" fill="none" stroke="#d8c0ff" stroke-width="2.5" opacity="0.75" transform="rotate(-18 500 116)"/>`
+    +`<circle cx="489" cy="104" r="9" fill="#a98fe0" opacity="0.6"/>`;
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="display:block;">`
-    +`<defs><linearGradient id="ktSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#221a3e"/><stop offset="48%" stop-color="#4a3a6a"/><stop offset="76%" stop-color="#b07a8a"/><stop offset="100%" stop-color="#cf9e6e"/></linearGradient>`
+    +`<defs><linearGradient id="ktSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1b1436"/><stop offset="48%" stop-color="#3f3160"/><stop offset="78%" stop-color="#a8748a"/><stop offset="100%" stop-color="#caa06e"/></linearGradient>`
     +`<linearGradient id="ktGround" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#7a6f5e"/><stop offset="100%" stop-color="#9a8c76"/></linearGradient>`
     +`<radialGradient id="ktKant" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffe9fb"/><stop offset="55%" stop-color="#b98cff"/><stop offset="100%" stop-color="#5a3aa0" stop-opacity="0"/></radialGradient></defs>`
-    +R(0,0,W,H,'url(#ktSky)')
-    +`<circle cx="772" cy="118" r="46" fill="url(#ktKant)" opacity="0.6"/><circle cx="772" cy="118" r="10" fill="#e8d4ff" opacity="0.7"/>`
-    +`<circle cx="200" cy="80" r="2" fill="rgba(255,255,255,0.6)"/><circle cx="380" cy="52" r="1.5" fill="rgba(255,255,255,0.5)"/><circle cx="600" cy="66" r="1.8" fill="rgba(255,255,255,0.5)"/>`
-    +R(0,VPY+6,W,H-VPY-6,'#5b5042')
-    +street
-    +sorted.map(bld).join('')
+    +R(0,0,W,H,'url(#ktSky)')+planet
+    +`<circle cx="180" cy="70" r="2" fill="rgba(255,255,255,0.6)"/><circle cx="340" cy="48" r="1.5" fill="rgba(255,255,255,0.5)"/><circle cx="660" cy="60" r="1.8" fill="rgba(255,255,255,0.5)"/><circle cx="820" cy="90" r="1.5" fill="rgba(255,255,255,0.5)"/>`
+    +R(0,VPY+6,W,H-VPY-6,'#5b5042')+street
+    +sortedArt.map(art).join('')
+    +items.map(sign).join('')
     +`</svg>`;
 })();
 
@@ -17795,7 +17828,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-119'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-120'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
