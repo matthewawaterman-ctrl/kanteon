@@ -9571,12 +9571,19 @@ function playPhrase(ctx, t0, notes, timbre, opts) {
 // the entry (e.g. url:'audio/guitar.wav') — ensureSamples() will fetch+decode it instead.
 let KANTEON_USE_SAMPLER = true;   // dev A/B: set false to hear the old oscillator voices
 const KANTEON_SAMPLES = {
-  guitar: { baseNote: 52, url: null, buffer: null, voice: 'pluckBright', q: 96 },
-  bass:   { baseNote: 33, url: null, buffer: null, voice: 'pluckDeep',   q: 64 },
-  keys:   { baseNote: 60, url: null, buffer: null, voice: 'struck',      q: 110 },
-  synth:  { baseNote: 60, url: null, buffer: null, voice: 'saw',         q: 40 },
+  guitar: { baseNote: 52, url: null, buffer: null, voice: 'pluckBright', q: 120, lp: 4800, drive: 2.6 },
+  bass:   { baseNote: 33, url: null, buffer: null, voice: 'pluckDeep',   q: 150, lp: 2800, drive: 0 },
+  keys:   { baseNote: 60, url: null, buffer: null, voice: 'struck',      q: 150, lp: 5600, drive: 0 },
+  synth:  { baseNote: 60, url: null, buffer: null, voice: 'saw',         q: 40,  lp: 7400, drive: 0 },
 };
 let KANTEON_LOADED = false;
+const _kanteonClip = {};
+function kanteonClipCurve(amt){
+  if(_kanteonClip[amt]) return _kanteonClip[amt];
+  const n=1024, c=new Float32Array(n), norm=Math.tanh(amt);
+  for(let i=0;i<n;i++){ const x=i/(n-1)*2-1; c[i]=Math.tanh(x*amt)/norm; }
+  _kanteonClip[amt]=c; return c;
+}
 function ksBuffer(ctx, freq, dur, damp, blend){
   const sr=ctx.sampleRate, N=Math.max(2,Math.round(sr/freq)), len=Math.floor(sr*dur);
   const buf=ctx.createBuffer(1,len,sr), out=buf.getChannelData(0), line=new Float32Array(N);
@@ -9592,12 +9599,12 @@ function ksBuffer(ctx, freq, dur, damp, blend){
 }
 function struckBuffer(ctx, freq, dur){
   const sr=ctx.sampleRate, len=Math.floor(sr*dur), buf=ctx.createBuffer(1,len,sr), out=buf.getChannelData(0);
-  const parts=[1,0.55,0.42,0.28,0.18,0.12,0.08]; let peak=0;
+  const parts=[1,0.5,0.3,0.18,0.1,0.06,0.035]; let peak=0;
   for(let i=0;i<len;i++){
     const tt=i/sr; let v=0;
     for(let p=0;p<parts.length;p++){ const n=p+1, inh=1+0.0008*n*n;
-      v+=parts[p]*Math.sin(2*Math.PI*freq*n*inh*tt)*Math.exp(-tt*(2.0+n*0.65)); }
-    if(i<sr*0.006) v+=(Math.random()*2-1)*0.5*(1-i/(sr*0.006));   // hammer transient
+      v+=parts[p]*Math.sin(2*Math.PI*freq*n*inh*tt)*Math.exp(-tt*(1.6+n*0.6)); }
+    if(i<sr*0.006) v+=(Math.random()*2-1)*0.4*(1-i/(sr*0.006));   // hammer transient
     out[i]=v; if(Math.abs(v)>peak)peak=Math.abs(v);
   }
   if(peak>0) for(let i=0;i<len;i++) out[i]/=peak;
@@ -9621,9 +9628,9 @@ function loFiBake(buf, q){           // bit-crush (quantize) for the PS1/SNES gr
 }
 function genVoice(ctx, sm){
   const f=midiFreq(sm.baseNote); let b;
-  if(sm.voice==='pluckBright') b=ksBuffer(ctx,f,1.5,0.997,0.5);
-  else if(sm.voice==='pluckDeep') b=ksBuffer(ctx,f,1.4,0.993,0.62);
-  else if(sm.voice==='struck') b=struckBuffer(ctx,f,1.9);
+  if(sm.voice==='pluckBright') b=ksBuffer(ctx,f,1.7,0.9975,0.5);
+  else if(sm.voice==='pluckDeep') b=ksBuffer(ctx,f,1.9,0.991,0.5);
+  else if(sm.voice==='struck') b=struckBuffer(ctx,f,2.2);
   else b=sawBuffer(ctx,f,1.3);
   return loFiBake(b, sm.q);
 }
@@ -9643,8 +9650,10 @@ function playSampleNote(ctx, id, midi, t, dur, gain, dest){
     const src=ctx.createBufferSource(); src.buffer=sm.buffer;
     src.playbackRate.value=Math.pow(2,(midi-sm.baseNote)/12);
     const env=ctx.createGain(), lp=ctx.createBiquadFilter();
-    lp.type='lowpass'; lp.frequency.value=7400;
-    src.connect(lp); lp.connect(env); env.connect(dest||ctx.destination);
+    lp.type='lowpass'; lp.frequency.value=sm.lp||7400;
+    if(sm.drive){ const sh=ctx.createWaveShaper(); sh.curve=kanteonClipCurve(sm.drive); sh.oversample='2x'; src.connect(sh); sh.connect(lp); }
+    else { src.connect(lp); }
+    lp.connect(env); env.connect(dest||ctx.destination);
     env.gain.setValueAtTime(0,t);
     env.gain.linearRampToValueAtTime(gain,t+0.008);
     env.gain.exponentialRampToValueAtTime(0.0008,t+dur);
@@ -12283,15 +12292,58 @@ const KL_TOWN_SVG = (function(){
     }
   }
   const sortedArt=items.slice().sort((a,b)=>b.t-a.t);
-  const street=`<path d="M250 ${H} L${VPX-9} ${VPY+4} L${VPX+9} ${VPY+4} L750 ${H} Z" fill="url(#ktGround)"/>`
+  // ── SIDEWALKS (concrete bands flanking the narrowed road) ──
+  const sidewalks =
+    `<path d="M196 ${H} L310 ${H} L${VPX-9} ${VPY+4} L478 ${VPY+4} Z" fill="#565049"/>`+
+    `<path d="M804 ${H} L690 ${H} L${VPX+9} ${VPY+4} L522 ${VPY+4} Z" fill="#565049"/>`+
+    `<line x1="310" y1="${H}" x2="${VPX-9}" y2="${VPY+4}" stroke="rgba(255,250,235,0.22)" stroke-width="2"/>`+
+    `<line x1="690" y1="${H}" x2="${VPX+9}" y2="${VPY+4}" stroke="rgba(255,250,235,0.22)" stroke-width="2"/>`+
+    `<line x1="250" y1="${H}" x2="484" y2="${VPY+4}" stroke="rgba(0,0,0,0.18)" stroke-width="1.5"/>`+
+    `<line x1="750" y1="${H}" x2="516" y2="${VPY+4}" stroke="rgba(0,0,0,0.18)" stroke-width="1.5"/>`;
+  // ── FUTURISTIC CARS (SMIL: drive along the road, scale with perspective) ──
+  const carShape = (front) =>
+    `<ellipse cx="0" cy="13" rx="34" ry="6" fill="rgba(90,220,255,0.45)"/>`+
+    `<path d="M-30 6 Q-34 -6 -15 -10 L15 -10 Q34 -6 30 6 Z" fill="#2a2e3e"/>`+
+    `<path d="M-13 -9 L13 -9 Q21 -8 19 -1 L-19 -1 Q-21 -8 -13 -9 Z" fill="#0e1a34"/>`+
+    (front ? `<circle cx="-20" cy="3" r="3.4" fill="#fff7d0"/><circle cx="20" cy="3" r="3.4" fill="#fff7d0"/>`
+           : `<circle cx="-20" cy="3" r="3.2" fill="#ff5a4a"/><circle cx="20" cy="3" r="3.2" fill="#ff5a4a"/>`);
+  const carA =
+    `<g opacity="0">`+
+      `<animate attributeName="opacity" values="0;0;1;1;1" keyTimes="0;0.03;0.13;0.9;1" dur="7s" repeatCount="indefinite"/>`+
+      `<animateMotion path="M${VPX+8} ${VPY+12} L640 660" dur="7s" repeatCount="indefinite"/>`+
+      `<g><animateTransform attributeName="transform" type="scale" values="0.1;0.45;1.8" keyTimes="0;0.5;1" dur="7s" repeatCount="indefinite"/>`+carShape(true)+`</g>`+
+    `</g>`;
+  const carB =
+    `<g opacity="0">`+
+      `<animate attributeName="opacity" values="1;1;1;0;0" keyTimes="0;0.72;0.9;0.97;1" dur="9s" begin="3.5s" repeatCount="indefinite"/>`+
+      `<animateMotion path="M360 660 L${VPX-8} ${VPY+12}" dur="9s" begin="3.5s" repeatCount="indefinite"/>`+
+      `<g><animateTransform attributeName="transform" type="scale" values="1.8;0.5;0.1" keyTimes="0;0.5;1" dur="9s" begin="3.5s" repeatCount="indefinite"/>`+carShape(false)+`</g>`+
+    `</g>`;
+  const cars = carA + carB;
+  // ── PEDESTRIANS (SMIL: walk the sidewalk there-and-back, clickable) ──
+  const pedShape = (color) =>
+    `<ellipse cx="0" cy="19" rx="8" ry="3" fill="rgba(0,0,0,0.28)"/>`+
+    `<g><animateTransform attributeName="transform" type="rotate" values="-15 0 8;15 0 8;-15 0 8" dur="0.66s" repeatCount="indefinite"/><line x1="0" y1="7" x2="-3" y2="18" stroke="#33333f" stroke-width="3" stroke-linecap="round"/></g>`+
+    `<g><animateTransform attributeName="transform" type="rotate" values="15 0 8;-15 0 8;15 0 8" dur="0.66s" repeatCount="indefinite"/><line x1="0" y1="7" x2="3" y2="18" stroke="#33333f" stroke-width="3" stroke-linecap="round"/></g>`+
+    `<path d="M-5 -9 L5 -9 L4 8 L-4 8 Z" fill="${color}"/>`+
+    `<circle cx="0" cy="-14" r="5" fill="#e6c4a0"/>`;
+  const ped = (path, sc, dur, begin, color, idx) =>
+    `<g class="kt-ped" onclick="klPedSay(${idx})" style="cursor:pointer">`+
+      `<animateMotion path="${path}" dur="${dur}s" begin="${begin}s" repeatCount="indefinite"/>`+
+      `<g><animateTransform attributeName="transform" type="scale" values="${sc}" keyTimes="0;0.5;1" dur="${dur}s" begin="${begin}s" repeatCount="indefinite"/>`+pedShape(color)+`</g>`+
+    `</g>`;
+  const peds =
+    ped(`M250 496 L470 236 L250 496`, '1.15;0.32;1.15', 17, 0,   '#5a6fae', 0)+
+    ped(`M758 470 L536 236 L758 470`, '1.05;0.3;1.05',  19, 0, '#a65a7a', 1);
+  const street=`<path d="M310 ${H} L${VPX-9} ${VPY+4} L${VPX+9} ${VPY+4} L690 ${H} Z" fill="url(#ktGround)"/>`
     +`<line x1="${VPX}" y1="${VPY+22}" x2="${VPX}" y2="${H}" stroke="rgba(235,225,185,0.4)" stroke-width="3" stroke-dasharray="14 20"/>`;
   const planet=`<ellipse cx="500" cy="118" rx="66" ry="66" fill="url(#ktKant)" opacity="0.55"/><circle cx="500" cy="118" r="32" fill="#7b5ec4"/><path d="M470 110 a32 32 0 0 0 60 -6 a38 38 0 0 1 -60 6 Z" fill="#6a4eb0" opacity="0.7"/><ellipse cx="500" cy="118" rx="55" ry="14" fill="none" stroke="#d8c0ff" stroke-width="2.5" opacity="0.75" transform="rotate(-18 500 118)"/><circle cx="490" cy="107" r="8" fill="#a98fe0" opacity="0.6"/>`;
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="display:block;">`
     +`<defs><linearGradient id="ktSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1b1436"/><stop offset="52%" stop-color="#3f3160"/><stop offset="82%" stop-color="#a8748a"/><stop offset="100%" stop-color="#caa06e"/></linearGradient><linearGradient id="ktGround" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#7a6f5e"/><stop offset="100%" stop-color="#9a8c76"/></linearGradient><radialGradient id="ktFount" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#c6f8ff"/><stop offset="60%" stop-color="#4fd4ff"/><stop offset="100%" stop-color="#1060a0" stop-opacity="0"/></radialGradient><radialGradient id="ktKant" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffe9fb"/><stop offset="55%" stop-color="#b98cff"/><stop offset="100%" stop-color="#5a3aa0" stop-opacity="0"/></radialGradient></defs>`
     +R(0,0,W,H,'url(#ktSky)')+planet
     +`<circle cx="180" cy="70" r="2" fill="rgba(255,255,255,0.6)"/><circle cx="340" cy="48" r="1.5" fill="rgba(255,255,255,0.5)"/><circle cx="660" cy="60" r="1.8" fill="rgba(255,255,255,0.5)"/><circle cx="820" cy="90" r="1.5" fill="rgba(255,255,255,0.5)"/>`
-    +R(0,VPY+4,W,H-VPY-4,'#5b5042')+filler+street
-    +sortedArt.map(art).join('')
+    +R(0,VPY+4,W,H-VPY-4,'#5b5042')+filler+sidewalks+street
+    +sortedArt.map(art).join('')+cars+peds
     +`</svg>`;
 })();
 
@@ -12320,6 +12372,17 @@ function klRenderTown() {
   klFlushNotifications(klRenderTown); // any queued rent/promo notices play as cutscenes
 }
 window.klRenderTown = klRenderTown; // inline onclick handlers need it global
+// Pedestrian flavor (placeholder lines) — clicked peds say one at random.
+const KL_PED_QUOTES = [
+  "Heard you're trying to play the Venue. Bold.",
+  "This whole town runs on rhythm, kid.",
+  "Spare a credit? ...kidding. Go practice.",
+  "The fountain's been glitching since the last patch.",
+  "Saw your name on a flyer. Or maybe that was a dream.",
+  "Waddy still owes me a guitar string.",
+  "Day job's that way. Music's everywhere else."
+];
+window.klPedSay = function(i){ try { klToast(KL_PED_QUOTES[Math.floor(Math.random()*KL_PED_QUOTES.length)]); } catch(e){} };
 
 window.klLeaveTown = function() {
   klLogSessionEnd();
@@ -17939,7 +18002,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-130'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-132'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
