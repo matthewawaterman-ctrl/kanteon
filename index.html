@@ -4085,7 +4085,7 @@
   }
   /* the chrome logo sitting in the player-select sky (top-right, where the flat one was) */
   .kl-scene-logo {
-    position: absolute; top: 4vh; right: 5vw; z-index: 3;
+    position: absolute; top: 4vh; left: 5vw; z-index: 3;
     font-size: clamp(34px, 7vw, 76px);
     pointer-events: none;
   }
@@ -5668,9 +5668,6 @@
         Instruments <span class="ear-count" id="al-instruments-count">0</span>
       </div>
       <div class="ear-quick-actions">
-        <button class="ear-quick-btn" onclick="alQuickSelect('instruments','all')">ALL</button>
-        <button class="ear-quick-btn" onclick="alQuickSelect('instruments','none')">NONE</button>
-        <button class="ear-quick-btn" onclick="alQuickSelect('instruments','starter')">STARTER</button>
       </div>
       <div class="ear-item-grid" id="al-instruments-grid" style="margin-top:8px;"></div>
       <div style="margin-top:10px; font-family:var(--font-display); font-size:var(--fs-helper); color:var(--text2); letter-spacing:1px;">
@@ -9235,9 +9232,12 @@ const AL_ARTICULATION = [
 
 // TEMPO & FEEL
 const AL_TEMPO = [
-  { id: 'slow',     label: 'Slow Tempo (~60 BPM)',   mnemonic: 'Ballad pace — wide note spacing.' },
-  { id: 'medium',   label: 'Medium Tempo (~100 BPM)',mnemonic: 'Moderate groove pace.' },
-  { id: 'fast',     label: 'Fast Tempo (~150 BPM)',  mnemonic: 'Quick, energetic.' },
+  { id: 'largo',    label: 'Largo (~52 BPM)',     mnemonic: 'Very slow and broad.' },
+  { id: 'adagio',   label: 'Adagio (~66 BPM)',    mnemonic: 'Slow and at ease — ballad pace.' },
+  { id: 'andante',  label: 'Andante (~82 BPM)',   mnemonic: 'A walking pace.' },
+  { id: 'moderato', label: 'Moderato (~108 BPM)', mnemonic: 'Moderate, steady groove.' },
+  { id: 'allegro',  label: 'Allegro (~138 BPM)',  mnemonic: 'Fast and bright.' },
+  { id: 'presto',   label: 'Presto (~176 BPM)',   mnemonic: 'Very fast and driving.' },
   { id: 'straight', label: 'Straight 8ths',          mnemonic: 'Even, mechanical eighth notes.' },
   { id: 'swung',    label: 'Swung 8ths',             mnemonic: 'Long-short triplet feel — jazz/blues.' },
   { id: 'time44',   label: '4/4 Time',               mnemonic: 'Four-beat cycle — most rock/pop.' },
@@ -9259,7 +9259,7 @@ const AL_PRESETS = {
   instruments:  ['bass', 'leadGuitar', 'keys', 'drums'],
   dynamics:     ['soft', 'loud', 'crescendo', 'decrescendo'],
   articulation: ['staccato', 'legato', 'sustained'],
-  tempo:        ['slow', 'medium', 'fast'],
+  tempo:        ['adagio', 'moderato', 'allegro'],
   texture:      ['mono', 'homo', 'solo', 'ensemble'],
 };
 
@@ -9267,10 +9267,10 @@ const AL_PRESETS = {
 const alState = {
   activeTab: 'instruments',
   includeInstruments:  true,
-  includeDynamics:     false,
-  includeArticulation: false,
-  includeTempo:        false,
-  includeTexture:      false,
+  includeDynamics:     true,
+  includeArticulation: true,
+  includeTempo:        true,
+  includeTexture:      true,
   selectedInstruments:  new Set(),
   selectedDynamics:     new Set(),
   selectedArticulation: new Set(),
@@ -9297,8 +9297,9 @@ const AL_MODES = Object.keys(AL_MODE_META);
 
 function initAlConfig() {
   AL_MODES.forEach(mode => {
+    alState[AL_MODE_META[mode].includeKey] = true;        // every category ON by default
     if (alState[AL_MODE_META[mode].setKey].size === 0) {
-      alQuickSelect(mode, 'starter', false);
+      alQuickSelect(mode, 'all', false);                  // every item selected by default
     }
   });
   buildAlItemGrids();
@@ -9451,7 +9452,15 @@ function renderAlQuestion(q) {
     tempo:        'Identify the tempo or feel',
     texture:      'Identify the texture',
   };
-  document.getElementById('al-prompt').textContent = prompts[q.kind] || 'Listen and identify';
+  let promptTxt = prompts[q.kind] || 'Listen and identify';
+  if (q.kind === 'dynamics') {
+    promptTxt = (q.id === 'soft' || q.id === 'loud')
+      ? 'A reference phrase plays, then a 2nd — is the 2nd LOUDER or SOFTER than the 1st?'
+      : (q.id === 'crescendo' || q.id === 'decrescendo')
+      ? 'Does the phrase get LOUDER or SOFTER as it plays?'
+      : 'Where is the emphasis? Identify the accent.';
+  }
+  document.getElementById('al-prompt').textContent = promptTxt;
 
   const grid = document.getElementById('al-answer-grid');
   grid.innerHTML = '';
@@ -9809,11 +9818,16 @@ function playArticulationDemo(ctx, t0, artId) {
   const phrase = buildPhrase(root, scale, 8);
   const beat = 0.35;
   const opts = { beat, gain: 0.25 };
-  if (artId === 'staccato')  { opts.shortNotes = true; opts.noteLen = beat * 0.2; }
-  if (artId === 'legato')    { opts.noteLen = beat * 1.05; }
-  if (artId === 'sustained') { opts.noteLen = beat * 1.5; }
+  if (artId === 'sustained') {
+    // Sustained = a few LONG held tones (sparse) — clearly unlike legato's flowing run.
+    const held = buildPhrase(root, scale, 4);
+    const sb = beat * 1.8;
+    held.forEach((m, i) => playTone(midiFreq(m), t0 + i * sb, sb * 1.4, ctx, 0.24, 'guitar'));
+    return held.length * sb * 1000 + 300;
+  }
+  if (artId === 'staccato')  { opts.shortNotes = true; opts.noteLen = beat * 0.18; }
+  if (artId === 'legato')    { opts.noteLen = beat * 1.0; }   // 8 notes, just touching = smooth connected line
   if (artId === 'muted')     { opts.muted = true; opts.noteLen = beat * 0.3; }
-  // Pick a guitar-friendly timbre for articulation demos
   const timbre = (artId === 'muted') ? 'distGuitar' : 'guitar';
   return playPhrase(ctx, t0, phrase, timbre, opts);
 }
@@ -9821,9 +9835,9 @@ function playArticulationDemo(ctx, t0, artId) {
 // ── Tempo & Feel demos ───────────────────────────────────────────────────
 function playTempoDemo(ctx, t0, tempoId) {
   // Tempo categories — play drum loop at different BPMs
-  if (tempoId === 'slow' || tempoId === 'medium' || tempoId === 'fast') {
-    const bpm = { slow: 60, medium: 100, fast: 150 }[tempoId];
-    const beat = 60 / bpm;
+  const SPEED_BPM = { largo: 52, adagio: 66, andante: 82, moderato: 108, allegro: 138, presto: 176 };
+  if (SPEED_BPM[tempoId]) {
+    const beat = 60 / SPEED_BPM[tempoId];
     return playDrumLoop(ctx, t0, beat, 4, {});
   }
   // Straight 8ths vs Swung 8ths — play a clean melody
@@ -12162,7 +12176,7 @@ const KL_BAND_SVG =
 // background sky. Swap this whole SVG for real art later; it is a single string.
 // === KANTEON NAMING — END ===
 const KL_HERO_SVG =
-  '<svg viewBox=\"0 0 400 640\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"xMaxYMax meet\" xmlns=\"http://www.w3.org/2000/svg\" style=\"display:block;\"><defs><radialGradient id=\"klMach\" cx=\"50%\" cy=\"45%\" r=\"55%\"><stop offset=\"0%\" stop-color=\"#ffe9fb\"/><stop offset=\"38%\" stop-color=\"#d98cff\"/><stop offset=\"72%\" stop-color=\"#7b3ff0\"/><stop offset=\"100%\" stop-color=\"#3a1a8a\"/></radialGradient><linearGradient id=\"klRkt\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0%\" stop-color=\"#fbfdff\"/><stop offset=\"100%\" stop-color=\"#b9c6e6\"/></linearGradient><linearGradient id=\"klGround\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0%\" stop-color=\"#5a3a9c\"/><stop offset=\"100%\" stop-color=\"#2a1b5e\"/></linearGradient><linearGradient id=\"klSky\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0%\" stop-color=\"#3a1f6e\"/><stop offset=\"55%\" stop-color=\"#4a2580\"/><stop offset=\"100%\" stop-color=\"#2a1b5e\"/></linearGradient><radialGradient id=\"klHead\" cx=\"38%\" cy=\"30%\" r=\"72%\"><stop offset=\"0%\" stop-color=\"#ffffff\"/><stop offset=\"55%\" stop-color=\"#ece6ff\"/><stop offset=\"100%\" stop-color=\"#b9a8e8\"/></radialGradient><radialGradient id=\"klWinG\" cx=\"38%\" cy=\"32%\" r=\"72%\"><stop offset=\"0%\" stop-color=\"#bafaf0\"/><stop offset=\"50%\" stop-color=\"#2dd4bf\"/><stop offset=\"100%\" stop-color=\"#0e7d72\"/></radialGradient><linearGradient id=\"klRktHi\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0\"><stop offset=\"0%\" stop-color=\"#ffffff\" stop-opacity=\"0.85\"/><stop offset=\"42%\" stop-color=\"#ffffff\" stop-opacity=\"0.12\"/><stop offset=\"100%\" stop-color=\"#ffffff\" stop-opacity=\"0\"/></linearGradient><radialGradient id=\"klShadowG\" cx=\"50%\" cy=\"50%\" r=\"50%\"><stop offset=\"0%\" stop-color=\"#000000\" stop-opacity=\"0.42\"/><stop offset=\"100%\" stop-color=\"#000000\" stop-opacity=\"0\"/></radialGradient><radialGradient id=\"klRktGlow\" cx=\"50%\" cy=\"50%\" r=\"50%\"><stop offset=\"0%\" stop-color=\"#96aaff\" stop-opacity=\"0.32\"/><stop offset=\"100%\" stop-color=\"#96aaff\" stop-opacity=\"0\"/></radialGradient></defs><rect x=\"0\" y=\"0\" width=\"400\" height=\"640\" fill=\"none\"/><circle cx=\"60\" cy=\"70\" r=\"9\" fill=\"rgba(120,200,255,0.5)\"/><circle cx=\"120\" cy=\"46\" r=\"4\" fill=\"rgba(255,255,255,0.6)\"/><circle cx=\"300\" cy=\"180\" r=\"2.5\" fill=\"rgba(255,255,255,0.5)\"/><circle cx=\"40\" cy=\"220\" r=\"2\" fill=\"rgba(255,255,255,0.45)\"/><circle cx=\"360\" cy=\"260\" r=\"3\" fill=\"rgba(255,255,255,0.5)\"/><path d=\"M0 520 Q200 496 400 520 L400 640 L0 640 Z\" fill=\"url(#klGround)\"/><path d=\"M0 520 Q200 496 400 520\" stroke=\"rgba(180,150,255,0.5)\" stroke-width=\"2.5\" fill=\"none\"/><ellipse cx=\"326\" cy=\"450\" rx=\"58\" ry=\"116\" fill=\"url(#klRktGlow)\"/><g><path d=\"M300 528 L300 416 Q300 372 326 352 Q352 372 352 416 L352 528 Z\" fill=\"url(#klRkt)\" stroke=\"#8b9bc4\" stroke-width=\"2.5\"/><circle cx=\"326\" cy=\"408\" r=\"11\" fill=\"#2dd4bf\" stroke=\"#0e3b39\" stroke-width=\"2.5\"/><path d=\"M300 496 L282 528 L300 528 Z\" fill=\"#7c6ff7\"/><path d=\"M352 496 L370 528 L352 528 Z\" fill=\"#7c6ff7\"/><path d=\"M326 352 L326 336 L342 344 Z\" fill=\"#f0c040\"/><circle cx=\"326\" cy=\"446\" r=\"5\" fill=\"#f0c040\"/></g><path d=\"M307 522 L307 418 Q307 384 322 362 L327 364 Q313 388 313 420 L313 522 Z\" fill=\"url(#klRktHi)\"/><circle cx=\"326\" cy=\"408\" r=\"10\" fill=\"url(#klWinG)\"/><circle cx=\"322\" cy=\"404\" r=\"3\" fill=\"#ffffff\" fill-opacity=\"0.85\"/><ellipse cx=\"150\" cy=\"506\" rx=\"22\" ry=\"5\" fill=\"url(#klShadowG)\"/><ellipse cx=\"198\" cy=\"506\" rx=\"22\" ry=\"5\" fill=\"url(#klShadowG)\"/><ellipse cx=\"240\" cy=\"506\" rx=\"22\" ry=\"5\" fill=\"url(#klShadowG)\"/><circle cx=\"150\" cy=\"452\" r=\"8\" fill=\"url(#klHead)\"/><circle cx=\"198\" cy=\"446\" r=\"8\" fill=\"url(#klHead)\"/><circle cx=\"240\" cy=\"452\" r=\"8\" fill=\"url(#klHead)\"/><circle cx=\"147\" cy=\"449\" r=\"2.4\" fill=\"#ffffff\" fill-opacity=\"0.95\"/><circle cx=\"195\" cy=\"443\" r=\"2.4\" fill=\"#ffffff\" fill-opacity=\"0.95\"/><circle cx=\"237\" cy=\"449\" r=\"2.4\" fill=\"#ffffff\" fill-opacity=\"0.95\"/><g stroke=\"#fff\" stroke-width=\"2.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\" style=\"filter:drop-shadow(0 0 7px rgba(190,170,255,0.75))\"><circle cx=\"150\" cy=\"452\" r=\"8\"/><path d=\"M150 460 L150 484\"/><path d=\"M150 484 L140 502 M150 484 L160 502\"/><path d=\"M150 467 L136 474 M150 468 L168 477\"/><ellipse cx=\"136\" cy=\"476\" rx=\"8\" ry=\"5\" stroke=\"#f0c040\"/><path d=\"M141 472 L168 463\" stroke=\"#f0c040\"/><circle cx=\"198\" cy=\"446\" r=\"8\"/><path d=\"M198 454 L198 480\"/><path d=\"M198 480 L188 502 M198 480 L208 502\"/><path d=\"M198 462 L214 451\"/><circle cx=\"217\" cy=\"448\" r=\"4\" stroke=\"#2dd4bf\"/><path d=\"M217 452 L217 459\" stroke=\"#2dd4bf\"/><circle cx=\"240\" cy=\"452\" r=\"8\"/><path d=\"M240 460 L240 484\"/><path d=\"M240 484 L230 502 M240 484 L250 502\"/><path d=\"M240 467 L226 460 M240 468 L254 461\"/></g></svg>';
+  '<svg viewBox=\"0 0 400 640\" width=\"100%\" height=\"100%\" preserveAspectRatio=\"xMaxYMax meet\" xmlns=\"http://www.w3.org/2000/svg\" style=\"display:block;\"><defs><radialGradient id=\"klMach\" cx=\"50%\" cy=\"45%\" r=\"55%\"><stop offset=\"0%\" stop-color=\"#ffe9fb\"/><stop offset=\"38%\" stop-color=\"#d98cff\"/><stop offset=\"72%\" stop-color=\"#7b3ff0\"/><stop offset=\"100%\" stop-color=\"#3a1a8a\"/></radialGradient><linearGradient id=\"klRkt\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0%\" stop-color=\"#fbfdff\"/><stop offset=\"100%\" stop-color=\"#b9c6e6\"/></linearGradient><linearGradient id=\"klGround\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0%\" stop-color=\"#5a3a9c\"/><stop offset=\"100%\" stop-color=\"#2a1b5e\"/></linearGradient><radialGradient id=\"klHead\" cx=\"38%\" cy=\"30%\" r=\"72%\"><stop offset=\"0%\" stop-color=\"#ffffff\"/><stop offset=\"55%\" stop-color=\"#ece6ff\"/><stop offset=\"100%\" stop-color=\"#b9a8e8\"/></radialGradient><radialGradient id=\"klWinG\" cx=\"38%\" cy=\"32%\" r=\"72%\"><stop offset=\"0%\" stop-color=\"#bafaf0\"/><stop offset=\"50%\" stop-color=\"#2dd4bf\"/><stop offset=\"100%\" stop-color=\"#0e7d72\"/></radialGradient><linearGradient id=\"klRktHi\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0\"><stop offset=\"0%\" stop-color=\"#ffffff\" stop-opacity=\"0.85\"/><stop offset=\"42%\" stop-color=\"#ffffff\" stop-opacity=\"0.12\"/><stop offset=\"100%\" stop-color=\"#ffffff\" stop-opacity=\"0\"/></linearGradient><radialGradient id=\"klShadowG\" cx=\"50%\" cy=\"50%\" r=\"50%\"><stop offset=\"0%\" stop-color=\"#000000\" stop-opacity=\"0.42\"/><stop offset=\"100%\" stop-color=\"#000000\" stop-opacity=\"0\"/></radialGradient><radialGradient id=\"klRktGlow\" cx=\"50%\" cy=\"50%\" r=\"50%\"><stop offset=\"0%\" stop-color=\"#96aaff\" stop-opacity=\"0.32\"/><stop offset=\"100%\" stop-color=\"#96aaff\" stop-opacity=\"0\"/></radialGradient><radialGradient id=\"klPlanetA\" cx=\"40%\" cy=\"35%\" r=\"65%\"><stop offset=\"0%\" stop-color=\"#9fd8ff\"/><stop offset=\"100%\" stop-color=\"#2a5a9a\"/></radialGradient><radialGradient id=\"klPlanetB\" cx=\"40%\" cy=\"35%\" r=\"65%\"><stop offset=\"0%\" stop-color=\"#ffd9a0\"/><stop offset=\"100%\" stop-color=\"#9a5a3a\"/></radialGradient></defs><rect x=\"0\" y=\"0\" width=\"400\" height=\"640\" fill=\"none\"/><circle cx=\"60\" cy=\"70\" r=\"9\" fill=\"rgba(120,200,255,0.5)\"/><circle cx=\"120\" cy=\"46\" r=\"4\" fill=\"rgba(255,255,255,0.6)\"/><circle cx=\"300\" cy=\"180\" r=\"2.5\" fill=\"rgba(255,255,255,0.5)\"/><circle cx=\"40\" cy=\"220\" r=\"2\" fill=\"rgba(255,255,255,0.45)\"/><circle cx=\"360\" cy=\"260\" r=\"3\" fill=\"rgba(255,255,255,0.5)\"/><circle cx=\"90\" cy=\"120\" r=\"2.2\" fill=\"rgba(255,255,255,0.55)\"/><circle cx=\"180\" cy=\"90\" r=\"1.8\" fill=\"rgba(255,255,255,0.5)\"/><circle cx=\"250\" cy=\"60\" r=\"2.6\" fill=\"rgba(200,230,255,0.6)\"/><circle cx=\"340\" cy=\"120\" r=\"2\" fill=\"rgba(255,255,255,0.5)\"/><circle cx=\"150\" cy=\"180\" r=\"1.6\" fill=\"rgba(255,255,255,0.45)\"/><circle cx=\"70\" cy=\"300\" r=\"2.2\" fill=\"rgba(255,255,255,0.4)\"/><circle cx=\"290\" cy=\"300\" r=\"1.8\" fill=\"rgba(255,255,255,0.45)\"/><circle cx=\"210\" cy=\"150\" r=\"1.4\" fill=\"rgba(255,255,255,0.5)\"/><circle cx=\"130\" cy=\"260\" r=\"2\" fill=\"rgba(200,220,255,0.5)\"/><circle cx=\"370\" cy=\"200\" r=\"1.6\" fill=\"rgba(255,255,255,0.45)\"/><circle cx=\"95\" cy=\"160\" r=\"14\" fill=\"url(#klPlanetA)\"/><ellipse cx=\"95\" cy=\"160\" rx=\"22\" ry=\"6\" fill=\"none\" stroke=\"rgba(180,210,255,0.4)\" stroke-width=\"1.5\" transform=\"rotate(-20 95 160)\"/><circle cx=\"330\" cy=\"80\" r=\"10\" fill=\"url(#klPlanetB)\"/><circle cx=\"180\" cy=\"90\" r=\"1.8\" fill=\"#fff\"><animate attributeName=\"opacity\" values=\"0.3;1;0.3\" dur=\"2.6s\" repeatCount=\"indefinite\"/></circle><circle cx=\"250\" cy=\"60\" r=\"2.6\" fill=\"#cfe6ff\"><animate attributeName=\"opacity\" values=\"1;0.35;1\" dur=\"3.4s\" repeatCount=\"indefinite\"/></circle><g opacity=\"0\"><animate attributeName=\"opacity\" values=\"0;0;1;1;0;0\" keyTimes=\"0;0.02;0.05;0.12;0.18;1\" dur=\"7s\" begin=\"1.5s\" repeatCount=\"indefinite\"/><animateMotion path=\"M40 60 L210 115\" dur=\"7s\" begin=\"1.5s\" repeatCount=\"indefinite\" keyPoints=\"0;0;1;1\" keyTimes=\"0;0.02;0.18;1\" calcMode=\"linear\"/><line x1=\"0\" y1=\"0\" x2=\"34\" y2=\"11\" stroke=\"#ffffff\" stroke-width=\"2\" stroke-linecap=\"round\" opacity=\"0.9\"/><circle cx=\"0\" cy=\"0\" r=\"2.2\" fill=\"#fff\"/></g><g opacity=\"0\"><animate attributeName=\"opacity\" values=\"0;0;1;1;0;0\" keyTimes=\"0;0.02;0.05;0.12;0.18;1\" dur=\"11s\" begin=\"6s\" repeatCount=\"indefinite\"/><animateMotion path=\"M380 40 L210 150\" dur=\"11s\" begin=\"6s\" repeatCount=\"indefinite\" keyPoints=\"0;0;1;1\" keyTimes=\"0;0.02;0.18;1\" calcMode=\"linear\"/><line x1=\"0\" y1=\"0\" x2=\"34\" y2=\"11\" stroke=\"#ffffff\" stroke-width=\"2\" stroke-linecap=\"round\" opacity=\"0.9\"/><circle cx=\"0\" cy=\"0\" r=\"2.2\" fill=\"#fff\"/></g><g transform=\"translate(-232 -454) scale(1.71)\"><path d=\"M0 520 Q200 496 400 520 L400 640 L0 640 Z\" fill=\"url(#klGround)\"/><path d=\"M0 520 Q200 496 400 520\" stroke=\"rgba(180,150,255,0.5)\" stroke-width=\"2.5\" fill=\"none\"/><ellipse cx=\"326\" cy=\"450\" rx=\"58\" ry=\"116\" fill=\"url(#klRktGlow)\"/><g><path d=\"M300 528 L300 416 Q300 372 326 352 Q352 372 352 416 L352 528 Z\" fill=\"url(#klRkt)\" stroke=\"#8b9bc4\" stroke-width=\"2.5\"/><circle cx=\"326\" cy=\"408\" r=\"11\" fill=\"#2dd4bf\" stroke=\"#0e3b39\" stroke-width=\"2.5\"/><path d=\"M300 496 L282 528 L300 528 Z\" fill=\"#7c6ff7\"/><path d=\"M352 496 L370 528 L352 528 Z\" fill=\"#7c6ff7\"/><path d=\"M326 352 L326 336 L342 344 Z\" fill=\"#f0c040\"/><circle cx=\"326\" cy=\"446\" r=\"5\" fill=\"#f0c040\"/></g><path d=\"M307 522 L307 418 Q307 384 322 362 L327 364 Q313 388 313 420 L313 522 Z\" fill=\"url(#klRktHi)\"/><circle cx=\"326\" cy=\"408\" r=\"10\" fill=\"url(#klWinG)\"/><circle cx=\"322\" cy=\"404\" r=\"3\" fill=\"#ffffff\" fill-opacity=\"0.85\"/><ellipse cx=\"150\" cy=\"506\" rx=\"22\" ry=\"5\" fill=\"url(#klShadowG)\"/><g><animateTransform attributeName=\"transform\" type=\"rotate\" values=\"-6 150 502;6 150 502;-6 150 502\" dur=\"0.62s\" begin=\"0s\" repeatCount=\"indefinite\" calcMode=\"spline\" keyTimes=\"0;0.5;1\" keySplines=\"0.4 0 0.6 1;0.4 0 0.6 1\"/><circle cx=\"150\" cy=\"452\" r=\"8\" fill=\"url(#klHead)\"/><circle cx=\"147\" cy=\"449\" r=\"2.4\" fill=\"#ffffff\" fill-opacity=\"0.95\"/><g stroke=\"#fff\" stroke-width=\"2.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\" style=\"filter:drop-shadow(0 0 7px rgba(190,170,255,0.75))\"><circle cx=\"150\" cy=\"452\" r=\"8\"/><path d=\"M150 460 L150 484\"/><path d=\"M150 484 L140 502 M150 484 L160 502\"/><path d=\"M150 467 L136 474 M150 468 L168 477\"/><ellipse cx=\"136\" cy=\"476\" rx=\"8\" ry=\"5\" stroke=\"#f0c040\"/><path d=\"M141 472 L168 463\" stroke=\"#f0c040\"/></g></g><ellipse cx=\"198\" cy=\"506\" rx=\"22\" ry=\"5\" fill=\"url(#klShadowG)\"/><g><animateTransform attributeName=\"transform\" type=\"rotate\" values=\"-6 198 502;6 198 502;-6 198 502\" dur=\"0.5s\" begin=\"-0.2s\" repeatCount=\"indefinite\" calcMode=\"spline\" keyTimes=\"0;0.5;1\" keySplines=\"0.4 0 0.6 1;0.4 0 0.6 1\"/><circle cx=\"198\" cy=\"446\" r=\"8\" fill=\"url(#klHead)\"/><circle cx=\"195\" cy=\"443\" r=\"2.4\" fill=\"#ffffff\" fill-opacity=\"0.95\"/><g stroke=\"#fff\" stroke-width=\"2.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\" style=\"filter:drop-shadow(0 0 7px rgba(190,170,255,0.75))\"><circle cx=\"198\" cy=\"446\" r=\"8\"/><path d=\"M198 454 L198 480\"/><path d=\"M198 480 L188 502 M198 480 L208 502\"/><path d=\"M198 462 L214 451\"/><circle cx=\"217\" cy=\"448\" r=\"4\" stroke=\"#2dd4bf\"/><path d=\"M217 452 L217 459\" stroke=\"#2dd4bf\"/></g></g><ellipse cx=\"240\" cy=\"506\" rx=\"22\" ry=\"5\" fill=\"url(#klShadowG)\"/><g><animateTransform attributeName=\"transform\" type=\"rotate\" values=\"-6 240 502;6 240 502;-6 240 502\" dur=\"0.7s\" begin=\"-0.35s\" repeatCount=\"indefinite\" calcMode=\"spline\" keyTimes=\"0;0.5;1\" keySplines=\"0.4 0 0.6 1;0.4 0 0.6 1\"/><circle cx=\"240\" cy=\"452\" r=\"8\" fill=\"url(#klHead)\"/><circle cx=\"237\" cy=\"449\" r=\"2.4\" fill=\"#ffffff\" fill-opacity=\"0.95\"/><g stroke=\"#fff\" stroke-width=\"2.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\" style=\"filter:drop-shadow(0 0 7px rgba(190,170,255,0.75))\"><circle cx=\"240\" cy=\"452\" r=\"8\"/><path d=\"M240 460 L240 484\"/><path d=\"M240 484 L230 502 M240 484 L250 502\"/><path d=\"M240 467 L226 460 M240 468 L254 461\"/></g></g></g></svg>';
 // ── END HERO SCENE ─────────────────────────────────────────────────────────
 
 // === KANTEON TOWN — START ===
@@ -12323,8 +12337,8 @@ const KL_TOWN_SVG = (function(){
   // ── PEDESTRIANS (SMIL: walk the sidewalk there-and-back, clickable) ──
   const pedShape = (color) =>
     `<ellipse cx="0" cy="19" rx="8" ry="3" fill="rgba(0,0,0,0.28)"/>`+
-    `<g><animateTransform attributeName="transform" type="rotate" values="-14 0 8;14 0 8;-14 0 8" dur="0.85s" repeatCount="indefinite"/><line x1="0" y1="7" x2="-3" y2="18" stroke="#33333f" stroke-width="3" stroke-linecap="round"/></g>`+
-    `<g><animateTransform attributeName="transform" type="rotate" values="14 0 8;-14 0 8;14 0 8" dur="0.85s" repeatCount="indefinite"/><line x1="0" y1="7" x2="3" y2="18" stroke="#33333f" stroke-width="3" stroke-linecap="round"/></g>`+
+    `<g><animateTransform attributeName="transform" type="rotate" values="-13 0 8;13 0 8;-13 0 8" dur="1.0s" repeatCount="indefinite"/><line x1="0" y1="7" x2="-3" y2="18" stroke="#33333f" stroke-width="3" stroke-linecap="round"/></g>`+
+    `<g><animateTransform attributeName="transform" type="rotate" values="13 0 8;-13 0 8;13 0 8" dur="1.0s" repeatCount="indefinite"/><line x1="0" y1="7" x2="3" y2="18" stroke="#33333f" stroke-width="3" stroke-linecap="round"/></g>`+
     `<path d="M-5 -9 L5 -9 L4 8 L-4 8 Z" fill="${color}"/>`+
     `<circle cx="0" cy="-14" r="5" fill="#e6c4a0"/>`;
   const ped = (path, sc, dur, begin, color, idx) =>
@@ -12335,11 +12349,11 @@ const KL_TOWN_SVG = (function(){
   // RED lane = inner half of the sidewalk (street side of the black seam). Negative
   // begins phase-stagger the loop so peds are spread along the lane, not marching together.
   const peds =
-    ped(`M276 504 L485 233 L276 504`, '1.16;0.30;1.16', 28, 0,   '#5a6fae', 0)+
-    ped(`M292 498 L489 231 L292 498`, '1.12;0.29;1.12', 31, -10, '#7a9a5a', 1)+
-    ped(`M284 508 L487 234 L284 508`, '1.18;0.31;1.18', 26, -19, '#c0894a', 2)+
-    ped(`M724 504 L514 233 L724 504`, '1.14;0.30;1.14', 30, 0,   '#a65a7a', 3)+
-    ped(`M710 500 L510 232 L710 500`, '1.10;0.28;1.10', 33, -16, '#6a5aa8', 4);
+    ped(`M286 504 L476 234 L286 504`, '1.16;0.30;1.16', 38, 0,   '#5a6fae', 0)+
+    ped(`M292 498 L477 232 L292 498`, '1.12;0.29;1.12', 42, -14, '#7a9a5a', 1)+
+    ped(`M282 508 L475 236 L282 508`, '1.18;0.31;1.18', 35, -26, '#c0894a', 2)+
+    ped(`M712 504 L524 234 L712 504`, '1.14;0.30;1.14', 40, 0,   '#a65a7a', 3)+
+    ped(`M706 500 L523 232 L706 500`, '1.10;0.28;1.10', 45, -22, '#6a5aa8', 4);
   const street=`<path d="M310 ${H} L${VPX-9} ${VPY+4} L${VPX+9} ${VPY+4} L690 ${H} Z" fill="url(#ktGround)"/>`
     +`<line x1="${VPX}" y1="${VPY+22}" x2="${VPX}" y2="${H}" stroke="rgba(235,225,185,0.4)" stroke-width="3" stroke-dasharray="14 20"/>`;
   const planet=`<ellipse cx="500" cy="118" rx="66" ry="66" fill="url(#ktKant)" opacity="0.55"/><circle cx="500" cy="118" r="32" fill="#7b5ec4"/><path d="M470 110 a32 32 0 0 0 60 -6 a38 38 0 0 1 -60 6 Z" fill="#6a4eb0" opacity="0.7"/><ellipse cx="500" cy="118" rx="55" ry="14" fill="none" stroke="#d8c0ff" stroke-width="2.5" opacity="0.75" transform="rotate(-18 500 118)"/><circle cx="490" cy="107" r="8" fill="#a98fe0" opacity="0.6"/>`;
@@ -14027,7 +14041,23 @@ const KL_LISTEN_DEFS = [
   { id: 605, kind: 'tempo', up: true,    q: 'does it SPEED UP or SLOW DOWN?',  answer: 'Speeds Up',  choices: ['Speeds Up', 'Slows Down'] },
   { id: 606, kind: 'tempo', up: false,   q: 'does it SPEED UP or SLOW DOWN?',  answer: 'Slows Down', choices: ['Speeds Up', 'Slows Down'] },
   { id: 607, kind: 'art',   legato: true,  q: 'is it SMOOTH or CHOPPY?',       answer: 'Smooth',     choices: ['Smooth', 'Choppy'] },
-  { id: 608, kind: 'art',   legato: false, q: 'is it SMOOTH or CHOPPY?',       answer: 'Choppy',     choices: ['Smooth', 'Choppy'] }
+  { id: 608, kind: 'art',   legato: false, q: 'is it SMOOTH or CHOPPY?',       answer: 'Choppy',     choices: ['Smooth', 'Choppy'] },
+  { id: 609, kind: 'vol',   up: true,    q: 'does it get LOUDER or QUIETER?',  answer: 'Louder',     choices: ['Louder', 'Quieter'] },
+  { id: 610, kind: 'vol',   up: false,   q: 'does it get LOUDER or QUIETER?',  answer: 'Quieter',    choices: ['Louder', 'Quieter'] },
+  { id: 611, kind: 'pitch', up: true,    q: 'does the pitch go UP or DOWN?',   answer: 'Up',         choices: ['Up', 'Down'] },
+  { id: 612, kind: 'pitch', up: false,   q: 'does the pitch go UP or DOWN?',   answer: 'Down',       choices: ['Up', 'Down'] },
+  { id: 613, kind: 'tempo', up: true,    q: 'does it SPEED UP or SLOW DOWN?',  answer: 'Speeds Up',  choices: ['Speeds Up', 'Slows Down'] },
+  { id: 614, kind: 'tempo', up: false,   q: 'does it SPEED UP or SLOW DOWN?',  answer: 'Slows Down', choices: ['Speeds Up', 'Slows Down'] },
+  { id: 615, kind: 'art',   legato: true,  q: 'is it SMOOTH or CHOPPY?',       answer: 'Smooth',     choices: ['Smooth', 'Choppy'] },
+  { id: 616, kind: 'art',   legato: false, q: 'is it SMOOTH or CHOPPY?',       answer: 'Choppy',     choices: ['Smooth', 'Choppy'] },
+  { id: 617, kind: 'vol',   up: true,    q: 'does it get LOUDER or QUIETER?',  answer: 'Louder',     choices: ['Louder', 'Quieter'] },
+  { id: 618, kind: 'vol',   up: false,   q: 'does it get LOUDER or QUIETER?',  answer: 'Quieter',    choices: ['Louder', 'Quieter'] },
+  { id: 619, kind: 'pitch', up: true,    q: 'does the pitch go UP or DOWN?',   answer: 'Up',         choices: ['Up', 'Down'] },
+  { id: 620, kind: 'pitch', up: false,   q: 'does the pitch go UP or DOWN?',   answer: 'Down',       choices: ['Up', 'Down'] },
+  { id: 621, kind: 'tempo', up: true,    q: 'does it SPEED UP or SLOW DOWN?',  answer: 'Speeds Up',  choices: ['Speeds Up', 'Slows Down'] },
+  { id: 622, kind: 'tempo', up: false,   q: 'does it SPEED UP or SLOW DOWN?',  answer: 'Slows Down', choices: ['Speeds Up', 'Slows Down'] },
+  { id: 623, kind: 'art',   legato: true,  q: 'is it SMOOTH or CHOPPY?',       answer: 'Smooth',     choices: ['Smooth', 'Choppy'] },
+  { id: 624, kind: 'art',   legato: false, q: 'is it SMOOTH or CHOPPY?',       answer: 'Choppy',     choices: ['Smooth', 'Choppy'] }
 ];
 const KL_LISTEN_START = KL_PUZZLES.length;
 KL_LISTEN_DEFS.forEach((ld, i) => KL_PUZZLES.push({ id: ld.id, type: 'listen', dot: 140 + i, ldef: ld }));
@@ -18007,7 +18037,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-133'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-137'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
