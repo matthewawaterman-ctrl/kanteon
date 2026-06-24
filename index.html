@@ -3743,26 +3743,25 @@
     font-family: 'Barlow', sans-serif; font-size: 11px; letter-spacing: 1px;
     color: rgba(220,210,255,0.4); text-transform: uppercase;
   }
-  /* b31-142 — relocate the speaker note / fullscreen / credit / build stamp out of
-     the cramped left panel into the open sky beside the cliff, bigger & readable. */
+  /* b31-143 — info lives in the open lower-LEFT, never over the cliff: a horizontal
+     row (fullscreen · credit · build) with the speaker note bubble at the bottom. */
   .kl-info {
     position: absolute; z-index: 2;
-    bottom: 6vh; left: 50%; transform: translateX(-50%);
-    width: min(540px, 92vw);
-    display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center;
+    bottom: 4vh; left: 50%; transform: translateX(-50%);
+    width: min(560px, 92vw);
+    display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center;
   }
-  .kl-info .kl-bt-note {
-    max-width: 460px; margin: 0; font-size: 16px; line-height: 1.4; padding: 12px 18px;
-  }
+  .kl-info-row { display: flex; align-items: center; justify-content: center; gap: 24px; flex-wrap: wrap; }
+  .kl-info .kl-bt-note { max-width: 540px; margin: 0; font-size: 16px; line-height: 1.4; padding: 12px 18px; }
   .kl-info .kl-tools-link { margin: 0; padding: 13px 28px; font-size: 17px; letter-spacing: 1px; }
   .kl-info .kl-company-credit { margin: 0; font-size: 14px; letter-spacing: 1.5px; color: rgba(220,210,255,0.55); }
-  .kl-info .kl-build-stamp { margin: 0; font-size: 26px; }
+  .kl-info .kl-build-stamp { margin: 0; font-size: 24px; }
   @media (min-width: 1024px) {
     .kl-info {
-      left: 31vw; right: 34vw; transform: none; width: auto;
-      bottom: 13vh; align-items: flex-start; text-align: left;
+      left: clamp(290px, 21vw, 26vw); right: 46vw; transform: none; width: auto;
+      bottom: 5vh; align-items: flex-start; text-align: left;
     }
-    .kl-info .kl-bt-note { margin: 0; }
+    .kl-info-row { justify-content: flex-start; }
   }
   /* ── HOMETOWN DIRECTORY (Oregon-Trail-style hotspots) ── */
   .kt-stage { display: flex; }
@@ -12279,7 +12278,7 @@ function klTownSVG(){
     factory:{body:"#46423b",roof:"#37332d",win:"#7d8a6a",neon:"#a6ff7a"},
     venue:{body:"#3b2f55",roof:"#ffd97a",win:"#ff7ad9",neon:"#ff7ad9"},
     shop:{body:"#3f5a4e",roof:"#7ab98a",win:"#ffe0a0",neon:"#7affb0"}};
-  const SIGN={plaza:["neon","#67ecff"],waddy:["wood","#ffcf6e"],garage:["metal","#9fd3ff"],
+  const SIGN={plaza:["neon","#8af4ff"],waddy:["neon","#ffd24a"],garage:["metal","#9fd3ff"],
     neighbor:["wood","#ecc59a"],home:["neon","#6ff0e0"],factory:["metal","#a6ff7a"],
     venue:["neon","#ff7ad9"],shop:["neon","#7affb0"]};
   const R=(x,y,w,h,fill,ex)=>`<rect x="${f(x)}" y="${f(y)}" width="${f(w)}" height="${f(h)}" ${ex||''} fill="${fill}"/>`;
@@ -12342,11 +12341,13 @@ function klTownSVG(){
     if(it.side>0) x=Math.max(x, it.inner+8);
     cx=x+sW/2;
     let g='';
-    if(type==='neon'){g+=R(x-2,y-2,sW+4,sH+4,col,'rx="6" opacity="0.16"');g+=R(x,y,sW,sH,'#171327','rx="4" stroke="'+col+'" stroke-width="2"');}
+    const _bright=(it.kind==='plaza'||it.kind==='waddy');
+    if(type==='neon'){g+=R(x-3,y-3,sW+6,sH+6,col,'rx="7" opacity="'+(_bright?0.42:0.16)+'"');g+=R(x,y,sW,sH,'#171327','rx="4" stroke="'+col+'" stroke-width="'+(_bright?3:2)+'"');if(_bright)g+=R(x+2,y+2,sW-4,sH-4,col,'rx="3" opacity="0.16"');}
     else if(type==='wood'){g+=R(x,y,sW,sH,'#7a5a38','rx="3" stroke="#4a3418" stroke-width="2"');}
     else{g+=R(x,y,sW,sH,'#33343c','rx="3" stroke="#62636c" stroke-width="2"');}
-    g+='<text x="'+f(cx)+'" y="'+f(y+sH*0.72)+'" text-anchor="middle" font-family="Barlow Condensed" font-weight="900" font-size="'+fz+'" fill="'+col+'">'+it.name+'</text>';
-    const _glow=(it.kind==='plaza'||it.kind==='waddy')?'drop-shadow(0 0 3px '+col+') drop-shadow(0 0 7px '+col+') drop-shadow(0 0 14px '+col+')':'drop-shadow(0 0 4px '+col+') drop-shadow(0 0 8px '+col+')';
+    const _txt=it.kind==='plaza'?'#dffaff':it.kind==='waddy'?'#fff1c4':col;
+    g+='<text x="'+f(cx)+'" y="'+f(y+sH*0.72)+'" text-anchor="middle" font-family="Barlow Condensed" font-weight="900" font-size="'+fz+'" fill="'+_txt+'">'+it.name+'</text>';
+    const _glow=_bright?'drop-shadow(0 0 4px '+col+') drop-shadow(0 0 10px '+col+') drop-shadow(0 0 20px '+col+') drop-shadow(0 0 34px '+col+')':'drop-shadow(0 0 4px '+col+') drop-shadow(0 0 8px '+col+')';
     return '<g class="kt-sign" style="filter:'+_glow+'">'+g+'</g>';
   }
   function bladeSign(it){
@@ -15031,10 +15032,12 @@ function klRenderPlayerSelect() {
         '<div class="kl-panel-players">' + players.map(btn).join('') + addTile + guestTile + '</div>' +
       '</div>' +
       '<div class="kl-info">' +
+        '<div class="kl-info-row">' +
+          '<button class="kl-tools-link" onclick="klToggleFullscreen()">⛶ Fullscreen</button>' +
+          '<div class="kl-company-credit">a Velion game</div>' +
+          '<div class="kl-build-stamp">build ' + KL_BUILD_TAG + '</div>' +
+        '</div>' +
         '<div class="kl-bt-note">🔊 Use your device\u2019s built-in speakers. Bluetooth headphones &amp; speakers add a delay that throws off the rhythm games — please turn them off first.</div>' +
-        '<button class="kl-tools-link" onclick="klToggleFullscreen()">⛶ Fullscreen</button>' +
-        '<div class="kl-company-credit">a Velion game</div>' +
-        '<div class="kl-build-stamp">build ' + KL_BUILD_TAG + '</div>' +
       '</div>' +
       (klIsDevAvailable() ? klDevBar() : '') +
     '</div>';
@@ -18159,7 +18162,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-142'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-143'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
