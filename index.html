@@ -3973,6 +3973,16 @@
     box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: opacity 0.4s;
   }
   .kl-toast.out { opacity: 0; }
+  .kl-clock-ff {
+    position: fixed; top: 84px; left: 50%; transform: translateX(-50%); z-index: 998;
+    pointer-events: none; font-family: 'Barlow Condensed', sans-serif; font-weight: 900;
+    font-size: 26px; letter-spacing: 1px; color: #ffe08a;
+    background: rgba(20,14,40,0.94); border: 1px solid rgba(255,224,138,0.5);
+    border-radius: 14px; padding: 8px 18px; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    transition: opacity 0.22s;
+  }
+  .kl-clock-ff.out { opacity: 0; }
+  .kl-clock-ff-ic { opacity: 0.85; margin-right: 6px; }
   /* ── INTERIOR BACKGROUNDS — each building gets a grounded, realistic room.
        Static layered gradients only (no animation, no images): zero perf cost,
        zero bytes of asset data, and they fully cover the space backdrop. ── */
@@ -12695,20 +12705,126 @@ function klSetComplete(setId) {
 // music level doesn't change. BUSKING starts WELL BELOW the day job for a no-name
 // with no gear, but scales hard with day-of-week (Fri/Sat peak), gear, and level
 // — so it becomes the upside play once you've built yourself up. Grounded in real
+// ── TIME OF DAY ──────────────────────────────────────────────────────────────
+// A playable day runs 8:00 AM → midnight = 16 hours. Every activity costs hours;
+// crossing midnight rolls the clock to 8 AM the next day. (The real↔game pace
+// only references Stardew’s ~10 game-min / 7 real-sec for the fast-forward look.)
+const KL_DAY_START = 8, KL_DAY_END = 24, KL_HOURS_PER_DAY = KL_DAY_END - KL_DAY_START;
+const KL_WORK_SHIFT_HRS = 8, KL_WAGE_PER_HOUR = 15; // an 8h shift = $120
+const KL_BUSK_HR_MIN = 4, KL_BUSK_HR_SPAN = 6;      // $4–10 raw per hour busked
+const KL_WRITE_HRS = 4, KL_RECORD_HRS = 3, KL_PUZZLE_HRS = 4;
+const KL_CLOCK_FF_MS = 650;                          // fast-forward visual length (tunable)
+function klTimeLabel(h) {
+  if (h == null) h = (klState.hour == null ? KL_DAY_START : klState.hour);
+  if (h >= 24) h -= 24;
+  let hh = Math.floor(h + 1e-6), mm = Math.round((h - hh) * 60);
+  if (mm === 60) { mm = 0; hh += 1; }
+  if (hh >= 24) hh -= 24;
+  if (hh === 0 && mm === 0) return 'Midnight';
+  const ampm = hh < 12 ? 'AM' : 'PM';
+  let disp = hh % 12; if (disp === 0) disp = 12;
+  return disp + ':' + (mm < 10 ? '0' : '') + mm + ' ' + ampm;
+}
+function klHoursLeft() { return Math.max(0, KL_DAY_END - (klState.hour == null ? KL_DAY_START : klState.hour)); }
+// THE primitive: move the clock forward n game-hours, rolling new days at midnight.
+// State + save happen immediately; animate=true also plays the fast-forward badge.
+function klAdvanceHours(n, animate, done) {
+  const from = (klState.hour == null ? KL_DAY_START : klState.hour);
+  const rawTo = from + Math.max(0, n);
+  let h = rawTo, extraDays = 0;
+  while (h >= KL_DAY_END) { h -= KL_HOURS_PER_DAY; extraDays++; }
+  klState.day += extraDays;
+  klState.hour = h;
+  klSaveProgress();
+  if (animate) klClockFastForward(from, rawTo, done);
+  else if (done) done();
+}
+function klEndDay(done) { klAdvanceHours(klHoursLeft() + 0.001, false, done); }
+// Cheap fast-forward: a small badge ticks the time up over ~0.65s (text only, no
+// heavy animation — safe on old hardware), then fades and fires the callback.
+function klClockFastForward(fromH, toH, done) {
+  const wrap = document.getElementById('kidlab');
+  if (!wrap) { if (done) done(); return; }
+  const old = document.getElementById('kl-clock-ff'); if (old) old.remove();
+  const el = document.createElement('div');
+  el.id = 'kl-clock-ff'; el.className = 'kl-clock-ff';
+  el.innerHTML = '<span class="kl-clock-ff-ic">⏩</span><span id="kl-clock-ff-t">' + klTimeLabel(fromH) + '</span>';
+  wrap.appendChild(el);
+  const steps = 12, total = toH - fromH; let i = 0;
+  const tn = document.getElementById('kl-clock-ff-t');
+  const iv = setInterval(function() {
+    i++;
+    const cur = fromH + total * (i / steps);
+    if (tn) tn.textContent = klTimeLabel(cur);
+    if (i >= steps) {
+      clearInterval(iv);
+      setTimeout(function() { el.classList.add('out'); setTimeout(function() { el.remove(); if (done) done(); }, 230); }, 150);
+    }
+  }, Math.max(20, Math.floor(KL_CLOCK_FF_MS / steps)));
+}
+// ── BUSK (hourly) ────────────────────────────────────────────────────────────
+let klBuskPlanN = 1;
+window.klOpenBuskPlan = function() { klBuskPlanN = 1; klRenderBuskPlan(); };
+window.klBuskPlanAdjust = function(d) { const max = Math.max(1, Math.floor(klHoursLeft())); klBuskPlanN = Math.max(1, Math.min(max, klBuskPlanN + d)); klRenderBuskPlan(); };
+window.klBuskPlanCancel = function() { const el = document.getElementById('kt-buskplan'); if (el) el.remove(); };
+window.klBuskPlanConfirm = function() { const n = Math.min(Math.max(1, Math.floor(klHoursLeft())), klBuskPlanN); const el = document.getElementById('kt-buskplan'); if (el) el.remove(); klBuskHours(n); };
+function klBuskEstimate(n) {
+  const perHr = (KL_BUSK_HR_MIN + KL_BUSK_HR_SPAN / 2) * klBuskDayMult() * klGearBuskFactor() * klEarnMult() * klCatalogMult();
+  return Math.round(perHr * n);
+}
+function klBuskHours(n) {
+  n = Math.max(1, Math.floor(n));
+  let pay = 0, hot = false;
+  for (let i = 0; i < n; i++) {
+    const base = KL_BUSK_HR_MIN + Math.floor(Math.random() * (KL_BUSK_HR_SPAN + 1));
+    const dm = klBuskDayMult(); if (dm >= 1.3) hot = true;
+    pay += Math.max(1, Math.round(base * dm * klGearBuskFactor() * klEarnMult() * klCatalogMult()));
+  }
+  klState.money += pay;
+  klAdvanceHours(n, true, function() {
+    klRenderTown();
+    klToast('🎸 Busked ' + n + ' hr' + (n > 1 ? 's' : '') + (hot ? ' (big crowd!)' : '') + ' — earned $' + pay + '  ·  ' + klTimeLabel() + ', Day ' + klState.day);
+  });
+}
+function klRenderBuskPlan() {
+  const old = document.getElementById('kt-buskplan'); if (old) old.remove();
+  const maxH = Math.max(1, Math.floor(klHoursLeft()));
+  const n = Math.min(maxH, klBuskPlanN);
+  const est = klBuskEstimate(n);
+  const endRaw = (klState.hour == null ? KL_DAY_START : klState.hour) + n;
+  const el = document.createElement('div');
+  el.id = 'kt-buskplan';
+  el.style.cssText = 'position:absolute;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(8,6,24,0.78);';
+  el.innerHTML =
+    '<div style="width:min(360px,92vw);background:linear-gradient(180deg,#1b1640,#15102e);border:1px solid rgba(140,120,255,0.4);border-radius:20px;padding:18px;box-shadow:0 18px 40px rgba(0,0,0,0.5);font-family:\'Barlow\',sans-serif;color:#fff;">' +
+      '<div style="font-family:\'Barlow Condensed\',sans-serif;font-weight:900;font-size:22px;letter-spacing:1px;">🎸 BUSK THE PLAZA</div>' +
+      '<div style="font-size:13px;opacity:0.78;margin-bottom:12px;">It’s ' + klTimeLabel() + '. How many hours do you want to busk? <i style="opacity:0.7;">(' + maxH + ' till midnight)</i></div>' +
+      '<div style="display:flex;align-items:center;justify-content:center;gap:18px;margin:4px 0 12px;">' +
+        '<button onclick="klBuskPlanAdjust(-1)" style="width:46px;height:46px;border-radius:12px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.25);color:#fff;font-size:24px;font-weight:900;cursor:pointer;">–</button>' +
+        '<div style="min-width:90px;text-align:center;"><div style="font-size:36px;font-weight:900;line-height:1;">' + n + '</div><div style="font-size:12px;opacity:0.7;">hour' + (n > 1 ? 's' : '') + '</div></div>' +
+        '<button onclick="klBuskPlanAdjust(1)" style="width:46px;height:46px;border-radius:12px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.25);color:#fff;font-size:24px;font-weight:900;cursor:pointer;">+</button>' +
+      '</div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:13px;"><span style="opacity:0.7;">Done around</span><span style="font-weight:700;">' + klTimeLabel(endRaw) + (endRaw >= 24 ? ' (next day)' : '') + '</span></div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:17px;margin-top:6px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.12);"><span>Est. earnings</span><span style="font-weight:900;color:#7ad98a;">~$' + est + '</span></div>' +
+      '<div style="display:flex;gap:10px;margin-top:14px;">' +
+        '<button onclick="klBuskPlanCancel()" style="flex:1;padding:11px;border-radius:12px;border:1px solid rgba(255,255,255,0.18);background:transparent;color:#fff;font-weight:700;font-size:14px;cursor:pointer;">Cancel</button>' +
+        '<button onclick="klBuskPlanConfirm()" style="flex:2;padding:11px;border-radius:12px;border:none;background:linear-gradient(180deg,#7dd3fc,#38bdf8);color:#06283a;font-weight:900;font-size:15px;cursor:pointer;">Busk ' + n + ' hr' + (n > 1 ? 's' : '') + '</button>' +
+      '</div>' +
+    '</div>';
+  document.getElementById('kidlab').appendChild(el);
+}
+// ── WORK (a single 8-hour shift, fast-forwarded) ─────────────────────────────
+function klWorkShift() {
+  const pay = KL_WAGE_PER_HOUR * KL_WORK_SHIFT_HRS;
+  klState.money += pay;
+  klAdvanceHours(KL_WORK_SHIFT_HRS, true, function() {
+    klRenderTown();
+    klToast('💼 Worked an 8-hour shift — earned $' + pay + '  ·  ' + klTimeLabel() + ', Day ' + klState.day);
+  });
+}
 // busker economics (beginners ~$10–30, pros on prime days $100s).
 const KL_DAYJOB_PAY = 120; // flat wage per day worked — steady, no luck, no scaling
-window.klBusk = function() {
-  const base = 16 + Math.floor(Math.random() * 19);   // $16–34 raw
-  const dayMult = klBuskDayMult();                      // Fri/Sat peak, Mon floor
-  const pay = Math.max(1, Math.round(base * dayMult * klGearBuskFactor() * klEarnMult() * klCatalogMult()));
-  klState.day++;
-  klSaveProgress(); // advance + persist before condition/day read in toast
-  const hot = dayMult >= 1.3;
-  klState.money += pay;
-  klSaveProgress();
-  klToast('🎸 Busked ' + klDayName(klState.day - 1) + (hot ? ' (big crowd!)' : '') + ' — earned $' + pay + '  ·  now Day ' + klState.day + ' (' + klDayName() + ')');
-  klRenderTown();
-};
+window.klBusk = function() { klOpenBuskPlan(); };
 window.klDayJob = function() {
   const pay = KL_DAYJOB_PAY;
   klState.day++;
@@ -12723,7 +12839,7 @@ window.klDayJob = function() {
 // start→end dates on a mini calendar and the total pay, then confirm. Flat
 // $120/day, so total is simply days × wage.
 let klWorkPlanN = 1;
-window.klOpenWorkPlan = function() { klWorkPlanN = 1; klRenderWorkPlan(); };
+window.klOpenWorkPlan = function() { klWorkShift(); };
 window.klWorkPlanAdjust = function(delta) { klWorkPlanN = Math.max(1, Math.min(14, klWorkPlanN + delta)); klRenderWorkPlan(); };
 // Calendar: tap a day to set the run (today → that day, up to 14 days).
 window.klWorkPickDay = function(day) { klWorkPlanN = Math.max(1, Math.min(14, day - klState.day + 1)); klRenderWorkPlan(); };
@@ -13069,6 +13185,7 @@ function klHudMarkup() {
       '<span class="kt-xpbar"><span class="kt-xpbar-fill" style="width:' + pct + '%"></span></span>' +
       '<span class="kt-xp-num">' + xpInto + '/' + xpFor + '</span></span>' +
     '<span class="kt-hud-item">' + klSeasonLabel() + ' · ' + klDayName() + (klIsWeekend() ? ' 🎉' : '') + '</span>' +
+    '<span class="kt-hud-item">🕗 ' + klTimeLabel(klState.hour) + '</span>' +
     (rentOwed > 0 ? '<span class="kt-hud-item kt-hud-rent" onclick="klPayRent()" title="Pay rent">🏠 RENT $' + rentOwed + (daysLeft != null ? ' · ' + Math.max(0, daysLeft) + 'd' : '') + '</span>' : '') +
     (klState.bookedDay ? '<span class="kt-hud-item kt-hud-show">🎤 Day ' + klState.bookedDay + ' · ' + klDayName(klState.bookedDay) + (klHypeMult() > 1 ? ' · 🔥×' + klHypeMult().toFixed(2) : '') + '</span>' : '') +
     (klState.van ? '<span class="kt-hud-item">🚐</span>' : '') +
@@ -13589,7 +13706,7 @@ window.klPayFine = function(fine) {
   klRenderInterior('venue');
 };
 window.klSkipToShow = function() {
-  klState.day = klState.bookedDay;
+  klState.day = klState.bookedDay; klState.hour = 8;
   klSaveProgress();
   klRenderInterior('venue');
 };
@@ -13666,7 +13783,7 @@ window.klShowStrike = function(msg) {
     klShowCleanup();
     klState.bookedDay = null;
     klState.promo = { flyers: 0, ads: 0, radio: 0 }; klState.promoExp = { flyers: 0, ads: 0, radio: 0 };
-    klState.day++;
+    klState.day++; klState.hour = 8;
     klState.money += 40; // pity pay
     klSaveProgress();
     klToast('😬 Booed off. $40 pity pay. Practice and book another.');
@@ -13709,7 +13826,7 @@ function klShowSongClear() {
   klState.bookedDay = null;
   klState.bookedDaysOut = 0;
   klState.promo = { flyers: 0, ads: 0, radio: 0 }; klState.promoExp = { flyers: 0, ads: 0, radio: 0 };
-  klState.day++;
+  klState.day++; klState.hour = 8;
   klState.xp = (klState.xp || 0) + xpGain; // a clean show is worth real XP
   klSaveProgress();
   klRenderShowPayout(detail);
@@ -14324,7 +14441,7 @@ function klSaveProgress() {
     localStorage.setItem(klSaveKey(klState.kid.id), JSON.stringify({
       v: 2, puzzleIdx: klState.puzzleIdx, score: klState.score, solved, savedAt: Date.now(),
       // === ECONOMY — START ===
-      money: klState.money, xp: klState.xp, day: klState.day, showsPlayed: klState.showsPlayed, bookedDay: klState.bookedDay,
+      money: klState.money, xp: klState.xp, day: klState.day, hour: klState.hour, showsPlayed: klState.showsPlayed, bookedDay: klState.bookedDay,
       promo: klState.promo, promoExp: klState.promoExp, songs: klState.songs, gear: klState.gear, gearCondition: klState.gearCondition, van: klState.van, vanLoan: klState.vanLoan, rentPaidCount: klState.rentPaidCount, rentNotifiedFor: klState.rentNotifiedFor, rentIntroShown: klState.rentIntroShown, bookedDaysOut: klState.bookedDaysOut, waddyDone: klState.waddyDone, garageDone: klState.garageDone, modDone: klState.modDone, xpAwarded: klState.xpAwarded, devUnlock: klState.devUnlock, setPos: klState.setPos, avatar: klState.avatar,
       // === ECONOMY — END ===
     }));
@@ -14599,6 +14716,7 @@ const klState = {
   showsPlayed: 0,        // shows completed — gates the van in the shop
   xp: 0,                 // experience — amplifies earnings (flat multiplier per level)
   day: 1,                // the calendar — advances when shows/jobs happen; drives day-of-week
+  hour: 8,               // time of day (8 = 8 AM … 24 = midnight); activities cost hours
   bookedDay: null,       // day a show is booked for (null = nothing booked)
   bookedDaysOut: 0,      // how far out it was booked — feeds the Hype meter
   promo: { flyers: 0, ads: 0, radio: 0 }, // promotion bought for the NEXT show
@@ -14731,7 +14849,7 @@ function klEvicted() {
 // Game-over restart: wipe the money grind (cash, calendar, rent, gear, bookings,
 // shows) but KEEP earned skills — module completion and XP/level carry over.
 window.klRestartRun = function() {
-  klState.money = 50; klState.day = 1;
+  klState.money = 50; klState.day = 1; klState.hour = 8;
   klState.rentPaidCount = 0; klState.rentNotifiedFor = -1;
   klState.bookedDay = null; klState.bookedDaysOut = 0;
   klState.promo = { flyers: 0, ads: 0, radio: 0 }; klState.promoExp = { flyers: 0, ads: 0, radio: 0 };
@@ -14788,7 +14906,7 @@ window.klRecordSong = function(idx) {
   if (klState.money < KL_RECORD_FEE) { klToast('Need $' + KL_RECORD_FEE + ' for studio time \u2014 go earn it.'); return; }
   if (klRecordedHype() >= KL_RECORD_HYPE_CAP) { klToast('Your recorded hype is already maxed out.'); return; }
   klState.money -= KL_RECORD_FEE;
-  klState.day++;
+  klAdvanceHours(KL_RECORD_HRS, false);
   s.recorded = true;
   s.recordedDay = klState.day;
   klSaveProgress();
@@ -14835,7 +14953,7 @@ window.klSongCancel = function() { const el = document.getElementById('kt-songwr
 // Step 1 - write it: roll quality + spend the day, then go to the naming step.
 window.klSongWrite = function() {
   klSongDraft = { score: klSongRollScore() };
-  klState.day++; // writing takes a day
+  klAdvanceHours(KL_WRITE_HRS, false); // writing takes hours
   klSaveProgress();
   klRenderSongwriter('name');
 };
@@ -15171,6 +15289,7 @@ window.klPickKid = function(kidId) {
     klState.xp = save.xp || 0;
     klState.showsPlayed = save.showsPlayed || 0;
     klState.day = save.day || 1;
+    klState.hour = (save.hour != null ? save.hour : 8);
     klState.bookedDay = (save.bookedDay !== undefined) ? save.bookedDay : null;
     klState.promo = save.promo || { flyers: 0, ads: 0, radio: 0 };
     klState.promoExp = save.promoExp || { flyers: 0, ads: 0, radio: 0 };
@@ -16378,6 +16497,7 @@ function klDevBarMarkup() {
   s += btn("klDevGo('town')", '🏠 Town', 'town map');
   s += btn("klDevGo('master')", '🧙 Waddy\u2019s', 'Sweet Waddy\u2019s — station select');
   s += btn("klDevGo('garage')", '🎸 Garage', 'The Garage — station select');
+  s += btn("klDevStudio()", '🎙️ Rec Studio', 'Force-unlock + open Waddy’s recording studio');
   s += btn("klDevGo('venue')", '🍽️ Restaurant', 'The Restaurant');
   s += btn("klDevGo('shop')", '🏪 Shop', 'Music Shop');
   s += btn("klDevGo('hater')", '🏚 Neighbor', 'the music-hater neighbor');
@@ -16503,7 +16623,7 @@ window.klDevJump = function(idx) {
 function klResetFreshState() {
   klState.avatar = klAvatarDefault();
   klState.puzzleIdx = 0; klState.score = 0; klState.solved = [];
-  klState.money = 50; klState.xp = 0; klState.xpAwarded = {}; klState.day = 1; klState.showsPlayed = 0; klState.bookedDay = null; klState.bookedDaysOut = 0;
+  klState.money = 50; klState.xp = 0; klState.xpAwarded = {}; klState.day = 1; klState.hour = 8; klState.showsPlayed = 0; klState.bookedDay = null; klState.bookedDaysOut = 0;
   klState.promo = { flyers: 0, ads: 0, radio: 0 }; klState.promoExp = { flyers: 0, ads: 0, radio: 0 };
   klState.songs = [];
   klState.gear = []; klState.gearCondition = 100; klState.van = false; klState.vanLoan = false; klState.rentPaidCount = 0; klState.rentNotifiedFor = -1; klState.rentIntroShown = false; klState.waddyDone = false; klState.garageDone = false;
@@ -16544,6 +16664,17 @@ function klDevBecomeMatt() {
   if (matt) { klState.kid = matt; return true; }
   return false;
 }
+window.klDevStudio = function() {
+  if (!klIsDevAvailable() || !klDevBecomeMatt()) return;
+  klState.waddyDone = true;
+  klState.garageDone = true;
+  klState.showsPlayed = Math.max(1, klState.showsPlayed || 0);
+  if (!klState.songs || !klState.songs.length) {
+    klState.songs = [{ title: 'Dev Demo', score: 72, day: klState.day }, { title: 'Test Track', score: 45, day: klState.day }];
+  }
+  klSaveProgress();
+  klEnterBuilding('master'); // Waddy\u2019s — now the recording studio
+};
 window.klDevGo = function(where) {
   if (!klIsDevAvailable() || !klDevBecomeMatt()) return;
   if (where === 'town') { klRenderTown(); return; }
@@ -18221,7 +18352,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-150'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-152'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
@@ -18916,7 +19047,7 @@ function klWin() {
       const pos = mod.indices.indexOf(klState.puzzleIdx);
       if (pos < 0 || pos + 1 >= mod.indices.length) {
         const xpGained = klMarkModuleDone(mod.id);
-        klState.day++; // a practice session takes a day — can't clear it all at once
+        klAdvanceHours(KL_PUZZLE_HRS, false); // a practice session takes hours
         const building = mod.building;
         const buildingDone = klBuildingModules(building).every(m => klModuleIsDone(m.id));
         setTimeout(() => {
