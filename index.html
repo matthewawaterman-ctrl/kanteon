@@ -12470,6 +12470,9 @@ const KL_PED_QUOTES = [
   "The fountain's been glitching since the last patch.",
   "Saw your name on a flyer. Or maybe that was a dream.",
   "Waddy still owes me a guitar string.",
+  "That Waddy? Sharpest mind on the planet. Talks to his amplifiers, though.",
+  "Only guy left who calls banging on things a 'career.' Sweet, but a weirdo.",
+  "Waddy swears folks used to make music with their hands. Imagine that.",
   "Day job's that way. Music's everywhere else."
 ];
 window.klPedSay = function(i){ try { klToast(KL_PED_QUOTES[Math.floor(Math.random()*KL_PED_QUOTES.length)]); } catch(e){} };
@@ -12842,6 +12845,7 @@ function klSceneArt(id) {
     );
   }
   if (id === 'waddy') {
+    if (klStudioUnlocked()) return svg('<defs><linearGradient id="stWall" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2b1c22"/><stop offset="100%" stop-color="#190f13"/></linearGradient><radialGradient id="stWarm" cx="50%" cy="14%" r="70%"><stop offset="0%" stop-color="rgba(255,170,70,0.20)"/><stop offset="100%" stop-color="rgba(255,170,70,0)"/></radialGradient><radialGradient id="stRecG" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="rgba(255,70,70,0.85)"/><stop offset="100%" stop-color="rgba(255,70,70,0)"/></radialGradient></defs><rect x="0" y="0" width="1200" height="470" fill="url(#stWall)"/><rect x="0" y="470" width="1200" height="150" fill="#140c10"/><ellipse cx="600" cy="20" rx="560" ry="170" fill="url(#stWarm)"/><g fill="#37232b" opacity="0.5"><rect x="40" y="120" width="58" height="58" transform="rotate(45 70 150)"/><rect x="40" y="200" width="58" height="58" transform="rotate(45 70 230)"/><rect x="40" y="280" width="58" height="58" transform="rotate(45 70 310)"/><rect x="120" y="120" width="58" height="58" transform="rotate(45 150 150)"/><rect x="120" y="200" width="58" height="58" transform="rotate(45 150 230)"/><rect x="120" y="280" width="58" height="58" transform="rotate(45 150 310)"/><rect x="1020" y="120" width="58" height="58" transform="rotate(45 1050 150)"/><rect x="1020" y="200" width="58" height="58" transform="rotate(45 1050 230)"/><rect x="1020" y="280" width="58" height="58" transform="rotate(45 1050 310)"/><rect x="1100" y="120" width="58" height="58" transform="rotate(45 1130 150)"/><rect x="1100" y="200" width="58" height="58" transform="rotate(45 1130 230)"/><rect x="1100" y="280" width="58" height="58" transform="rotate(45 1130 310)"/></g><ellipse cx="600" cy="64" rx="92" ry="56" fill="url(#stRecG)"/><rect x="548" y="44" width="104" height="38" rx="9" fill="#1a0e10" stroke="#ff5a5a" stroke-width="2"/><circle cx="568" cy="63" r="7" fill="#ff6a6a"/><text x="585" y="72" font-family="Barlow Condensed,sans-serif" font-weight="900" font-size="24" fill="#ff9a9a">REC</text><line x1="600" y1="100" x2="600" y2="170" stroke="#2a2a30" stroke-width="5"/><rect x="582" y="168" width="36" height="80" rx="16" fill="#cfd2dc" stroke="#6a6d78" stroke-width="2"/><rect x="588" y="178" width="24" height="50" rx="10" fill="#3a3d46"/><ellipse cx="656" cy="208" rx="30" ry="34" fill="none" stroke="#9aa0b0" stroke-width="3"/><rect x="150" y="300" width="120" height="152" rx="8" fill="#241820" stroke="#3a2a32" stroke-width="2"/><circle cx="210" cy="346" r="27" fill="#160f13" stroke="#4a3a42" stroke-width="3"/><circle cx="210" cy="346" r="10" fill="#3a2e34"/><circle cx="210" cy="412" r="16" fill="#160f13" stroke="#4a3a42" stroke-width="3"/><rect x="200" y="452" width="20" height="22" fill="#1a1014"/><rect x="930" y="300" width="120" height="152" rx="8" fill="#241820" stroke="#3a2a32" stroke-width="2"/><circle cx="990" cy="346" r="27" fill="#160f13" stroke="#4a3a42" stroke-width="3"/><circle cx="990" cy="346" r="10" fill="#3a2e34"/><circle cx="990" cy="412" r="16" fill="#160f13" stroke="#4a3a42" stroke-width="3"/><rect x="980" y="452" width="20" height="22" fill="#1a1014"/><rect x="360" y="412" width="480" height="110" rx="10" fill="#241820" stroke="#3a2a32" stroke-width="2"/><rect x="360" y="412" width="480" height="22" rx="10" fill="#2e2029"/><rect x="386" y="444" width="4" height="60" rx="2" fill="#15100e"/><rect x="378" y="452" width="20" height="11" rx="3" fill="#caa24a"/><rect x="416" y="444" width="4" height="60" rx="2" fill="#15100e"/><rect x="408" y="459" width="20" height="11" rx="3" fill="#caa24a"/><rect x="446" y="444" width="4" height="60" rx="2" fill="#15100e"/><rect x="438" y="466" width="20" height="11" rx="3" fill="#caa24a"/><rect x="476" y="444" width="4" height="60" rx="2" fill="#15100e"/><rect x="468" y="473" width="20" height="11" rx="3" fill="#caa24a"/><rect x="506" y="444" width="4" height="60" rx="2" fill="#15100e"/><rect x="498" y="480" width="20" height="11" rx="3" fill="#caa24a"/><rect x="536" y="444" width="4" height="60" rx="2" fill="#15100e"/><rect x="528" y="453" width="20" height="11" rx="3" fill="#caa24a"/><rect x="566" y="444" width="4" height="60" rx="2" fill="#15100e"/><rect x="558" y="460" width="20" height="11" rx="3" fill="#caa24a"/><rect x="596" y="444" width="4" height="60" rx="2" fill="#15100e"/><rect x="588" y="467" width="20" height="11" rx="3" fill="#caa24a"/><g fill="#160f13" stroke="#5a4a52" stroke-width="2"><circle cx="705" cy="452" r="12"/><line x1="705" y1="452" x2="705" y2="443" stroke="#caa24a" stroke-width="2"/><circle cx="705" cy="490" r="12"/><line x1="705" y1="490" x2="705" y2="481" stroke="#caa24a" stroke-width="2"/><circle cx="742" cy="452" r="12"/><line x1="742" y1="452" x2="742" y2="443" stroke="#caa24a" stroke-width="2"/><circle cx="742" cy="490" r="12"/><line x1="742" y1="490" x2="742" y2="481" stroke="#caa24a" stroke-width="2"/><circle cx="779" cy="452" r="12"/><line x1="779" y1="452" x2="779" y2="443" stroke="#caa24a" stroke-width="2"/><circle cx="779" cy="490" r="12"/><line x1="779" y1="490" x2="779" y2="481" stroke="#caa24a" stroke-width="2"/></g><rect x="120" y="430" width="12" height="40" fill="#e8dcc0"/><ellipse cx="126" cy="424" rx="6" ry="11" fill="#ffcf5e"/><ellipse cx="126" cy="427" rx="3" ry="6" fill="#ff7a3c"/><text x="440" y="150" font-family="Georgia" font-size="30" fill="rgba(255,210,140,0.5)">♪</text><text x="800" y="150" font-family="Georgia" font-size="26" fill="rgba(180,210,255,0.45)">♫</text>');
     // mystical music lair: brick, arched stained window, shelves of potions, a
     // hanging lute, candles, a crystal ball, and a few floating notes.
     return svg(
@@ -12987,6 +12991,11 @@ const KL_WADDY_LINES = [
   '"They called me crazy. Then they called the cops. Keep playing."',
   '"Every great riff started as a wrong note played twice."',
   '"This town forgot how to listen. You\u2019re gonna remind them."',
+  '"Half the gear in that Garage I built from salvage and spite. She runs. Mostly."',
+  '"Everybody on this rock thinks live music\u2019s a fairy tale. Let \u2019em \u2014 more amps for us."',
+  '"They think I\u2019m a crank in goggles. They\u2019re right. I\u2019m also the only one still plugged in."',
+  '"The Garage is mine. The noise you make in it? That\u2019s all you."',
+  '"One day this planet remembers it has ears. I\u2019m just keeping the lights on till then."',
 ];
 const KL_HATER_LINES = [
   '"Hmph. You kids and your NOISE."',
@@ -13280,7 +13289,7 @@ function klRenderInterior(id) {
       '<div class="kl-stage kt-interior kt-bg-garage">' +
         klHudMarkup() +
         '<div class="kl-garage-head"><div class="kl-garage-title">THE GARAGE</div>' +
-        '<div class="kl-garage-sub">Your turf. Click any piece of gear to train on it.</div></div>' +
+        '<div class="kl-garage-sub">Waddy\u2019s lab — he tossed you a key. Click any piece of gear to train on it.</div></div>' +
         '<div class="kl-garage-scene-wrap">' + klGarageScene() + '</div>' +
         '<button class="kl-garage-back" onclick="klRenderTown()">← Back outside</button>' +
         (klIsDevAvailable() ? klDevBar() : '') +
@@ -13288,11 +13297,31 @@ function klRenderInterior(id) {
     klFlushNotifications(() => klRenderInterior('garage'));
     return;
   }
-  if (id === 'waddy') {
+  if (id === 'waddy' && klStudioUnlocked()) {
+    title = "WADDY'S STUDIO"; art = '🎚️';
+    const songs = klState.songs || [];
+    const recRows = songs.length
+      ? songs.map(function(sg, i) {
+          const tt = klSongTier(sg.score || 0);
+          const add = ((sg.score || 0) / 100 * KL_RECORD_HYPE);
+          return '<div class="kt-song-row"><span class="kt-song-title">' + tt.emoji + ' ' + sg.title + '</span>' +
+            (sg.recorded
+              ? '<span class="kt-song-vibe" style="color:#86efac;">🎙️ on tape · +' + add.toFixed(2) + ' hype</span>'
+              : '<button class="kt-int-sub" ' + (klState.money < KL_RECORD_FEE ? 'disabled' : '') + ' onclick="klRecordSong(' + i + ')">Record · $' + KL_RECORD_FEE + ' + 1 day</button>') +
+            '</div>';
+        }).join('')
+      : '<p class="kt-int-note">No songs to record yet — write some at your house first.</p>';
+    const recHype = klRecordedHype();
+    body =
+      '<p class="kt-int-line">Waddy gutted the basement and wired it up proper — a console, monitors, a vocal booth, the works. Goggles up, grin on. "Writing a song is half of it, kid. Put it to <i>tape</i> and the whole planet can hear it — that’s heat that doesn’t fade like some flyer."</p>' +
+      '<div class="kt-shop-divider">DURABLE HYPE · ' + (recHype > 0 ? '×' + (1 + recHype).toFixed(2) + ' (permanent)' : 'record a track to start') + (recHype >= KL_RECORD_HYPE_CAP ? ' · MAX' : '') + '</div>' +
+      recRows +
+      '<button class="kt-int-sub" onclick="klTalkTo(\'waddy\')">💬 Talk to Waddy</button>';
+  } else if (id === 'waddy') {
     title = "SWEET WADDY'S"; art = '🧙';
     const stations = klBuildingModules('waddy').map(klStationMarkup).join('');
     body =
-      '<p class="kt-int-line">The wizard of rock grins from behind a wall of busted amps. "Start with the big three — drums, bass, melody. Nail those and the rest opens up."</p>' +
+      '<p class="kt-int-line">Waddy looks up from a half-gutted amp — goggles shoved up in a tangle of wild hair, soldering iron still smoking. The last soul on the planet who swears live music is real. "Fingers on strings, sticks on skins — the big three first: drums, bass, melody. Nail those and I\u2019ll turn you loose in my Garage."</p>' +
       '<div class="kl-station-grid">' + stations + '</div>' +
       '<button class="kt-int-sub" onclick="klTalkTo(\'waddy\')">💬 Talk to Waddy</button>';
   } else if (id === 'garage') {
@@ -14738,7 +14767,35 @@ function klPromoHype() {
   const rad = klPromoActive('radio')  ? p.radio  : 0;
   return fly * 0.10 + ad * 0.25 + rad * 0.50; // up to +1.05
 }
-function klHypeMult() { return 1 + klPromoHype(); }
+// Durable hype from RECORDED songs — never decays. Soft-capped for sane economy.
+function klRecordedHype() {
+  const songs = klState.songs || [];
+  const raw = songs.reduce(function(a, s) { return a + (s.recorded ? (s.score || 0) / 100 * KL_RECORD_HYPE : 0); }, 0);
+  return Math.min(KL_RECORD_HYPE_CAP, raw);
+}
+// Waddy's place converts to the recording studio once the player has cleared the
+// basics, cleared the Garage, and played at least one show.
+function klStudioUnlocked() {
+  return !!(klState.waddyDone && klState.garageDone && (klState.showsPlayed || 0) >= 1);
+}
+function klHypeMult() { return 1 + klPromoHype() + klRecordedHype(); }
+// RECORD a Song Bank track at Waddy's: costs a day + a small fee, marks it
+// "on tape", and adds its quality as PERMANENT hype.
+window.klRecordSong = function(idx) {
+  const songs = klState.songs || [];
+  const s = songs[idx];
+  if (!s || s.recorded) return;
+  if (klState.money < KL_RECORD_FEE) { klToast('Need $' + KL_RECORD_FEE + ' for studio time \u2014 go earn it.'); return; }
+  if (klRecordedHype() >= KL_RECORD_HYPE_CAP) { klToast('Your recorded hype is already maxed out.'); return; }
+  klState.money -= KL_RECORD_FEE;
+  klState.day++;
+  s.recorded = true;
+  s.recordedDay = klState.day;
+  klSaveProgress();
+  const add = ((s.score || 0) / 100 * KL_RECORD_HYPE);
+  klNotify('\U0001F399\uFE0F', 'Laid it to tape!', '\u201C' + s.title + '\u201D is recorded \u2014 +' + add.toFixed(2) + ' permanent hype. Show hype is now \u00D7' + klHypeMult().toFixed(2) + '.');
+  klRenderInterior('waddy');
+};
 // ── SONGWRITING — your SONG BANK ────────────────────────────────────────────
 // Writing a song takes a day and rolls a QUALITY score 1-100 (mostly your skill,
 // a bit of luck), then you NAME it. Songs are durable assets: your catalog adds a
@@ -14746,6 +14803,11 @@ function klHypeMult() { return 1 + klPromoHype(); }
 // bank of good songs is lasting income. Grows later: performing specific songs,
 // recording, royalties, decay, etc.
 const KL_SONG_WEIGHT = 0.08; // a perfect (100) song = +8% to busk & show pay; a 50 = +4%
+// RECORDING (Waddy's studio, endgame-gated): lay a written song to tape for
+// PERMANENT hype that never decays like promotion does.
+const KL_RECORD_HYPE = 0.35;     // a perfect (100) recording = +0.35 hype; a 50 = +0.175
+const KL_RECORD_HYPE_CAP = 2.0;  // total durable hype from recordings is capped here
+const KL_RECORD_FEE = 20;        // studio cost per track (plus one day)
 // Quality roll: mostly skill (your level sets the range), a bit of pure luck.
 function klSongRollScore() {
   const lvl = klLevel();
@@ -18159,7 +18221,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-148'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-150'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
