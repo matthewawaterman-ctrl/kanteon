@@ -4872,10 +4872,10 @@
     text-shadow: 0 2px 10px rgba(0,0,0,0.9); }
   .kl-garage-title { font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 28px; letter-spacing: 1.5px; color: #fff; }
   .kl-garage-sub { font-family: 'Barlow', sans-serif; font-size: 13.5px; color: #e6e2f5; margin-top: 1px; }
-  .kl-garage-back { position: absolute; left: 16px; bottom: 16px; z-index: 6;
-    font-family: 'Barlow', sans-serif; font-size: 15px; font-weight: 700; color: #fff;
-    background: rgba(20,16,40,0.82); border: 1px solid rgba(255,255,255,0.22); border-radius: 12px;
-    padding: 10px 16px; cursor: pointer; backdrop-filter: blur(4px); }
+  .kl-garage-back { position: absolute; left: 24px; bottom: 58px; z-index: 7;
+    font-family: 'Barlow', sans-serif; font-size: 17px; font-weight: 700; color: #fff;
+    background: rgba(20,16,40,0.82); border: 1px solid rgba(255,255,255,0.22); border-radius: 13px;
+    padding: 13px 22px; cursor: pointer; backdrop-filter: blur(4px); }
   .kl-garage-back:hover { background: rgba(40,32,70,0.92); border-color: rgba(255,255,255,0.4); }
   .kl-ear-choice {
     flex: 1 1 40%; min-width: 130px; min-height: 60px; padding: 10px 18px; border-radius: 14px; cursor: pointer;
@@ -12721,8 +12721,8 @@ function klSetComplete(setId) {
 const KL_DAY_START = 8, KL_DAY_END = 24, KL_HOURS_PER_DAY = KL_DAY_END - KL_DAY_START;
 const KL_WORK_SHIFT_HRS = 8, KL_WAGE_PER_HOUR = 15; // an 8h shift = $120
 const KL_BUSK_HR_MIN = 4, KL_BUSK_HR_SPAN = 6;      // $4–10 raw per hour busked
-const KL_WRITE_HRS = 4, KL_RECORD_HRS = 3, KL_PUZZLE_HRS = 4;
-const KL_SONG_HOURS = 6;             // a full song demo = 6 hours of studio work (resumable across days)
+const KL_WRITE_HRS = 4, KL_RECORD_HRS = 6, KL_PUZZLE_HRS = 4;
+const KL_SONG_HOURS = 4;             // writing + demoing a song = 4 hours of studio work (resumable across days)
 const KL_SHOW_LOADIN = 18;           // load-in is 6:00 PM; arriving later = "late but showed up"
 const KL_SHOW_LATE_MULT = 0.6;       // a late show pays/hypes 40% less than an on-time one
 const KL_CLOCK_FF_MS = 650;                          // fast-forward visual length (tunable)
@@ -13694,7 +13694,7 @@ function klRenderInterior(id) {
           return '<div class="kt-song-row"><span class="kt-song-title">' + tt.emoji + ' ' + sg.title + '</span>' +
             (sg.recorded
               ? '<span class="kt-song-vibe" style="color:#86efac;">🎙️ on tape · +' + add.toFixed(2) + ' hype</span>'
-              : '<button class="kt-int-sub" ' + (klState.money < KL_RECORD_FEE ? 'disabled' : '') + ' onclick="klRecordSong(' + i + ')">Record · $' + KL_RECORD_FEE + ' + 1 day</button>') +
+              : '<button class="kt-int-sub" ' + (klState.money < KL_RECORD_FEE ? 'disabled' : '') + ' onclick="klRecordSong(' + i + ')">Record · $' + KL_RECORD_FEE + ' + ' + KL_RECORD_HRS + ' hrs</button>') +
             '</div>';
         }).join('')
       : '<p class="kt-int-note">No songs to record yet — write some at your house first.</p>';
@@ -13864,9 +13864,9 @@ function klRenderInterior(id) {
           '<div class="kt-int-card kt-shop-card">' +
             '<div class="kt-int-title">' + title + '</div>' +
             body +
-            '<button class="kt-int-leave" onclick="klRenderTown()">← Back outside</button>' +
           '</div>' +
         '</div>' +
+        '<button class="kl-garage-back" onclick="klRenderTown()">← Back outside</button>' +
         (klIsDevAvailable() ? klDevBar() : '') +
       '</div>';
     return;
@@ -13879,8 +13879,8 @@ function klRenderInterior(id) {
         '<div class="kt-int-art">' + art + '</div>' +
         '<div class="kt-int-title">' + title + '</div>' +
         body +
-        '<button class="kt-int-leave" onclick="klRenderTown()">← Back outside</button>' +
       '</div>' +
+      '<button class="kl-garage-back" onclick="klRenderTown()">← Back outside</button>' +
       (klIsDevAvailable() ? klDevBar() : '') +
     '</div>';
   klFlushNotifications(() => klRenderInterior(id)); // level-up / cleared notices play here
@@ -15240,7 +15240,7 @@ const KL_SONG_WEIGHT = 0.08; // a perfect (100) song = +8% to busk & show pay; a
 // PERMANENT hype that never decays like promotion does.
 const KL_RECORD_HYPE = 0.35;     // a perfect (100) recording = +0.35 hype; a 50 = +0.175
 const KL_RECORD_HYPE_CAP = 2.0;  // total durable hype from recordings is capped here
-const KL_RECORD_FEE = 20;        // studio cost per track (plus one day)
+const KL_RECORD_FEE = 250;       // studio cost per track (plus studio time)
 // Quality roll: mostly skill (your level sets the range), a bit of pure luck.
 function klSongRollScore() {
   const lvl = klLevel();
@@ -15277,7 +15277,9 @@ window.klOpenSongBank = function() {
       songs.slice().reverse().map(function(sg) {
         const t = klSongTier(sg.score || 0);
         return '<div class="kt-song-row"><span class="kt-song-title">' + t.emoji + ' ' + sg.title + '</span>' +
-          '<span class="kt-song-vibe">' + t.label + ' \u00B7 ' + (sg.score || 0) + '/100' + (sg.recorded ? ' \uD83C\uDF99\uFE0F' : '') + '</span></div>';
+          '<span class="kt-song-vibe">' + t.label + ' \u00B7 ' + (sg.score || 0) + '/100 \u00B7 ' +
+            (sg.recorded ? '<b style="color:#86efac;">\uD83C\uDF99\uFE0F Recorded</b>' : '<span style="opacity:0.55;">\uD83D\uDCDD Demo</span>') +
+          '</span></div>';
       }).join('')
     : '<p class="kt-int-note">No songs yet \u2014 grab the guitar to write one. Better songs multiply what you earn busking and playing shows.</p>';
   const overlay = document.createElement('div');
@@ -18765,7 +18767,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-159'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-160'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
