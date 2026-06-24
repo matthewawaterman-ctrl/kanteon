@@ -4214,10 +4214,10 @@
     background: linear-gradient(90deg, rgba(20,12,46,0.78) 0%, rgba(20,12,46,0.5) 26%, rgba(20,12,46,0) 50%);
   }
   .kl-panel {
-    position: absolute; z-index: 2; left: 0; top: 0; bottom: 0;
+    position: absolute; z-index: 2; left: 2.5vw; top: 0; bottom: 0;
     width: min(290px, 62%);
     display: flex; flex-direction: column; justify-content: center; gap: 16px;
-    padding: 24px 20px 24px 26px;
+    padding: 24px 20px 24px 0;
   }
   .kl-panel-title {
     font-family: 'Barlow Condensed', sans-serif; font-weight: 900;
@@ -12343,12 +12343,13 @@ function klTownSVG(){
     const _bright=(it.kind==='plaza'||it.kind==='waddy');
     const txt='<text x="'+f(cx)+'" y="'+f(y+sH*0.72)+'" text-anchor="middle" font-family="Barlow Condensed" font-weight="900" font-size="'+fz+'" fill="'+col+'">'+it.name+'</text>';
     if(_bright){
-      // Real SVG-filter neon: glow the COLORED outline+text only (no dark plate in the
-      // glow source -> no dark haze), with a generous filter region so the blur on a
-      // short, wide sign is NOT clipped the way CSS drop-shadow was. Stacked twice for punch.
-      const plate=R(x,y,sW,sH,'#171327','rx="4" stroke="'+col+'" stroke-width="2.5"');
-      const src='<rect x="'+f(x)+'" y="'+f(y)+'" width="'+f(sW)+'" height="'+f(sH)+'" rx="4" fill="none" stroke="'+col+'" stroke-width="2.5"/>'+txt;
-      return '<g class="kt-sign">'+plate+'<g filter="url(#ktNeon)">'+src+'</g><g filter="url(#ktNeon)">'+src+'</g>'+txt+'</g>';
+      // Crisp neon: sharp dark plate, then ONE filtered group of the COLORED outline+text.
+      // The filter blurs for the glow but merges the SHARP source back on top, so the text
+      // stays crisp (not hazy) while a tight colored glow surrounds it. Generous filter
+      // region => no clipping like CSS drop-shadow had on these short, wide signs.
+      const plate=R(x,y,sW,sH,'#171327','rx="4" stroke="'+col+'" stroke-width="2"');
+      const bright='<rect x="'+f(x)+'" y="'+f(y)+'" width="'+f(sW)+'" height="'+f(sH)+'" rx="4" fill="none" stroke="'+col+'" stroke-width="2"/>'+txt;
+      return '<g class="kt-sign">'+plate+'<g filter="url(#ktNeon)">'+bright+'</g></g>';
     }
     let g='';
     if(type==='neon'){g+=R(x-2,y-2,sW+4,sH+4,col,'rx="6" opacity="0.16"');g+=R(x,y,sW,sH,'#171327','rx="4" stroke="'+col+'" stroke-width="2"');}
@@ -12439,7 +12440,7 @@ function klTownSVG(){
     +`<line x1="${VPX}" y1="${VPY+22}" x2="${VPX}" y2="${H}" stroke="rgba(235,225,185,0.4)" stroke-width="3" stroke-dasharray="14 20"/>`;
   const planet=`<ellipse cx="500" cy="118" rx="66" ry="66" fill="url(#ktKant)" opacity="0.55"/><circle cx="500" cy="118" r="32" fill="#7b5ec4"/><path d="M470 110 a32 32 0 0 0 60 -6 a38 38 0 0 1 -60 6 Z" fill="#6a4eb0" opacity="0.7"/><ellipse cx="500" cy="118" rx="55" ry="14" fill="none" stroke="#d8c0ff" stroke-width="2.5" opacity="0.75" transform="rotate(-18 500 118)"/><circle cx="490" cy="107" r="8" fill="#a98fe0" opacity="0.6"/>`;
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="display:block;">`
-    +`<defs><linearGradient id="ktSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1b1436"/><stop offset="52%" stop-color="#3f3160"/><stop offset="82%" stop-color="#a8748a"/><stop offset="100%" stop-color="#caa06e"/></linearGradient><linearGradient id="ktGround" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#7a6f5e"/><stop offset="100%" stop-color="#9a8c76"/></linearGradient><radialGradient id="ktFount" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#c6f8ff"/><stop offset="60%" stop-color="#4fd4ff"/><stop offset="100%" stop-color="#1060a0" stop-opacity="0"/></radialGradient><radialGradient id="ktKant" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffe9fb"/><stop offset="55%" stop-color="#b98cff"/><stop offset="100%" stop-color="#5a3aa0" stop-opacity="0"/></radialGradient><filter id="ktNeon" x="-120%" y="-320%" width="340%" height="740%" color-interpolation-filters="sRGB"><feGaussianBlur in="SourceGraphic" stdDeviation="2.6"/></filter></defs>`
+    +`<defs><linearGradient id="ktSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1b1436"/><stop offset="52%" stop-color="#3f3160"/><stop offset="82%" stop-color="#a8748a"/><stop offset="100%" stop-color="#caa06e"/></linearGradient><linearGradient id="ktGround" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#7a6f5e"/><stop offset="100%" stop-color="#9a8c76"/></linearGradient><radialGradient id="ktFount" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#c6f8ff"/><stop offset="60%" stop-color="#4fd4ff"/><stop offset="100%" stop-color="#1060a0" stop-opacity="0"/></radialGradient><radialGradient id="ktKant" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffe9fb"/><stop offset="55%" stop-color="#b98cff"/><stop offset="100%" stop-color="#5a3aa0" stop-opacity="0"/></radialGradient><filter id="ktNeon" x="-100%" y="-300%" width="300%" height="700%" color-interpolation-filters="sRGB"><feGaussianBlur in="SourceGraphic" stdDeviation="1.7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`
     +R(0,0,W,H,'url(#ktSky)')+planet
     +`<circle cx="180" cy="70" r="2" fill="rgba(255,255,255,0.6)"/><circle cx="340" cy="48" r="1.5" fill="rgba(255,255,255,0.5)"/><circle cx="660" cy="60" r="1.8" fill="rgba(255,255,255,0.5)"/><circle cx="820" cy="90" r="1.5" fill="rgba(255,255,255,0.5)"/>`
     +R(0,VPY+4,W,H-VPY-4,'#5b5042')+filler+sidewalks+street
@@ -18169,7 +18170,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-144'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-145'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
