@@ -3763,6 +3763,15 @@
     }
     .kl-info-row { justify-content: flex-start; }
   }
+  /* Landing corners: Fullscreen mirrors the KANTEON logo (top-right), the company
+     credit mirrors the bottom-left info block (bottom-right). Same 4vh / 2.5vw
+     insets as .kl-scene-logo and .kl-info, so all four corners line up. */
+  .kl-fs-corner { position: absolute; top: 4vh; right: 2.5vw; z-index: 3; margin: 0; }
+  .kl-credit-corner { position: absolute; bottom: 4vh; right: 2.5vw; z-index: 3; margin: 0; display: none; }
+  @media (min-width: 1024px) {
+    .kl-credit-corner { display: block; }           /* corner credit on desktop */
+    .kl-info .kl-company-credit { display: none; }  /* hide the in-row credit on desktop */
+  }
   /* ── HOMETOWN DIRECTORY (Oregon-Trail-style hotspots) ── */
   .kt-stage { display: flex; }
   .kt-town-name {
@@ -15423,9 +15432,10 @@ function klRenderPlayerSelect() {
         '<div class="kl-panel-title">Who\'s playing?</div>' +
         '<div class="kl-panel-players">' + players.map(btn).join('') + addTile + guestTile + '</div>' +
       '</div>' +
+      '<button class="kl-tools-link kl-fs-corner" onclick="klToggleFullscreen()">⛶ Fullscreen</button>' +
+      '<div class="kl-company-credit kl-credit-corner">a Velion game</div>' +
       '<div class="kl-info">' +
         '<div class="kl-info-row">' +
-          '<button class="kl-tools-link" onclick="klToggleFullscreen()">⛶ Fullscreen</button>' +
           '<div class="kl-company-credit">a Velion game</div>' +
           '<div class="kl-build-stamp">build ' + KL_BUILD_TAG + '</div>' +
         '</div>' +
@@ -18574,7 +18584,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-155'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-156'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
