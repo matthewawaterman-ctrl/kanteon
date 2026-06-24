@@ -12454,6 +12454,7 @@ function klTownSVG(){
 function klRenderTown() {
   document.getElementById('kidlab').classList.remove('kl-playing');
   klStopClock(); klStopBeatBar();
+  klStartDayClock();
   klState.activeSet = null;
   if (klCheckRent()) return; // rent came due — notified, or overdue/evicted (eviction takes the screen)
   klExpirePromo();           // clear any promotion whose run has ended
@@ -12763,6 +12764,61 @@ function klClockFastForward(fromH, toH, done) {
   }, Math.max(20, Math.floor(KL_CLOCK_FF_MS / steps)));
 }
 // ── BUSK (hourly) ────────────────────────────────────────────────────────────
+// ── LIVE CLOCK ───────────────────────────────────────────────────────────────
+// Time flows on its own while the TOWN MAP is on screen: 60 real seconds = one
+// game-hour. It pauses automatically everywhere else (puzzles, lessons, the shop,
+// dialogue, modals) and via the user pause button. Busk/work still fast-forward.
+const KL_REAL_SEC_PER_GAME_HOUR = 60; // tune this to change the pace
+let klDayClockTimer = null, klDayClockPaused = false, klDayClockSaveAccum = 0;
+function klDayClockShouldTick() {
+  if (klDayClockPaused) return false;
+  if (!document.querySelector('.kt-stage')) return false; // town map only
+  if (document.getElementById('kt-buskplan') || document.getElementById('kt-workplan') ||
+      document.getElementById('kt-songwriter') || document.getElementById('kt-avatar') ||
+      document.getElementById('kl-clock-ff') || document.querySelector('.kl-cutscene')) return false;
+  return true;
+}
+function klStartDayClock() { if (!klDayClockTimer) klDayClockTimer = setInterval(klDayClockTick, 1000); }
+function klDayClockTick() {
+  klRefreshPauseBtn();
+  if (!klDayClockShouldTick()) return;
+  const perTick = 1 / KL_REAL_SEC_PER_GAME_HOUR; // game-hours per real second
+  const oldDay = klState.day;
+  let h = (klState.hour == null ? KL_DAY_START : klState.hour) + perTick;
+  if (h >= KL_DAY_END) { h -= KL_HOURS_PER_DAY; klState.day++; }
+  klState.hour = h;
+  const c = document.getElementById('kl-hud-clock');
+  if (c) c.textContent = '🕗 ' + klTimeLabel(klState.hour);
+  klDayClockSaveAccum += perTick;
+  if (klDayClockSaveAccum >= 0.25) { klDayClockSaveAccum = 0; klSaveProgress(); } // ~4 saves/hr
+  if (klState.day !== oldDay) klRenderTown(); // new day rolled in — refresh day/rent chips
+}
+window.klTogglePause = function() {
+  klDayClockPaused = !klDayClockPaused;
+  if (!klDayClockPaused) klSaveProgress();
+  klRefreshPauseBtn();
+};
+function klRefreshPauseBtn() {
+  const b = document.getElementById('kl-pause-btn');
+  if (b) b.textContent = klDayClockPaused ? '▶' : '⏸';
+  const c = document.getElementById('kl-hud-clock');
+  if (c) c.textContent = '🕗 ' + klTimeLabel(klState.hour) + (klDayClockPaused ? ' ⏸' : '');
+}
+window.klDevTimeShift = function(h) {
+  if (!klIsDevAvailable() || !klDevBecomeMatt()) return;
+  let t = (klState.day - 1) * KL_HOURS_PER_DAY + ((klState.hour == null ? KL_DAY_START : klState.hour) - KL_DAY_START) + h;
+  if (t < 0) t = 0;
+  klState.day = Math.floor(t / KL_HOURS_PER_DAY) + 1;
+  klState.hour = KL_DAY_START + (t % KL_HOURS_PER_DAY);
+  klSaveProgress();
+  if (document.querySelector('.kt-stage')) klRenderTown(); else klRefreshPauseBtn();
+};
+window.klDevDayShift = function(d) {
+  if (!klIsDevAvailable() || !klDevBecomeMatt()) return;
+  klState.day = Math.max(1, klState.day + d);
+  klSaveProgress();
+  if (document.querySelector('.kt-stage')) klRenderTown(); else klRefreshPauseBtn();
+};
 let klBuskPlanN = 1;
 window.klOpenBuskPlan = function() { klBuskPlanN = 1; klRenderBuskPlan(); };
 window.klBuskPlanAdjust = function(d) { const max = Math.max(1, Math.floor(klHoursLeft())); klBuskPlanN = Math.max(1, Math.min(max, klBuskPlanN + d)); klRenderBuskPlan(); };
@@ -13180,12 +13236,13 @@ function klHudMarkup() {
   const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
   return '<div class="kt-hud">' +
     '<button class="kl-fs-btn" id="kl-fs-btn" onclick="klToggleFullscreen()" title="Fullscreen (press F)" aria-label="Toggle fullscreen">' + (isFs ? '🗗' : '⛶') + '</button>' +
+    '<button class="kl-fs-btn" id="kl-pause-btn" onclick="klTogglePause()" title="Pause time" aria-label="Pause time">' + (klDayClockPaused ? '▶' : '⏸') + '</button>' +
     '<span class="kt-hud-item">💵 $' + klState.money + '</span>' +
     '<span class="kt-hud-item kt-hud-level' + (leveled ? ' leveled' : '') + '">⭐ Lv.' + lvl +
       '<span class="kt-xpbar"><span class="kt-xpbar-fill" style="width:' + pct + '%"></span></span>' +
       '<span class="kt-xp-num">' + xpInto + '/' + xpFor + '</span></span>' +
     '<span class="kt-hud-item">' + klSeasonLabel() + ' · ' + klDayName() + (klIsWeekend() ? ' 🎉' : '') + '</span>' +
-    '<span class="kt-hud-item">🕗 ' + klTimeLabel(klState.hour) + '</span>' +
+    '<span class="kt-hud-item" id="kl-hud-clock">🕗 ' + klTimeLabel(klState.hour) + (klDayClockPaused ? ' ⏸' : '') + '</span>' +
     (rentOwed > 0 ? '<span class="kt-hud-item kt-hud-rent" onclick="klPayRent()" title="Pay rent">🏠 RENT $' + rentOwed + (daysLeft != null ? ' · ' + Math.max(0, daysLeft) + 'd' : '') + '</span>' : '') +
     (klState.bookedDay ? '<span class="kt-hud-item kt-hud-show">🎤 Day ' + klState.bookedDay + ' · ' + klDayName(klState.bookedDay) + (klHypeMult() > 1 ? ' · 🔥×' + klHypeMult().toFixed(2) : '') + '</span>' : '') +
     (klState.van ? '<span class="kt-hud-item">🚐</span>' : '') +
@@ -16498,6 +16555,11 @@ function klDevBarMarkup() {
   s += btn("klDevGo('master')", '🧙 Waddy\u2019s', 'Sweet Waddy\u2019s — station select');
   s += btn("klDevGo('garage')", '🎸 Garage', 'The Garage — station select');
   s += btn("klDevStudio()", '🎙️ Rec Studio', 'Force-unlock + open Waddy’s recording studio');
+  s += sub('Time:');
+  s += btn("klDevDayShift(-1)", '⏮ -1 day', 'Rewind one day');
+  s += btn("klDevTimeShift(-1)", '◀ -1 hr', 'Rewind one hour');
+  s += btn("klDevTimeShift(1)", '+1 hr ▶', 'Forward one hour');
+  s += btn("klDevDayShift(1)", '+1 day ⏭', 'Forward one day');
   s += btn("klDevGo('venue')", '🍽️ Restaurant', 'The Restaurant');
   s += btn("klDevGo('shop')", '🏪 Shop', 'Music Shop');
   s += btn("klDevGo('hater')", '🏚 Neighbor', 'the music-hater neighbor');
@@ -18352,7 +18414,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-152'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-153'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
