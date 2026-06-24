@@ -12451,52 +12451,45 @@ function klTownSVG(){
     +`<defs><linearGradient id="ktSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1b1436"/><stop offset="52%" stop-color="#3f3160"/><stop offset="82%" stop-color="#a8748a"/><stop offset="100%" stop-color="#caa06e"/></linearGradient><linearGradient id="ktGround" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#7a6f5e"/><stop offset="100%" stop-color="#9a8c76"/></linearGradient><radialGradient id="ktFount" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#c6f8ff"/><stop offset="60%" stop-color="#4fd4ff"/><stop offset="100%" stop-color="#1060a0" stop-opacity="0"/></radialGradient><radialGradient id="ktKant" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffe9fb"/><stop offset="55%" stop-color="#b98cff"/><stop offset="100%" stop-color="#5a3aa0" stop-opacity="0"/></radialGradient><radialGradient id="radioBeacon" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="rgba(255,70,70,0.85)"/><stop offset="100%" stop-color="rgba(255,70,70,0)"/></radialGradient></defs>`
     +R(0,0,W,H,'url(#ktSky)')+planet
     +`<circle cx="180" cy="70" r="2" fill="rgba(255,255,255,0.6)"/><circle cx="340" cy="48" r="1.5" fill="rgba(255,255,255,0.5)"/><circle cx="660" cy="60" r="1.8" fill="rgba(255,255,255,0.5)"/><circle cx="820" cy="90" r="1.5" fill="rgba(255,255,255,0.5)"/>`
-    +R(0,VPY+4,W,H-VPY-4,'#5b5042')+filler+sidewalks+street
-    +sortedArt.map(art).join('')+klRadioTowerSVG()+cars+peds
+    +R(0,VPY+4,W,H-VPY-4,'#5b5042')+filler+sidewalks+street+klRadioTowerSVG()
+    +sortedArt.map(art).join('')+cars+peds
     +`</svg>`;
 }
 
 // The RADIO TOWER stands in the far-left foreground (the empty land), added as a
 // standalone positioned hotspot so it doesn't disturb the procedural building-row
-// math. Lattice mast + red beacon + signal arcs + broadcast shack + neon blade.
-// Click -> klEnterBuilding('radio'). Uses the #radioBeacon gradient in town defs.
+// math. Lattice mast + red beacon + signal arcs + broadcast shack labelled RADIO.
+// Sits up/left in the back-left so it clears the Plaza and Waddy's; drawn BEFORE
+// the buildings so it reads as background. Click -> klEnterBuilding('radio').
 function klRadioTowerSVG() {
-  const cx = 86, baseY = 458, topY = 126, segs = 7, wbot = 58, wtop = 16;
+  const cx = 58, baseY = 420, topY = 150, segs = 7, wbot = 44, wtop = 12;
   const f = n => (+n).toFixed(1);
   let mast =
-    '<line x1="' + f(cx-wbot/2) + '" y1="' + baseY + '" x2="' + f(cx-wtop/2) + '" y2="' + topY + '" stroke="#8893a5" stroke-width="3.5"/>' +
-    '<line x1="' + f(cx+wbot/2) + '" y1="' + baseY + '" x2="' + f(cx+wtop/2) + '" y2="' + topY + '" stroke="#8893a5" stroke-width="3.5"/>';
+    '<line x1="' + f(cx-wbot/2) + '" y1="' + baseY + '" x2="' + f(cx-wtop/2) + '" y2="' + topY + '" stroke="#8893a5" stroke-width="3"/>' +
+    '<line x1="' + f(cx+wbot/2) + '" y1="' + baseY + '" x2="' + f(cx+wtop/2) + '" y2="' + topY + '" stroke="#8893a5" stroke-width="3"/>';
   for (let i = 0; i < segs; i++) {
     const t0 = i/segs, t1 = (i+1)/segs;
     const y0 = baseY+(topY-baseY)*t0, y1 = baseY+(topY-baseY)*t1;
     const w0 = (wbot+(wtop-wbot)*t0)/2, w1 = (wbot+(wtop-wbot)*t1)/2;
     mast +=
-      '<line x1="' + f(cx-w0) + '" y1="' + f(y0) + '" x2="' + f(cx+w1) + '" y2="' + f(y1) + '" stroke="#5d6675" stroke-width="2"/>' +
-      '<line x1="' + f(cx+w0) + '" y1="' + f(y0) + '" x2="' + f(cx-w1) + '" y2="' + f(y1) + '" stroke="#5d6675" stroke-width="2"/>' +
-      '<line x1="' + f(cx-w1) + '" y1="' + f(y1) + '" x2="' + f(cx+w1) + '" y2="' + f(y1) + '" stroke="#6d7585" stroke-width="1.6"/>';
+      '<line x1="' + f(cx-w0) + '" y1="' + f(y0) + '" x2="' + f(cx+w1) + '" y2="' + f(y1) + '" stroke="#5d6675" stroke-width="1.8"/>' +
+      '<line x1="' + f(cx+w0) + '" y1="' + f(y0) + '" x2="' + f(cx-w1) + '" y2="' + f(y1) + '" stroke="#5d6675" stroke-width="1.8"/>' +
+      '<line x1="' + f(cx-w1) + '" y1="' + f(y1) + '" x2="' + f(cx+w1) + '" y2="' + f(y1) + '" stroke="#6d7585" stroke-width="1.5"/>';
   }
-  const body =
-    '<g class="kt-bld" onclick="klEnterBuilding(\'radio\')">' +
-      '<ellipse cx="' + cx + '" cy="' + (baseY+6) + '" rx="70" ry="11" fill="rgba(0,0,0,0.28)"/>' +
-      '<g fill="none" stroke="#6ff0e0" opacity="0.5" stroke-width="3"><path d="M' + (cx+10) + ' ' + (topY-2) + ' q34 12 44 46"/><path d="M' + (cx+16) + ' ' + (topY-10) + ' q56 20 70 74"/></g>' +
-      '<g fill="none" stroke="#ff7ad9" opacity="0.4" stroke-width="3"><path d="M' + (cx-10) + ' ' + (topY-2) + ' q-30 12 -38 44"/><path d="M' + (cx-16) + ' ' + (topY-10) + ' q-46 20 -56 70"/></g>' +
+  return '<g class="kt-bld" onclick="klEnterBuilding(\'radio\')">' +
+      '<ellipse cx="' + cx + '" cy="' + (baseY+5) + '" rx="52" ry="9" fill="rgba(0,0,0,0.26)"/>' +
+      '<g fill="none" stroke="#6ff0e0" opacity="0.45" stroke-width="2.5"><path d="M' + (cx+9) + ' ' + (topY-2) + ' q28 10 36 38"/><path d="M' + (cx+14) + ' ' + (topY-9) + ' q46 16 58 62"/></g>' +
+      '<g fill="none" stroke="#ff7ad9" opacity="0.35" stroke-width="2.5"><path d="M' + (cx-9) + ' ' + (topY-2) + ' q-26 10 -32 36"/><path d="M' + (cx-14) + ' ' + (topY-9) + ' q-40 16 -48 58"/></g>' +
       mast +
-      '<line x1="' + cx + '" y1="' + topY + '" x2="' + cx + '" y2="' + (topY-22) + '" stroke="#8893a5" stroke-width="3.5"/>' +
-      '<circle cx="' + cx + '" cy="' + (topY-22) + '" r="16" fill="url(#radioBeacon)"/><circle cx="' + cx + '" cy="' + (topY-22) + '" r="5" fill="#ff4646"/>' +
-      '<rect x="' + (cx-48) + '" y="398" width="96" height="62" rx="3" fill="#2c3340" stroke="#454f60" stroke-width="3"/>' +
-      '<rect x="' + (cx-34) + '" y="412" width="26" height="26" rx="2" fill="#ffd97a" opacity="0.9"/>' +
-      '<rect x="' + (cx+8) + '" y="412" width="26" height="26" rx="2" fill="#ffd97a" opacity="0.5"/>' +
-      '<rect x="' + (cx-30) + '" y="442" width="60" height="14" rx="3" fill="#171327" stroke="#ff4646" stroke-width="1.6"/>' +
-      '<text x="' + cx + '" y="453" text-anchor="middle" font-family="Barlow Condensed" font-weight="900" font-size="11" fill="#ff6b6b">ON AIR</text>' +
+      '<line x1="' + cx + '" y1="' + topY + '" x2="' + cx + '" y2="' + (topY-18) + '" stroke="#8893a5" stroke-width="3"/>' +
+      '<circle cx="' + cx + '" cy="' + (topY-18) + '" r="13" fill="url(#radioBeacon)"/><circle cx="' + cx + '" cy="' + (topY-18) + '" r="4" fill="#ff4646"/>' +
+      // broadcast shack labelled RADIO
+      '<rect x="' + (cx-36) + '" y="372" width="72" height="48" rx="3" fill="#2c3340" stroke="#454f60" stroke-width="2.5"/>' +
+      '<rect x="' + (cx-26) + '" y="382" width="20" height="20" rx="2" fill="#ffd97a" opacity="0.9"/>' +
+      '<rect x="' + (cx+6) + '" y="382" width="20" height="20" rx="2" fill="#ffd97a" opacity="0.5"/>' +
+      '<rect x="' + (cx-30) + '" y="402" width="60" height="15" rx="3" fill="#171327" stroke="#b9a9ff" stroke-width="1.6"/>' +
+      '<text x="' + cx + '" y="413.5" text-anchor="middle" font-family="Barlow Condensed" font-weight="900" font-size="12" letter-spacing="1.5" fill="#c9bcff">RADIO</text>' +
     '</g>';
-  const bx = 112, by = 296, bw = 24, chars = ['R','A','D','I','O'], lineH = 20;
-  let blade =
-    '<g class="kt-sign" style="filter:drop-shadow(0 0 4px #b9a9ff) drop-shadow(0 0 8px #b9a9ff)">' +
-    '<rect x="' + (bx-2) + '" y="' + (by-2) + '" width="' + (bw+4) + '" height="' + (chars.length*lineH+14) + '" rx="6" fill="#b9a9ff" opacity="0.16"/>' +
-    '<rect x="' + bx + '" y="' + by + '" width="' + bw + '" height="' + (chars.length*lineH+10) + '" rx="5" fill="#171327" stroke="#b9a9ff" stroke-width="2"/>';
-  chars.forEach((ch, i) => { blade += '<text x="' + (bx+bw/2) + '" y="' + (by+16+i*lineH) + '" text-anchor="middle" font-family="Barlow Condensed" font-weight="900" font-size="17" fill="#c9bcff">' + ch + '</text>'; });
-  blade += '</g>';
-  return body + blade;
 }
 
 // Building hotspots — positioned over the scene as clickable cards. Each: an
@@ -13933,20 +13926,26 @@ function klRenderInterior(id) {
       '<button class="kt-int-sub" onclick="klTalkTo(\'hater\')">💬 Keep talking</button>';
   } else if (id === 'radio') {
     title = 'RADIO KANTEON'; art = '📻';
-    const best = klBestSongScore();
+    const bestRec = klBestRecordedScore();
+    const bestAny = klBestSongScore();
+    const hasUnrecordedBanger = bestAny >= KL_RADIO_GATE && bestRec < KL_RADIO_GATE;
     if (!klRadioUnlocked()) {
       // LOCKED: the DJ has only ever rebroadcast the Kanteon machine's signal and
-      // won't put an unproven act on the air. Gate = one song scoring 80+.
+      // won't put an unproven act on the air. Gate = a RECORDED song scoring 80+.
       body =
-        '<p class="kt-int-line">The DJ doesn\u2019t turn around. Reels spin on the old Kanteon machine behind him, pushing the same signal skyward they\u2019ve pushed since before anyone alive can remember. \u201cThis tower has broadcast exactly one thing my whole life \u2014 whatever that machine pulls down from up there. Never a single song made by a person. You want me to break that streak?\u201d He finally looks at you. \u201cBring me something <i>undeniable</i>. A track that scores ' + KL_RADIO_GATE + ' or better. Anything less and the dial stays where it\u2019s been for a hundred years.\u201d</p>' +
+        '<p class="kt-int-line">The DJ doesn\u2019t turn around. Reels spin on the old Kanteon machine behind him, pushing the same signal skyward they\u2019ve pushed since before anyone alive can remember. \u201cThis tower has broadcast exactly one thing my whole life \u2014 whatever that machine pulls down from up there. Never a single song made by a person. You want me to break that streak?\u201d He finally looks at you. \u201cBring me something <i>undeniable</i> \u2014 a <b>recorded</b> track that scores ' + KL_RADIO_GATE + ' or better. I don\u2019t spin demos. Lay it to tape, then we\u2019ll talk.\u201d</p>' +
         '<button class="kt-int-sub" onclick="klTalkTo(\'radio\')">💬 Talk to the DJ</button>' +
         '<p class="kt-npc-line" id="kt-npc-line"></p>' +
-        '<p class="kt-int-note">🔒 Your best song so far scores <b>' + best + '</b>. Write one that hits <b>' + KL_RADIO_GATE + '+</b> to get on the air.</p>';
+        '<p class="kt-int-note">🔒 ' +
+          (hasUnrecordedBanger
+            ? 'You\u2019ve written a track that scores <b>' + bestAny + '</b> \u2014 good enough, but the DJ only plays <b>records</b>. Take it to Waddy\u2019s studio and record it first.'
+            : 'Your best <b>recorded</b> song scores <b>' + bestRec + '</b>. Get a recorded track to <b>' + KL_RADIO_GATE + '+</b> to get on the air.') +
+        '</p>';
     } else {
       // UNLOCKED: the DJ is a believer. Radio promotion lives here now.
       const onAir = klState.promo && klState.promo.radio >= 1;
       body =
-        '<p class="kt-int-line">The DJ grins and slides a fader up. \u201cScored a ' + best + '. First real music this rock has heard in a century \u2014 and it goes out over <i>my</i> tower.\u201d He taps the mic. \u201cYou want a spot before your next show, you\u2019ve got one. Half the planet\u2019s listening, whether they admit it or not.\u201d</p>' +
+        '<p class="kt-int-line">The DJ grins and slides a fader up. \u201cA recorded ' + bestRec + '. First real music this rock has heard in a century \u2014 and it goes out over <i>my</i> tower.\u201d He taps the mic. \u201cYou want a spot before your next show, you\u2019ve got one. Half the planet\u2019s listening, whether they admit it or not.\u201d</p>' +
         '<div class="kt-shop-divider">RADIO PROMOTION (builds hype for your next show)</div>' +
         '<div class="kt-shop-item' + (onAir ? ' owned' : '') + '">' +
           '<span class="kt-shop-label">📻 Radio spot <i>+50%</i></span>' +
@@ -14328,7 +14327,7 @@ window.klBuy = function(key, price) {
 // Radio promotion now lives at the RADIO TOWER (gated behind a song scoring 80+),
 // not the shop. Same effect as the old shop radio spot: +50% hype for one window.
 window.klBuyRadioSpot = function() {
-  if (!klRadioUnlocked()) { klToast('The DJ won\u2019t book you yet — bring a song scoring ' + KL_RADIO_GATE + '+.'); return; }
+  if (!klRadioUnlocked()) { klToast('The DJ won\u2019t book you yet — bring a recorded song scoring ' + KL_RADIO_GATE + '+.'); return; }
   if (klState.promo && klState.promo.radio >= 1) { klToast('Already on air.'); return; }
   if (klState.money < KL_RADIO_SPOT) { klToast('💸 Not enough cash for a radio spot ($' + KL_RADIO_SPOT + ').'); return; }
   if (!klState.promoExp) klState.promoExp = { flyers: 0, ads: 0, radio: 0 };
@@ -15416,7 +15415,9 @@ function klCatalogMult() {
 const KL_RADIO_GATE = 80;            // a song must score this to unlock the radio tower
 const KL_RADIO_SPOT = 250;           // price of a radio spot (+50% hype), bought at the tower
 function klBestSongScore() { return (klState.songs || []).reduce((m, s) => Math.max(m, s.score || 0), 0); }
-function klRadioUnlocked() { return klBestSongScore() >= KL_RADIO_GATE; }
+function klBestRecordedScore() { return (klState.songs || []).reduce((m, s) => s.recorded ? Math.max(m, s.score || 0) : m, 0); }
+// The DJ only spins RECORDS — a qualifying track must be recorded AND score 80+.
+function klRadioUnlocked() { return klBestRecordedScore() >= KL_RADIO_GATE; }
 let klSongDraft = { score: 0 };           // the freshly-finished demo awaiting a name
 let klSongPlanN = 1;                       // hours chosen for THIS work session
 window.klOpenSongwriter = function() { klSongPlanN = 1; klRenderSongwriter('confirm'); };
@@ -18924,7 +18925,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-161'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-162'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
