@@ -4649,26 +4649,26 @@
   }
   .kl-dev-grouplbl {
     flex-basis: 100%; font-family: 'Barlow Condensed', sans-serif; font-weight: 900;
-    font-size: 14px; letter-spacing: 2px; padding: 8px 6px 2px; margin-top: 6px;
+    font-size: 28px; letter-spacing: 4px; padding: 18px 10px 6px; margin-top: 14px;
     border-top: 1px dashed rgba(255,255,255,0.12); opacity: 0.95;
   }
   .kl-dev-grouplbl.waddy { color: #c4b5fd; }
   .kl-dev-grouplbl.garage { color: #fca5a5; }
   .kl-dev-toggle {
     pointer-events: auto; align-self: flex-start; margin-left: 14px;
-    display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
-    padding: 4px 12px; border-radius: 10px 10px 0 0;
+    display: inline-flex; align-items: center; gap: 10px; cursor: pointer;
+    padding: 8px 22px; border-radius: 10px 10px 0 0;
     background: rgba(10,6,26,0.92); color: #facc15;
     border: 1px dashed rgba(255,255,255,0.25); border-bottom: none;
   }
   .kl-dev-tag {
-    font-family: 'VT323', monospace; font-size: 13px; color: #facc15; letter-spacing: 1px;
+    font-family: 'VT323', monospace; font-size: 26px; color: #facc15; letter-spacing: 1px;
   }
-  .kl-dev-arrow { transition: transform 0.3s ease; font-size: 11px; }
+  .kl-dev-arrow { transition: transform 0.3s ease; font-size: 18px; }
   .kl-devbar.open .kl-dev-arrow { transform: rotate(180deg); }
   .kl-dev-tray {
     pointer-events: auto; overflow: hidden;
-    display: flex; flex-wrap: wrap; gap: 5px; align-items: center; justify-content: flex-start;
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: flex-start;
     background: rgba(10,6,26,0.92); border-top: 1px dashed rgba(255,255,255,0.25);
     max-height: 0; padding: 0 12px;
     transition: max-height 0.3s ease, padding 0.3s ease;
@@ -4677,14 +4677,14 @@
   .kl-dev-cut { background: rgba(250,204,21,0.16) !important; border-color: rgba(250,204,21,0.5) !important; color: #fde68a !important; }
   .kl-devbar.open .kl-dev-tray {
     flex: 1 1 auto; max-height: none; overflow-y: auto;
-    width: 100%; max-width: 640px; margin: 0;
-    padding: 16px 26px 32px; align-content: flex-start; justify-content: flex-start;
+    width: 100%; max-width: none; margin: 0;
+    padding: 24px 44px 56px; align-content: flex-start; justify-content: flex-start;
   }
   .kl-dev-btn {
-    min-width: 34px; height: 34px; padding: 0 13px;
-    border: 1px solid rgba(255,255,255,0.2); border-radius: 8px;
+    min-width: 64px; height: 64px; padding: 0 26px;
+    border: 1px solid rgba(255,255,255,0.2); border-radius: 14px;
     background: rgba(255,255,255,0.08); color: #e8e8ff;
-    font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 16px;
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 30px;
     cursor: pointer; line-height: 1;
   }
   .kl-dev-btn:hover { background: rgba(255,255,255,0.18); }
@@ -4695,8 +4695,8 @@
   .kl-dev-grouplbl.show  { color: #f9a8d4; }
   .kl-dev-grouplbl.tools { color: #a7f3d0; }
   .kl-dev-sublbl {
-    align-self: center; font-family: 'VT323', monospace; font-size: 12px;
-    color: #9aa0b5; letter-spacing: 0.5px; margin: 0 2px 0 8px; opacity: 0.85;
+    align-self: center; font-family: 'VT323', monospace; font-size: 24px;
+    color: #9aa0b5; letter-spacing: 0.5px; margin: 0 4px 0 14px; opacity: 0.85;
   }
   .kl-dev-btn.done { background: rgba(74,222,128,0.16); border-color: rgba(74,222,128,0.5); color: #bbf7d0; }
   .kl-dev-pz { min-width: 30px; height: 26px; padding: 0 8px; font-size: 13px; opacity: 0.95; }
@@ -18159,7 +18159,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-146'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-147'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
