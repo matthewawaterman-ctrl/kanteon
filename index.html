@@ -12448,12 +12448,55 @@ function klTownSVG(){
     +`<line x1="${VPX}" y1="${VPY+22}" x2="${VPX}" y2="${H}" stroke="rgba(235,225,185,0.4)" stroke-width="3" stroke-dasharray="14 20"/>`;
   const planet=`<ellipse cx="500" cy="118" rx="66" ry="66" fill="url(#ktKant)" opacity="0.55"/><circle cx="500" cy="118" r="32" fill="#7b5ec4"/><path d="M470 110 a32 32 0 0 0 60 -6 a38 38 0 0 1 -60 6 Z" fill="#6a4eb0" opacity="0.7"/><ellipse cx="500" cy="118" rx="55" ry="14" fill="none" stroke="#d8c0ff" stroke-width="2.5" opacity="0.75" transform="rotate(-18 500 118)"/><circle cx="490" cy="107" r="8" fill="#a98fe0" opacity="0.6"/>`;
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="display:block;">`
-    +`<defs><linearGradient id="ktSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1b1436"/><stop offset="52%" stop-color="#3f3160"/><stop offset="82%" stop-color="#a8748a"/><stop offset="100%" stop-color="#caa06e"/></linearGradient><linearGradient id="ktGround" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#7a6f5e"/><stop offset="100%" stop-color="#9a8c76"/></linearGradient><radialGradient id="ktFount" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#c6f8ff"/><stop offset="60%" stop-color="#4fd4ff"/><stop offset="100%" stop-color="#1060a0" stop-opacity="0"/></radialGradient><radialGradient id="ktKant" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffe9fb"/><stop offset="55%" stop-color="#b98cff"/><stop offset="100%" stop-color="#5a3aa0" stop-opacity="0"/></radialGradient></defs>`
+    +`<defs><linearGradient id="ktSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1b1436"/><stop offset="52%" stop-color="#3f3160"/><stop offset="82%" stop-color="#a8748a"/><stop offset="100%" stop-color="#caa06e"/></linearGradient><linearGradient id="ktGround" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#7a6f5e"/><stop offset="100%" stop-color="#9a8c76"/></linearGradient><radialGradient id="ktFount" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#c6f8ff"/><stop offset="60%" stop-color="#4fd4ff"/><stop offset="100%" stop-color="#1060a0" stop-opacity="0"/></radialGradient><radialGradient id="ktKant" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffe9fb"/><stop offset="55%" stop-color="#b98cff"/><stop offset="100%" stop-color="#5a3aa0" stop-opacity="0"/></radialGradient><radialGradient id="radioBeacon" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="rgba(255,70,70,0.85)"/><stop offset="100%" stop-color="rgba(255,70,70,0)"/></radialGradient></defs>`
     +R(0,0,W,H,'url(#ktSky)')+planet
     +`<circle cx="180" cy="70" r="2" fill="rgba(255,255,255,0.6)"/><circle cx="340" cy="48" r="1.5" fill="rgba(255,255,255,0.5)"/><circle cx="660" cy="60" r="1.8" fill="rgba(255,255,255,0.5)"/><circle cx="820" cy="90" r="1.5" fill="rgba(255,255,255,0.5)"/>`
     +R(0,VPY+4,W,H-VPY-4,'#5b5042')+filler+sidewalks+street
-    +sortedArt.map(art).join('')+cars+peds
+    +sortedArt.map(art).join('')+klRadioTowerSVG()+cars+peds
     +`</svg>`;
+}
+
+// The RADIO TOWER stands in the far-left foreground (the empty land), added as a
+// standalone positioned hotspot so it doesn't disturb the procedural building-row
+// math. Lattice mast + red beacon + signal arcs + broadcast shack + neon blade.
+// Click -> klEnterBuilding('radio'). Uses the #radioBeacon gradient in town defs.
+function klRadioTowerSVG() {
+  const cx = 86, baseY = 458, topY = 126, segs = 7, wbot = 58, wtop = 16;
+  const f = n => (+n).toFixed(1);
+  let mast =
+    '<line x1="' + f(cx-wbot/2) + '" y1="' + baseY + '" x2="' + f(cx-wtop/2) + '" y2="' + topY + '" stroke="#8893a5" stroke-width="3.5"/>' +
+    '<line x1="' + f(cx+wbot/2) + '" y1="' + baseY + '" x2="' + f(cx+wtop/2) + '" y2="' + topY + '" stroke="#8893a5" stroke-width="3.5"/>';
+  for (let i = 0; i < segs; i++) {
+    const t0 = i/segs, t1 = (i+1)/segs;
+    const y0 = baseY+(topY-baseY)*t0, y1 = baseY+(topY-baseY)*t1;
+    const w0 = (wbot+(wtop-wbot)*t0)/2, w1 = (wbot+(wtop-wbot)*t1)/2;
+    mast +=
+      '<line x1="' + f(cx-w0) + '" y1="' + f(y0) + '" x2="' + f(cx+w1) + '" y2="' + f(y1) + '" stroke="#5d6675" stroke-width="2"/>' +
+      '<line x1="' + f(cx+w0) + '" y1="' + f(y0) + '" x2="' + f(cx-w1) + '" y2="' + f(y1) + '" stroke="#5d6675" stroke-width="2"/>' +
+      '<line x1="' + f(cx-w1) + '" y1="' + f(y1) + '" x2="' + f(cx+w1) + '" y2="' + f(y1) + '" stroke="#6d7585" stroke-width="1.6"/>';
+  }
+  const body =
+    '<g class="kt-bld" onclick="klEnterBuilding(\'radio\')">' +
+      '<ellipse cx="' + cx + '" cy="' + (baseY+6) + '" rx="70" ry="11" fill="rgba(0,0,0,0.28)"/>' +
+      '<g fill="none" stroke="#6ff0e0" opacity="0.5" stroke-width="3"><path d="M' + (cx+10) + ' ' + (topY-2) + ' q34 12 44 46"/><path d="M' + (cx+16) + ' ' + (topY-10) + ' q56 20 70 74"/></g>' +
+      '<g fill="none" stroke="#ff7ad9" opacity="0.4" stroke-width="3"><path d="M' + (cx-10) + ' ' + (topY-2) + ' q-30 12 -38 44"/><path d="M' + (cx-16) + ' ' + (topY-10) + ' q-46 20 -56 70"/></g>' +
+      mast +
+      '<line x1="' + cx + '" y1="' + topY + '" x2="' + cx + '" y2="' + (topY-22) + '" stroke="#8893a5" stroke-width="3.5"/>' +
+      '<circle cx="' + cx + '" cy="' + (topY-22) + '" r="16" fill="url(#radioBeacon)"/><circle cx="' + cx + '" cy="' + (topY-22) + '" r="5" fill="#ff4646"/>' +
+      '<rect x="' + (cx-48) + '" y="398" width="96" height="62" rx="3" fill="#2c3340" stroke="#454f60" stroke-width="3"/>' +
+      '<rect x="' + (cx-34) + '" y="412" width="26" height="26" rx="2" fill="#ffd97a" opacity="0.9"/>' +
+      '<rect x="' + (cx+8) + '" y="412" width="26" height="26" rx="2" fill="#ffd97a" opacity="0.5"/>' +
+      '<rect x="' + (cx-30) + '" y="442" width="60" height="14" rx="3" fill="#171327" stroke="#ff4646" stroke-width="1.6"/>' +
+      '<text x="' + cx + '" y="453" text-anchor="middle" font-family="Barlow Condensed" font-weight="900" font-size="11" fill="#ff6b6b">ON AIR</text>' +
+    '</g>';
+  const bx = 112, by = 296, bw = 24, chars = ['R','A','D','I','O'], lineH = 20;
+  let blade =
+    '<g class="kt-sign" style="filter:drop-shadow(0 0 4px #b9a9ff) drop-shadow(0 0 8px #b9a9ff)">' +
+    '<rect x="' + (bx-2) + '" y="' + (by-2) + '" width="' + (bw+4) + '" height="' + (chars.length*lineH+14) + '" rx="6" fill="#b9a9ff" opacity="0.16"/>' +
+    '<rect x="' + bx + '" y="' + by + '" width="' + bw + '" height="' + (chars.length*lineH+10) + '" rx="5" fill="#171327" stroke="#b9a9ff" stroke-width="2"/>';
+  chars.forEach((ch, i) => { blade += '<text x="' + (bx+bw/2) + '" y="' + (by+16+i*lineH) + '" text-anchor="middle" font-family="Barlow Condensed" font-weight="900" font-size="17" fill="#c9bcff">' + ch + '</text>'; });
+  blade += '</g>';
+  return body + blade;
 }
 
 // Building hotspots — positioned over the scene as clickable cards. Each: an
@@ -12620,6 +12663,7 @@ window.klEnterBuilding = function(id) {
   else if (id === 'venue') klRenderInterior('venue');
   else if (id === 'shop') klRenderInterior('shop');
   else if (id === 'hater') klRenderInterior('hater');
+  else if (id === 'radio') klRenderInterior('radio');
 };
 
 // Enter a puzzle set, resuming from that set's saved position.
@@ -13272,6 +13316,49 @@ function klSceneArt(id) {
     );
   }
   // fallback: a soft empty room (gradient bg already themed)
+  if (id === 'radio') {
+    // radio station booth: dark studio, big ON AIR sign, a mixing console with
+    // faders, a broadcast mic on a boom, and the ancient KANTEON MACHINE on the
+    // right still transmitting its signal skyward (the only thing they've aired).
+    return svg(
+      '<defs>' +
+        '<radialGradient id="raGlow" cx="50%" cy="20%" r="70%"><stop offset="0%" stop-color="rgba(155,140,255,0.22)"/><stop offset="100%" stop-color="rgba(155,140,255,0)"/></radialGradient>' +
+        '<linearGradient id="raWall" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#241f38"/><stop offset="100%" stop-color="#15111f"/></linearGradient>' +
+        '<radialGradient id="raBeam" cx="50%" cy="0%" r="80%"><stop offset="0%" stop-color="rgba(111,240,224,0.5)"/><stop offset="100%" stop-color="rgba(111,240,224,0)"/></radialGradient>' +
+        '<radialGradient id="raRec" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="rgba(255,70,70,0.85)"/><stop offset="100%" stop-color="rgba(255,70,70,0)"/></radialGradient>' +
+      '</defs>' +
+      '<rect x="0" y="0" width="1200" height="470" fill="url(#raWall)"/>' +
+      '<rect x="0" y="470" width="1200" height="150" fill="#100c18"/>' +
+      '<ellipse cx="600" cy="20" rx="560" ry="180" fill="url(#raGlow)"/>' +
+      // big ON AIR sign (center-top)
+      '<ellipse cx="600" cy="96" rx="150" ry="70" fill="url(#raRec)"/>' +
+      '<rect x="500" y="68" width="200" height="56" rx="12" fill="#1a0e12" stroke="#ff5a5a" stroke-width="3"/>' +
+      '<circle cx="534" cy="96" r="11" fill="#ff6a6a"/>' +
+      '<text x="616" y="108" font-family="Barlow Condensed,sans-serif" font-weight="900" font-size="38" letter-spacing="3" fill="#ff9a9a" text-anchor="middle">ON AIR</text>' +
+      // the KANTEON MACHINE (right): reel-to-reel transmitter beaming a signal up to Kanteon
+      '<ellipse cx="1010" cy="150" rx="140" ry="190" fill="url(#raBeam)"/>' +
+      '<circle cx="1010" cy="58" r="26" fill="#b98cff" opacity="0.5"/><circle cx="1010" cy="58" r="14" fill="#c9a6ff"/><ellipse cx="1010" cy="58" rx="34" ry="9" fill="none" stroke="#d8c0ff" stroke-width="2" opacity="0.7" transform="rotate(-18 1010 58)"/>' +
+      '<rect x="928" y="300" width="164" height="150" rx="8" fill="#2a2438" stroke="#4a4060" stroke-width="3"/>' +
+      '<circle cx="968" cy="350" r="26" fill="#15111f" stroke="#6a5e8a" stroke-width="4"/><circle cx="968" cy="350" r="7" fill="#9b8cff"/>' +
+      '<circle cx="1052" cy="350" r="26" fill="#15111f" stroke="#6a5e8a" stroke-width="4"/><circle cx="1052" cy="350" r="7" fill="#9b8cff"/>' +
+      '<rect x="946" y="402" width="128" height="14" rx="4" fill="#15111f"/><rect x="946" y="424" width="128" height="14" rx="4" fill="#15111f"/>' +
+      '<g stroke="#6ff0e0" stroke-width="3" fill="none" opacity="0.6"><path d="M1010 296 q24 -40 0 -86"/><path d="M1028 300 q40 -52 0 -118"/></g>' +
+      // broadcast mic on a boom (left-center)
+      '<line x1="150" y1="470" x2="150" y2="250" stroke="#3a3550" stroke-width="6"/><line x1="150" y1="262" x2="330" y2="232" stroke="#3a3550" stroke-width="6"/>' +
+      '<ellipse cx="338" cy="232" rx="26" ry="34" fill="#2a2438" stroke="#6a5e8a" stroke-width="3"/>' +
+      '<g stroke="#6a5e8a" stroke-width="1.5" opacity="0.8"><line x1="318" y1="220" x2="358" y2="220"/><line x1="316" y1="232" x2="360" y2="232"/><line x1="318" y1="244" x2="358" y2="244"/></g>' +
+      // mixing console (center-bottom): faders + knobs
+      '<rect x="360" y="430" width="440" height="120" rx="10" fill="#241f33" stroke="#3e3654" stroke-width="2"/>' +
+      '<rect x="360" y="430" width="440" height="22" rx="10" fill="#2e2742"/>' +
+      '<g>' +
+        [0,1,2,3,4,5,6,7].map(function(i){ var x = 392 + i*48; var fy = 470 + (i*13 % 40); return '<rect x="' + x + '" y="462" width="4" height="64" rx="2" fill="#15111f"/><rect x="' + (x-8) + '" y="' + fy + '" width="20" height="11" rx="3" fill="#9b8cff"/>'; }).join('') +
+      '</g>' +
+      '<g fill="#15111f" stroke="#5a4e7a" stroke-width="2"><circle cx="705" cy="470" r="11"/><circle cx="742" cy="470" r="11"/><circle cx="779" cy="470" r="11"/></g>' +
+      // floating signal notes
+      '<text x="430" y="170" font-family="Georgia" font-size="30" fill="rgba(155,140,255,0.5)">\u266b</text>' +
+      '<text x="250" y="360" font-family="Georgia" font-size="24" fill="rgba(111,240,224,0.45)">\u266a</text>'
+    );
+  }
   return svg('<rect x="0" y="430" width="1200" height="190" fill="rgba(0,0,0,0.25)"/>');
 }
 
@@ -13300,6 +13387,14 @@ const KL_CHEF_LINES = [
   '"Last kitchen on the planet. No pressure."',
   '"I cooked for rooms that forgot how to sit and eat. You\u2019ll play for rooms that forgot how to listen. Same job."',
   '"Prove me wrong about music. I\u2019d like to be wrong, for once."',
+];
+const KL_DJ_LINES = [
+  '"A hundred years of dead air with a heartbeat. That\u2019s all the machine ever gave me."',
+  '"People say the signal\u2019s a transmission. I say it\u2019s a station waiting for a song."',
+  '"I keep the tower warm. Somebody had to, for when the music finally showed up."',
+  '"You hit eighty, the dial\u2019s yours. Don\u2019t make me regret turning the knob."',
+  '"Velion paste for the body, my signal for the void. Neither one ever fed a soul \u2014 maybe you will."',
+  '"Half this rock pretends they don\u2019t listen. The needle says otherwise."',
 ];
 let klTalkIdx = 0;
 
@@ -13816,7 +13911,7 @@ function klRenderInterior(id) {
         '<div class="kt-shop-divider">PROMOTION (builds hype for your next show)</div>' +
         item('flyers', '📄 Flyers <i>+10%</i>', 20, false, klState.promo.flyers ? '×' + klState.promo.flyers : '') +
         item('ads', '📰 Newspaper ad <i>+25%</i>', 80, klState.promo.ads >= 1) +
-        item('radio', '📻 Radio spot <i>+50%</i>', 250, klState.promo.radio >= 1) +
+        '<p class="kt-int-note" style="margin:2px 4px 0;">📻 Radio spots moved to the Radio Tower on the west end of town.</p>' +
         '<div class="kt-shop-divider">THE BIG ONE</div>' +
         (klState.van
           ? '<div class="kt-shop-item owned"><span class="kt-shop-label">🚐 TOURING VAN</span><span class="kt-shop-own">OWNED</span></div>'
@@ -13836,6 +13931,33 @@ function klRenderInterior(id) {
     body =
       '<p class="kt-int-line kt-npc-line" id="kt-npc-line">' + KL_HATER_LINES[klTalkIdx % KL_HATER_LINES.length] + '</p>' +
       '<button class="kt-int-sub" onclick="klTalkTo(\'hater\')">💬 Keep talking</button>';
+  } else if (id === 'radio') {
+    title = 'RADIO KANTEON'; art = '📻';
+    const best = klBestSongScore();
+    if (!klRadioUnlocked()) {
+      // LOCKED: the DJ has only ever rebroadcast the Kanteon machine's signal and
+      // won't put an unproven act on the air. Gate = one song scoring 80+.
+      body =
+        '<p class="kt-int-line">The DJ doesn\u2019t turn around. Reels spin on the old Kanteon machine behind him, pushing the same signal skyward they\u2019ve pushed since before anyone alive can remember. \u201cThis tower has broadcast exactly one thing my whole life \u2014 whatever that machine pulls down from up there. Never a single song made by a person. You want me to break that streak?\u201d He finally looks at you. \u201cBring me something <i>undeniable</i>. A track that scores ' + KL_RADIO_GATE + ' or better. Anything less and the dial stays where it\u2019s been for a hundred years.\u201d</p>' +
+        '<button class="kt-int-sub" onclick="klTalkTo(\'radio\')">💬 Talk to the DJ</button>' +
+        '<p class="kt-npc-line" id="kt-npc-line"></p>' +
+        '<p class="kt-int-note">🔒 Your best song so far scores <b>' + best + '</b>. Write one that hits <b>' + KL_RADIO_GATE + '+</b> to get on the air.</p>';
+    } else {
+      // UNLOCKED: the DJ is a believer. Radio promotion lives here now.
+      const onAir = klState.promo && klState.promo.radio >= 1;
+      body =
+        '<p class="kt-int-line">The DJ grins and slides a fader up. \u201cScored a ' + best + '. First real music this rock has heard in a century \u2014 and it goes out over <i>my</i> tower.\u201d He taps the mic. \u201cYou want a spot before your next show, you\u2019ve got one. Half the planet\u2019s listening, whether they admit it or not.\u201d</p>' +
+        '<div class="kt-shop-divider">RADIO PROMOTION (builds hype for your next show)</div>' +
+        '<div class="kt-shop-item' + (onAir ? ' owned' : '') + '">' +
+          '<span class="kt-shop-label">📻 Radio spot <i>+50%</i></span>' +
+          (onAir
+            ? '<span class="kt-shop-own">ON AIR</span>'
+            : '<button class="kt-int-sub" ' + (klState.money < KL_RADIO_SPOT ? 'disabled' : '') + ' onclick="klBuyRadioSpot()">$' + KL_RADIO_SPOT + '</button>') +
+        '</div>' +
+        (onAir ? '' : (klState.money < KL_RADIO_SPOT ? '<p class="kt-int-note">Not enough cash for a spot — go earn it.</p>' : '')) +
+        '<button class="kt-int-sub" style="margin-top:6px;" onclick="klTalkTo(\'radio\')">💬 Talk to the DJ</button>' +
+        '<p class="kt-npc-line" id="kt-npc-line"></p>';
+    }
   } else if (id === 'home') {
     // YOUR PLACE is its own interactive room (same engine as THE GARAGE): each
     // piece of furniture is a clickable object wired to an existing handler.
@@ -13889,7 +14011,7 @@ window.klRenderInterior = klRenderInterior; // inline onclick handlers (avatar c
 
 window.klTalkTo = function(who) {
   klTalkIdx++;
-  const lines = who === 'waddy' ? KL_WADDY_LINES : who === 'venue' ? KL_CHEF_LINES : KL_HATER_LINES;
+  const lines = who === 'waddy' ? KL_WADDY_LINES : who === 'venue' ? KL_CHEF_LINES : who === 'radio' ? KL_DJ_LINES : KL_HATER_LINES;
   const el = document.getElementById('kt-npc-line');
   if (el) { el.textContent = lines[klTalkIdx % lines.length]; }
   else klToast(lines[klTalkIdx % lines.length]);
@@ -14055,7 +14177,13 @@ function klShowSongClear() {
   }
   klShow.i++;
   if (klShow.i < 3) { klShowNextSong(); return; }
-  // SHOW COMPLETE — payout = base × Hype × Gear × Level × Day-of-week.
+  klFinishShowSuccessfully();
+}
+
+// The successful-show payout, factored out so both a real cleared set and the DEV
+// "complete show" shortcut resolve through one source of truth (payout = base ×
+// Hype × Gear × Level × Catalog × Day-of-week).
+function klFinishShowSuccessfully() {
   klShowCleanup();
   const hypeMult = klHypeMult();   // promotion only
   const gearMult = klGearBoost();  // owned gear, scaled by condition
@@ -14083,6 +14211,14 @@ function klShowSongClear() {
   klSaveProgress();
   klRenderShowPayout(detail);
 }
+// DEV: resolve a clean, on-time first show without playing the set — runs the real
+// payout path so the dev shortcut can never drift from the live formula.
+window.klDevCompleteShow = function() {
+  if (!klIsDevAvailable() || !klDevBecomeMatt()) return;
+  klState.waddyDone = true;             // a real first show implies Waddy's was cleared
+  klShow.active = false; klShow.late = false;
+  klFinishShowSuccessfully();
+};
 
 // Show-night payout screen: an explicit money-math breakdown so the player can
 // SEE how promotion and their level multiplier built the take. COLLECT → town.
@@ -14188,6 +14324,20 @@ window.klBuy = function(key, price) {
   klState.money -= price;
   klSaveProgress();
   klRenderInterior('shop');
+};
+// Radio promotion now lives at the RADIO TOWER (gated behind a song scoring 80+),
+// not the shop. Same effect as the old shop radio spot: +50% hype for one window.
+window.klBuyRadioSpot = function() {
+  if (!klRadioUnlocked()) { klToast('The DJ won\u2019t book you yet — bring a song scoring ' + KL_RADIO_GATE + '+.'); return; }
+  if (klState.promo && klState.promo.radio >= 1) { klToast('Already on air.'); return; }
+  if (klState.money < KL_RADIO_SPOT) { klToast('💸 Not enough cash for a radio spot ($' + KL_RADIO_SPOT + ').'); return; }
+  if (!klState.promoExp) klState.promoExp = { flyers: 0, ads: 0, radio: 0 };
+  klState.money -= KL_RADIO_SPOT;
+  klState.promo.radio = 1;
+  klState.promoExp.radio = klState.day + KL_PROMO_DAYS;
+  klSaveProgress();
+  klToast('📻 You\u2019re on the air — +50% hype on your next show.');
+  klRenderInterior('radio');
 };
 // === ECONOMY CORE — END ===
 // === KANTEON TOWN — END ===
@@ -15262,6 +15412,11 @@ function klCatalogMult() {
   const songs = klState.songs || [];
   return 1 + songs.reduce((a, s) => a + ((s.score || 0) / 100) * KL_SONG_WEIGHT, 0);
 }
+// The radio DJ won't air anything until you've written a real banger.
+const KL_RADIO_GATE = 80;            // a song must score this to unlock the radio tower
+const KL_RADIO_SPOT = 250;           // price of a radio spot (+50% hype), bought at the tower
+function klBestSongScore() { return (klState.songs || []).reduce((m, s) => Math.max(m, s.score || 0), 0); }
+function klRadioUnlocked() { return klBestSongScore() >= KL_RADIO_GATE; }
 let klSongDraft = { score: 0 };           // the freshly-finished demo awaiting a name
 let klSongPlanN = 1;                       // hours chosen for THIS work session
 window.klOpenSongwriter = function() { klSongPlanN = 1; klRenderSongwriter('confirm'); };
@@ -16916,6 +17071,8 @@ function klDevBarMarkup() {
   s += btn("klDevGo('venue')", '🍽️ Restaurant', 'The Restaurant');
   s += btn("klDevGo('shop')", '🏪 Shop', 'Music Shop');
   s += btn("klDevGo('hater')", '🏚 Neighbor', 'the music-hater neighbor');
+  s += btn("klDevGo('radio')", '📻 Radio Tower', 'The radio station (DJ gatekeeper + radio promo)');
+  s += btn("klDevCompleteShow()", '✅ Complete Show', 'DEV: resolve a clean first show instantly — full payout, no set to play');
 
   // ── LESSON / ARCADE — jump straight into the other game modes ──
   s += lbl('nav', '📖 LESSON · 🎧 ARCADE');
@@ -18767,7 +18924,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-160'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-161'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
