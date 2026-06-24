@@ -3743,6 +3743,27 @@
     font-family: 'Barlow', sans-serif; font-size: 11px; letter-spacing: 1px;
     color: rgba(220,210,255,0.4); text-transform: uppercase;
   }
+  /* b31-142 — relocate the speaker note / fullscreen / credit / build stamp out of
+     the cramped left panel into the open sky beside the cliff, bigger & readable. */
+  .kl-info {
+    position: absolute; z-index: 2;
+    bottom: 6vh; left: 50%; transform: translateX(-50%);
+    width: min(540px, 92vw);
+    display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center;
+  }
+  .kl-info .kl-bt-note {
+    max-width: 460px; margin: 0; font-size: 16px; line-height: 1.4; padding: 12px 18px;
+  }
+  .kl-info .kl-tools-link { margin: 0; padding: 13px 28px; font-size: 17px; letter-spacing: 1px; }
+  .kl-info .kl-company-credit { margin: 0; font-size: 14px; letter-spacing: 1.5px; color: rgba(220,210,255,0.55); }
+  .kl-info .kl-build-stamp { margin: 0; font-size: 26px; }
+  @media (min-width: 1024px) {
+    .kl-info {
+      left: 31vw; right: 34vw; transform: none; width: auto;
+      bottom: 13vh; align-items: flex-start; text-align: left;
+    }
+    .kl-info .kl-bt-note { margin: 0; }
+  }
   /* ── HOMETOWN DIRECTORY (Oregon-Trail-style hotspots) ── */
   .kt-stage { display: flex; }
   .kt-town-name {
@@ -4129,8 +4150,8 @@
   }
   /* the chrome logo sitting in the player-select sky (top-right, where the flat one was) */
   .kl-scene-logo {
-    position: absolute; top: 4vh; left: 5vw; z-index: 3;
-    font-size: clamp(34px, 7vw, 76px);
+    position: absolute; top: 4vh; left: 2.5vw; z-index: 3;
+    font-size: clamp(38px, 8vw, 88px);
     pointer-events: none;
   }
   @keyframes klLogoIn {
@@ -4293,7 +4314,8 @@
   }
   .kl-mode-lesson .kl-mode-name { color: var(--gold); }
   .kl-mode-arcade .kl-mode-name { color: var(--gold); }
-  .kl-mode-foot { display: flex; gap: 18px; margin-top: 6px; }
+  .kl-mode-foot { display: flex; gap: 22px; margin-top: 6px; }
+  .kl-mode-foot .kl-tools-link { padding: 14px 30px; font-size: 18px; letter-spacing: 1px; }
   /* prominent logo */
   .kl-title-land { font-size: clamp(46px, 13vw, 72px); margin: 0; line-height: 0.95; }
   .kl-hero {
@@ -12236,7 +12258,7 @@ const KL_SKY_SVG =
 // hint of space in the sky (the lore: uncultured hometown, Kanteon faint above).
 // This is also the reusable PLANET-DIRECTORY shell — every planet later gets a
 // landing scene with hotspots in this exact pattern.
-const KL_TOWN_SVG = (function(){
+function klTownSVG(){
   const W=1000,H=520,VPX=500,VPY=212;
   const lerp=(a,b,t)=>a+(b-a)*t, f=n=>(+n).toFixed(1);
   const BLD=[
@@ -12244,7 +12266,7 @@ const KL_TOWN_SVG = (function(){
     {side:-1,t:0.30,act:"klEnterBuilding('master')",name:"WADDY'S",kind:"waddy"},
     {side:-1,t:0.56,act:"klEnterBuilding('garage')",name:"GARAGE",kind:"garage"},
     {side:1,t:0.30,act:"klEnterBuilding('hater')",name:"NEIGHBOR",kind:"neighbor"},
-    {side:1,t:0.00,act:"klEnterBuilding('home')",name:"YOUR PLACE",kind:"home"},
+    {side:1,t:0.00,act:"klEnterBuilding('home')",name:(klState.kid && !klState.guest && klState.kid.name ? klState.kid.name.toUpperCase()+"\u2019S PLACE" : "YOUR PLACE"),kind:"home"},
     {side:-1,t:0.80,act:"klOpenWorkPlan()",name:"FACTORY",kind:"factory"},
     {side:1,t:0.56,act:"klEnterBuilding('venue')",name:"RESTAURANT",kind:"venue"},
     {side:1,t:0.80,act:"klEnterBuilding('shop')",name:"SHOP",kind:"shop"},
@@ -12257,7 +12279,7 @@ const KL_TOWN_SVG = (function(){
     factory:{body:"#46423b",roof:"#37332d",win:"#7d8a6a",neon:"#a6ff7a"},
     venue:{body:"#3b2f55",roof:"#ffd97a",win:"#ff7ad9",neon:"#ff7ad9"},
     shop:{body:"#3f5a4e",roof:"#7ab98a",win:"#ffe0a0",neon:"#7affb0"}};
-  const SIGN={plaza:["neon","#8ee8ff"],waddy:["wood","#ffe2b4"],garage:["metal","#9fd3ff"],
+  const SIGN={plaza:["neon","#67ecff"],waddy:["wood","#ffcf6e"],garage:["metal","#9fd3ff"],
     neighbor:["wood","#ecc59a"],home:["neon","#6ff0e0"],factory:["metal","#a6ff7a"],
     venue:["neon","#ff7ad9"],shop:["neon","#7affb0"]};
   const R=(x,y,w,h,fill,ex)=>`<rect x="${f(x)}" y="${f(y)}" width="${f(w)}" height="${f(h)}" ${ex||''} fill="${fill}"/>`;
@@ -12324,7 +12346,8 @@ const KL_TOWN_SVG = (function(){
     else if(type==='wood'){g+=R(x,y,sW,sH,'#7a5a38','rx="3" stroke="#4a3418" stroke-width="2"');}
     else{g+=R(x,y,sW,sH,'#33343c','rx="3" stroke="#62636c" stroke-width="2"');}
     g+='<text x="'+f(cx)+'" y="'+f(y+sH*0.72)+'" text-anchor="middle" font-family="Barlow Condensed" font-weight="900" font-size="'+fz+'" fill="'+col+'">'+it.name+'</text>';
-    return '<g class="kt-sign" style="filter:drop-shadow(0 0 4px '+col+') drop-shadow(0 0 8px '+col+')">'+g+'</g>';
+    const _glow=(it.kind==='plaza'||it.kind==='waddy')?'drop-shadow(0 0 3px '+col+') drop-shadow(0 0 7px '+col+') drop-shadow(0 0 14px '+col+')':'drop-shadow(0 0 4px '+col+') drop-shadow(0 0 8px '+col+')';
+    return '<g class="kt-sign" style="filter:'+_glow+'">'+g+'</g>';
   }
   function bladeSign(it){
     const [type,col]=SIGN[it.kind], s=it.s;
@@ -12414,7 +12437,7 @@ const KL_TOWN_SVG = (function(){
     +R(0,VPY+4,W,H-VPY-4,'#5b5042')+filler+sidewalks+street
     +sortedArt.map(art).join('')+cars+peds
     +`</svg>`;
-})();
+}
 
 // Building hotspots — positioned over the scene as clickable cards. Each: an
 // emoji sign + label, mapped to an entry handler.
@@ -12432,7 +12455,7 @@ function klRenderTown() {
     : '';
   wrap.innerHTML =
     '<div class="kl-stage kt-stage">' +
-      '<div class="kl-scene">' + KL_TOWN_SVG + '</div>' +
+      '<div class="kl-scene">' + klTownSVG() + '</div>' +
       klHudMarkup() +
       '<div class="kt-town-title-top">HOMETOWN</div>' +
       '<button class="kl-back kt-town-back" onclick="klLeaveTown()" title="Leave">←</button>' +
@@ -15006,11 +15029,11 @@ function klRenderPlayerSelect() {
       '<div class="kl-panel">' +
         '<div class="kl-panel-title">Who\'s playing?</div>' +
         '<div class="kl-panel-players">' + players.map(btn).join('') + addTile + guestTile + '</div>' +
+      '</div>' +
+      '<div class="kl-info">' +
         '<div class="kl-bt-note">🔊 Use your device\u2019s built-in speakers. Bluetooth headphones &amp; speakers add a delay that throws off the rhythm games — please turn them off first.</div>' +
         '<button class="kl-tools-link" onclick="klToggleFullscreen()">⛶ Fullscreen</button>' +
-        // === KANTEON RENAME — START ===
         '<div class="kl-company-credit">a Velion game</div>' +
-        // === KANTEON RENAME — END ===
         '<div class="kl-build-stamp">build ' + KL_BUILD_TAG + '</div>' +
       '</div>' +
       (klIsDevAvailable() ? klDevBar() : '') +
@@ -18136,7 +18159,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-141'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-142'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
