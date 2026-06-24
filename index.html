@@ -13586,8 +13586,8 @@ function klHomeScene() {
   const rentOwed = klRentOwed();
   const rentDaysLeft = klRentDaysLeft();
   const rentLabel = rentOwed > 0
-    ? 'RENT $' + rentOwed + (rentDaysLeft != null ? ' \u00B7 ' + Math.max(0, rentDaysLeft) + 'd' : '')
-    : 'RENT PAID';
+    ? 'PAY RENT \u00B7 $' + rentOwed + (rentDaysLeft != null ? ' \u00B7 ' + Math.max(0, rentDaysLeft) + 'd' : '')
+    : 'PAY RENT';
   const owed = rentOwed > 0;
   const avatarSvg = klAvatarSVG(klState.avatar || klAvatarDefault(), 110);
 
@@ -13650,7 +13650,7 @@ function klHomeScene() {
     '</g>' +
 
     // ── OBJECT 4: desk + bills + lamp -> pay rent ──
-    '<g class="kl-scene-obj" onclick="klPayRent()">' +
+    '<g class="kl-scene-obj" onclick="klOpenRentDesk()">' +
       (owed ? '<ellipse cx="970" cy="455" rx="120" ry="60" fill="rgba(224,85,106,0.18)"/>' : '') +
       '<line x1="1050" y1="470" x2="1050" y2="430" stroke="#3a3f4a" stroke-width="4"/>' +
       '<path d="M1034 430 L1066 430 L1058 412 L1042 412 Z" fill="#f0c040"/>' +
@@ -15063,6 +15063,68 @@ window.klPayRent = function() {
   klSaveProgress();
   klToast('🏠 Rent paid: $' + owed + (fee > 0 ? ' (incl. $' + fee + ' late fee)' : '') + '. Next rent on Day ' + klNextRentDueDay() + ' (' + klSeasonLabel(klNextRentDueDay()) + ').');
   klRenderTown();
+};
+
+// Desk prompt in YOUR PLACE: always responds. Shows status, lets you settle
+// what's due OR prepay next month early, and explains when you can't afford it.
+// (Reuses the avatar overlay styling .kl-av-overlay / .kl-av-card.)
+const klMoneyFmt = (n) => '$' + Math.round(n).toLocaleString('en-US');
+window.klOpenRentDesk = function() {
+  klCloseRentDesk();
+  const owed = klRentOwed();
+  const money = klState.money || 0;
+  const fee = klRentLateFee();
+  const daysLeft = klRentDaysLeft();
+  const next = klNextRentDueDay();
+  let status, action;
+  if (owed > 0) {
+    status = '<p class="kt-int-note">Rent is <b>' + klMoneyFmt(owed) + '</b>' + (fee > 0 ? ' (incl. ' + klMoneyFmt(fee) + ' late fee)' : '') + ', due on the 1st of the season.' +
+      (daysLeft != null ? ' You have <b>' + Math.max(0, daysLeft) + ' day' + (daysLeft === 1 ? '' : 's') + '</b> before eviction.' : '') + '</p>';
+    action = (money >= owed)
+      ? '<button class="kt-int-sub" style="width:100%;" onclick="klRentDeskPay()">Pay ' + klMoneyFmt(owed) + ' now</button>'
+      : '<button class="kt-int-sub" style="width:100%;opacity:0.45;" disabled>Pay ' + klMoneyFmt(owed) + ' now</button>' +
+        '<p class="kt-int-note" style="color:#fca5a5;">You\u2019ve got ' + klMoneyFmt(money) + ' \u2014 not enough yet. Earn it busking, working, or playing a show.</p>';
+  } else {
+    status = '<p class="kt-int-note">You\u2019re all paid up. Rent is <b>' + klMoneyFmt(KL_RENT) + '</b>, due on the 1st of each season \u2014 next on <b>Day ' + next + '</b> (' + klSeasonLabel(next) + ').</p>';
+    action = (money >= KL_RENT)
+      ? '<button class="kt-int-sub" style="width:100%;" onclick="klRentDeskPay()">Pay next month early (' + klMoneyFmt(KL_RENT) + ')</button>'
+      : '<button class="kt-int-sub" style="width:100%;opacity:0.45;" disabled>Pay next month early (' + klMoneyFmt(KL_RENT) + ')</button>' +
+        '<p class="kt-int-note">You\u2019ve got ' + klMoneyFmt(money) + ' \u2014 come back when you can cover it.</p>';
+  }
+  const overlay = document.createElement('div');
+  overlay.className = 'kl-av-overlay';
+  overlay.id = 'kl-rent-overlay';
+  overlay.setAttribute('onclick', 'if(event.target===this)klCloseRentDesk()');
+  overlay.innerHTML =
+    '<div class="kl-av-card">' +
+      '<div class="kl-av-title">\uD83C\uDFE0 RENT</div>' +
+      status + action +
+      '<button class="kt-int-sub" style="width:100%;margin-top:8px;background:transparent;" onclick="klCloseRentDesk()">Close</button>' +
+    '</div>';
+  document.body.appendChild(overlay);
+};
+window.klCloseRentDesk = function() {
+  const o = document.getElementById('kl-rent-overlay');
+  if (o) o.remove();
+};
+window.klRentDeskPay = function() {
+  const owed = klRentOwed();
+  if (owed > 0) {
+    if (klState.money < owed) return; // button was disabled; guard anyway
+    const fee = klRentLateFee();
+    klState.money -= owed;
+    klState.rentPaidCount = klRentDueCount();
+    klSaveProgress();
+    klToast('\uD83C\uDFE0 Rent paid: ' + klMoneyFmt(owed) + (fee > 0 ? ' (incl. ' + klMoneyFmt(fee) + ' late fee)' : '') + '. Next due Day ' + klNextRentDueDay() + ' (' + klSeasonLabel(klNextRentDueDay()) + ').');
+  } else {
+    if (klState.money < KL_RENT) return;
+    klState.money -= KL_RENT;
+    klState.rentPaidCount = (klState.rentPaidCount || 0) + 1;
+    klSaveProgress();
+    klToast('\uD83C\uDFE0 Paid next month early: ' + klMoneyFmt(KL_RENT) + '. Next due Day ' + klNextRentDueDay() + ' (' + klSeasonLabel(klNextRentDueDay()) + ').');
+  }
+  klCloseRentDesk();
+  klRenderInterior('home'); // stay in the room; refresh the desk label
 };
 
 // Runs after any day advance (called at the top of klRenderTown). Returns true if
@@ -18703,7 +18765,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-158'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-159'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
