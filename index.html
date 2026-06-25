@@ -4149,6 +4149,11 @@
   .kl-perform-stage .kl-comp { width: min(620px, 94%); }
   .kl-comp-cell.now { box-shadow: 0 0 0 2px #f0c040 inset; }
   .kl-perform-tap { margin-top: 6px; font-size: 20px; padding: 16px 40px; }
+  .kl-perform-tap.pf-good { background: #34d399 !important; border-color: #34d399 !important; color: #06251c !important; }
+  .kl-perform-tap.pf-off { background: #ef4444 !important; border-color: #ef4444 !important; color: #2a0606 !important; }
+  /* #1 — center the songwriting composer in the stage (and widen it for the grid) */
+  #kl-songcompose { top: 50%; left: 50%; right: auto; transform: translate(-50%, -50%); width: min(680px, 94%); max-height: 88%; }
+  #kl-songcompose .kl-comp { width: 100%; }
   .kl-snd-tests select, .kl-snd-tests input {
     background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.25);
     border-radius: 8px; padding: 4px 8px; font-family: 'Barlow', sans-serif; font-size: 12px;
@@ -4579,7 +4584,7 @@
   .kl-grid-wrap {
     background: rgba(20,16,55,0.55);
     border: 1px solid rgba(140,120,255,0.35);
-    border-radius: 28px; padding: 16px;
+    border-radius: 20px; padding: 16px; margin-top: 18px;
     box-shadow: inset 0 2px 12px rgba(0,0,0,0.3), 0 0 30px rgba(140,120,255,0.25), 0 8px 20px rgba(0,0,0,0.3);
     backdrop-filter: blur(2px);
   }
@@ -4588,7 +4593,7 @@
     position: relative; z-index: 1;
   }
   .kl-cell {
-    border-radius: 16px;
+    border-radius: 8px;
     background: rgba(70,80,110,0.38);
     border: 3px dashed rgba(170,180,210,0.5);
     cursor: pointer; position: relative;
@@ -4909,7 +4914,7 @@
   .kl-scene-obj:hover { filter: drop-shadow(0 0 10px rgba(240,192,64,0.9)) brightness(1.08); }
   .kl-scene-obj.locked { cursor: default; opacity: 0.42; filter: grayscale(0.75); }
   .kl-scene-obj.locked:hover { filter: grayscale(0.75); }
-  .kl-garage-head { position: absolute; top: 52px; left: 0; right: 0; z-index: 4; text-align: center; pointer-events: none;
+  .kl-garage-head { position: absolute; top: 92px; left: 0; right: 0; z-index: 4; text-align: center; pointer-events: none;
     text-shadow: 0 2px 10px rgba(0,0,0,0.9); }
   .kl-garage-title { font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 28px; letter-spacing: 1.5px; color: #fff; }
   .kl-garage-sub { font-family: 'Barlow', sans-serif; font-size: 13.5px; color: #e6e2f5; margin-top: 1px; }
@@ -12488,7 +12493,7 @@ function klTownSVG(){
   const street=`<path d="M310 ${H} L${VPX-9} ${VPY+4} L${VPX+9} ${VPY+4} L690 ${H} Z" fill="url(#ktGround)"/>`
     +`<line x1="${VPX}" y1="${VPY+22}" x2="${VPX}" y2="${H}" stroke="rgba(235,225,185,0.4)" stroke-width="3" stroke-dasharray="14 20"/>`;
   const planet=`<ellipse cx="500" cy="118" rx="66" ry="66" fill="url(#ktKant)" opacity="0.55"/><circle cx="500" cy="118" r="32" fill="#7b5ec4"/><path d="M470 110 a32 32 0 0 0 60 -6 a38 38 0 0 1 -60 6 Z" fill="#6a4eb0" opacity="0.7"/><ellipse cx="500" cy="118" rx="55" ry="14" fill="none" stroke="#d8c0ff" stroke-width="2.5" opacity="0.75" transform="rotate(-18 500 118)"/><circle cx="490" cy="107" r="8" fill="#a98fe0" opacity="0.6"/>`;
-  return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="display:block;">`
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;">`
     +`<defs><linearGradient id="ktSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1b1436"/><stop offset="52%" stop-color="#3f3160"/><stop offset="82%" stop-color="#a8748a"/><stop offset="100%" stop-color="#caa06e"/></linearGradient><linearGradient id="ktGround" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#7a6f5e"/><stop offset="100%" stop-color="#9a8c76"/></linearGradient><radialGradient id="ktFount" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#c6f8ff"/><stop offset="60%" stop-color="#4fd4ff"/><stop offset="100%" stop-color="#1060a0" stop-opacity="0"/></radialGradient><radialGradient id="ktKant" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffe9fb"/><stop offset="55%" stop-color="#b98cff"/><stop offset="100%" stop-color="#5a3aa0" stop-opacity="0"/></radialGradient><radialGradient id="radioBeacon" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="rgba(255,70,70,0.85)"/><stop offset="100%" stop-color="rgba(255,70,70,0)"/></radialGradient></defs>`
     +R(0,0,W,H,'url(#ktSky)')+planet
     +`<circle cx="180" cy="70" r="2" fill="rgba(255,255,255,0.6)"/><circle cx="340" cy="48" r="1.5" fill="rgba(255,255,255,0.5)"/><circle cx="660" cy="60" r="1.8" fill="rgba(255,255,255,0.5)"/><circle cx="820" cy="90" r="1.5" fill="rgba(255,255,255,0.5)"/>`
@@ -14251,7 +14256,8 @@ function klShowSongClear() {
 // ----------------------------------------------------------------------------
 let klPerform = { beat: 0, song: null, notes: [], active: false };
 window.klRenderPerform = function(song) {
-  klPerform = { beat: 0, song: song, notes: (song.melody && song.melody.notes) || [], active: true };
+  klPerform = { beat: 0, song: song, notes: (song.melody && song.melody.notes) || [], active: true, lastTapAt: 0, t0: 0 };
+  if (!klClock.active) { klStartClock((song.melody && song.melody.bpm) || 96); klStartBeatBar(); } // groove = the beat reference you tap to
   document.getElementById('kidlab').classList.add('kl-playing');
   const lit = {};
   klPerform.notes.forEach(n => { lit[n.pitch + '@' + Math.round(n.start * 2)] = true; });
@@ -14267,7 +14273,7 @@ window.klRenderPerform = function(song) {
   document.getElementById('kl-wrap').innerHTML =
     '<div class="kl-perform-stage">' +
       '<div class="kl-perform-title">\uD83C\uDFA4 PERFORM: \u201C' + (song.title || 'your song') + '\u201D</div>' +
-      '<div class="kl-perform-sub">Tap the beat to play your song over the band \u00B7 <span id="kl-pf-count">0</span>/8</div>' +
+      '<div class="kl-perform-sub">Tap <b>in time with the band</b> to play your song \u00B7 <span id="kl-pf-count">0</span>/8</div>' +
       '<div class="kl-comp">' + head + grid + '</div>' +
       '<button class="kl-listen kt-int-btn kl-perform-tap" id="kl-pf-tap" onclick="klPerformTap()">\uD83D\uDC4F TAP THE BEAT</button>' +
     '</div>';
@@ -14281,13 +14287,26 @@ function klPerformLight(b) {
 }
 window.klPerformTap = function() {
   if (!klPerform.active) return;
-  const b = klPerform.beat;                       // beat 0..7 of the 2-bar song
   const ctx = getAudio();
-  const sub = 0.25;                               // sub-beat spacing for an 8th inside the tapped beat
+  const beat = klClock.active ? klClock.beat : (60 / ((klPerform.song.melody && klPerform.song.melody.bpm) || 96));
+  const ref = klClock.active ? klClock.startTs : (klPerform.t0 || (klPerform.t0 = ctx.currentTime));
+  const nowT = ctx.currentTime;
+  const phase = ((nowT - ref) % beat + beat) % beat;
+  const err = Math.min(phase, beat - phase);
+  if (err > beat * 0.25) {                          // off the beat → flub, no progress (mashing can't carry you)
+    klPerformFeedback(false);
+    playTone(110, nowT, 0.09, ctx, 0.1, 'klKeys');  // dull off-beat thud
+    return;
+  }
+  if (klPerform.lastTapAt && (nowT - klPerform.lastTapAt) < beat * 0.5) return; // anti-mash: one count per beat
+  klPerform.lastTapAt = nowT;
+  klPerformFeedback(true);
+  const b = klPerform.beat;
+  const sub = 0.25;
   [2 * b, 2 * b + 1].forEach((step, j) => {
     klPerform.notes.forEach(n => {
       if (Math.round(n.start * 2) === step) {
-        playTone(midiFreq(klPitchMidi(n.pitch)), ctx.currentTime + j * sub, 0.32, ctx, 0.3, 'klKeys');
+        playTone(midiFreq(klPitchMidi(n.pitch)), nowT + j * sub, 0.32, ctx, 0.3, 'klKeys');
       }
     });
   });
@@ -14301,6 +14320,13 @@ window.klPerformTap = function() {
     setTimeout(() => { if (klShow.active) klWin(); }, 520); // klWin → klShowSongClear during a show
   }
 };
+function klPerformFeedback(good) {
+  const btn = document.getElementById('kl-pf-tap'); if (!btn) return;
+  btn.classList.remove('pf-good', 'pf-off');
+  void btn.offsetWidth;                              // restart the flash
+  btn.classList.add(good ? 'pf-good' : 'pf-off');
+  setTimeout(() => { if (btn) btn.classList.remove('pf-good', 'pf-off'); }, 200);
+}
 
 // The successful-show payout, factored out so both a real cleared set and the DEV
 // "complete show" shortcut resolve through one source of truth (payout = base ×
@@ -15676,7 +15702,7 @@ window.klOpenComposeSong = function() {
   KL_PENTA.forEach(p => {
     grid += '<div class="kl-comp-row"><span class="kl-comp-rowlabel">' + KL_PENTA_LBL[p] + '</span>';
     for (let s = 0; s < 16; s++) {
-      grid += '<button class="kl-comp-cell" id="kl-sc-' + p + '-' + s + '"' + (s === 8 ? ' style="border-left:2px solid rgba(255,255,255,0.4)"' : '') + ' onclick="klSongComposeTap(' + p + ',' + s + ')"></button>';
+      grid += '<button class="kl-comp-cell" id="kl-sc-' + p + '-' + s + '" style="touch-action:none' + (s === 8 ? ';border-left:2px solid rgba(255,255,255,0.4)' : '') + '" onpointerdown="klSongComposePaintStart(event,' + p + ',' + s + ')"></button>';
     }
     grid += '</div>';
   });
@@ -15687,13 +15713,15 @@ window.klOpenComposeSong = function() {
       '<button class="kt-int-sub" onclick="klSongComposeClear()">CLEAR</button>' +
       '<button class="kt-int-sub" onclick="klSongComposeSaveLater()">\u2715</button>' +
     '</div>' +
-    '<div class="kl-snd-tests" style="opacity:0.75;">Tap to place a note \u00B7 any notes sound good \u00B7 \u2744 time is frozen while you write</div>' +
-    head + grid +
+    '<div class="kl-snd-tests" style="opacity:0.75;">Tap or drag to place notes \u00B7 any notes sound good \u00B7 \u2744 time is frozen while you write</div>' +
+    '<div onpointermove="klSongComposeMove(event)">' + head + grid + '</div>' +
     '<div style="display:flex;gap:8px;margin-top:10px;">' +
       '<button class="kt-int-sub" style="flex:1;" onclick="klSongComposeSaveLater()">Save for later</button>' +
       '<button class="kt-int-sub" style="flex:1;background:#f0c040;color:#1a0e2e;font-weight:700;border-color:#f0c040;" onclick="klSongComposeFinish()">Finish song (4 hrs)</button>' +
     '</div>';
   document.getElementById('kidlab').appendChild(el);
+  window.addEventListener('pointerup', klSongComposeEnd);
+  window.addEventListener('pointercancel', klSongComposeEnd);
   Object.keys(klSongComp.notes).forEach(k => {
     const c = document.getElementById('kl-sc-' + k.replace('@', '-')); if (c) c.classList.add('on');
   });
@@ -15703,21 +15731,45 @@ function klSongComposeWIPSave() {
   klState.songInProgress.melody = Object.assign({}, klSongComp.notes);
   klSaveProgress();
 }
-window.klSongComposeTap = function(p, s) {
-  const k = p + '@' + s;
-  const had = klSongComp.notes[k];
-  // MONOPHONIC: clear whatever note already sits in this time-column
+let klSongPaint = { on: false, row: 0, moved: false, startKey: null, startWasOn: false };
+function klSongComposeSet(p, s, on) {
+  // MONOPHONIC: clear any note already in this time-column first
   Object.keys(klSongComp.notes).forEach(kk => {
     if (Number(kk.split('@')[1]) === s) {
       delete klSongComp.notes[kk];
       const old = document.getElementById('kl-sc-' + kk.replace('@', '-')); if (old) old.classList.remove('on');
     }
   });
-  if (!had) {
-    klSongComp.notes[k] = true;
+  if (on) {
+    klSongComp.notes[p + '@' + s] = true;
     const cell = document.getElementById('kl-sc-' + p + '-' + s); if (cell) cell.classList.add('on');
     const ctx = getAudio(); playTone(midiFreq(klPitchMidi(p)), ctx.currentTime, 0.3, ctx, 0.25, 'klKeys');
   }
+}
+// Click-and-drag paints a run of the SAME note across slots (repeated notes).
+window.klSongComposePaintStart = function(ev, p, s) {
+  if (ev && ev.preventDefault) ev.preventDefault();
+  const k = p + '@' + s;
+  klSongPaint = { on: true, row: p, moved: false, startKey: k, startWasOn: !!klSongComp.notes[k] };
+  if (!klSongComp.notes[k]) klSongComposeSet(p, s, true);
+};
+window.klSongComposeMove = function(ev) {
+  if (!klSongPaint.on) return;
+  const t = (ev.touches && ev.touches[0]) ? ev.touches[0] : ev;
+  if (t.clientX == null) return;
+  const el = document.elementFromPoint(t.clientX, t.clientY);
+  if (!el || !el.id || el.id.indexOf('kl-sc-') !== 0 || el.id.indexOf('-col-') >= 0) return;
+  const ss = Number(el.id.slice(6).split('-')[1]); if (isNaN(ss)) return; // id = "kl-sc-<row>-<step>"
+  klSongPaint.moved = true;
+  klSongComposeSet(klSongPaint.row, ss, true); // paint the START row across the columns you drag over
+};
+window.klSongComposeEnd = function() {
+  if (!klSongPaint.on) return;
+  if (!klSongPaint.moved && klSongPaint.startWasOn) {  // a plain tap on an ON cell toggles it OFF
+    const parts = klSongPaint.startKey.split('@').map(Number);
+    klSongComposeSet(parts[0], parts[1], false);
+  }
+  klSongPaint.on = false;
   klSongComposeWIPSave();
 };
 window.klSongComposePlay = function() {
@@ -15750,6 +15802,9 @@ window.klSongComposeClear = function() {
 };
 function klCloseComposeSong() {
   klSongComposeStop(); klComposeFreeze = false;
+  if (typeof klSongPaint !== 'undefined') klSongPaint.on = false;
+  window.removeEventListener('pointerup', klSongComposeEnd);
+  window.removeEventListener('pointercancel', klSongComposeEnd);
   const el = document.getElementById('kl-songcompose'); if (el) el.remove();
 }
 function klComposeMelodyArray() {
@@ -19191,7 +19246,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-172'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-173'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
