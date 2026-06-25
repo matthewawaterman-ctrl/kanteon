@@ -3927,6 +3927,14 @@
   .kt-hud-rent:hover { background: rgba(220,38,38,1); }
   .kt-hud-inline { position: static; justify-content: center; margin: 4px 0 10px; height: auto; padding: 0; background: none; pointer-events: auto; }
   .kt-interior { display: flex; align-items: center; justify-content: center; position: relative; }
+  .kl-depart-wrap { position: absolute; inset: 0; overflow: hidden; }
+  .kl-depart-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .kl-depart-line { position: absolute; bottom: 116px; left: 0; right: 0; text-align: center; padding: 0 24px;
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 26px; letter-spacing: 1px;
+    color: #fff; text-shadow: 0 2px 14px rgba(0,0,0,0.75); opacity: 0; animation: kdLineIn 1s ease forwards 2.8s; }
+  .kl-depart-go { position: absolute; bottom: 54px; left: 50%; transform: translateX(-50%); opacity: 0; animation: kdFade 0.8s ease forwards 4.2s; }
+  @keyframes kdLineIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes kdFade { to { opacity: 1; } }
   /* Illustrated room scene sits at the back; a vignette floats above it for card
      contrast; the card sits in front. */
   .kt-scene-art { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
@@ -13972,10 +13980,9 @@ function klRenderInterior(id) {
             : '<div class="kt-shop-item" style="flex-direction:column;align-items:stretch;gap:6px;">' +
                 '<span class="kt-shop-label">🚐 TOURING VAN <i>— the way out of this town</i></span>' +
                 '<div style="display:flex;gap:8px;">' +
-                  '<button class="kt-int-sub" style="flex:1;" ' + (klState.money < 4500 ? 'disabled' : '') + ' onclick="klBuyVan(\'cash\')">Buy $4,500</button>' +
-                  '<button class="kt-int-sub" style="flex:1;" ' + (klState.money < 1500 ? 'disabled' : '') + ' onclick="klBuyVan(\'loan\')">Loan · $1,500 down</button>' +
+                  '<button class="kt-int-sub" style="flex:1;" ' + (klState.money < 10000 ? 'disabled' : '') + ' onclick="klBuyVan()">Buy $10,000</button>' +
                 '</div>' +
-                (klState.money < 1500 ? '<span class="kt-shop-extra">Save up at least the $1,500 down payment.</span>' : '') +
+                (klState.money < 10000 ? '<span class="kt-shop-extra">Save up the full $10,000 — the only way off this rock.</span>' : '') +
               '</div>') +
       '</div>';
   } else if (id === 'hater') {
@@ -14433,44 +14440,96 @@ function klRenderShowPayout(d) {
 }
 
 // ── SHOP ──
-// Buying the van ends the beta. Two ways: pay $4,500 cash, or take a loan with a
-// $1,500 down payment (you leave town owing the rest — the road has its costs).
-window.klBuyVan = function(mode) {
+// Buying the van ends the beta. One price, paid in full — $10,000, the way off
+// this rock. It plays a short lift-off cutscene, then the thank-you screen.
+window.klBuyVan = function() {
   if (klState.van || klState.showsPlayed < 1) return;
-  if (mode === 'loan') {
-    if (klState.money < 1500) { klToast('💸 Need $1,500 for the down payment.'); return; }
-    klState.money -= 1500;
-    klState.van = true; klState.vanLoan = true;
-    klSaveProgress();
-    klRenderBetaEnd(true);
-  } else {
-    if (klState.money < 4500) { klToast('💸 Need $4,500 to buy it outright.'); return; }
-    klState.money -= 4500;
-    klState.van = true; klState.vanLoan = false;
-    klSaveProgress();
-    klRenderBetaEnd(false);
-  }
+  if (klState.money < 10000) { klToast('💸 Need $10,000 to buy it outright.'); return; }
+  klState.money -= 10000;
+  klState.van = true; klState.vanLoan = false;
+  klSaveProgress();
+  klRenderDeparture();
 };
 
-// THE END OF THE BETA. Buying the van is the win condition.
-function klRenderBetaEnd(onLoan) {
+let klDepartTimer = null;
+
+// Cutscene: the van drives off and lifts clear of the planet. Plays once after
+// the purchase, then advances to the thank-you screen (auto after ~6s, or via
+// the Continue button). Kept lightweight (SMIL, no blur) for the old MacBook.
+function klRenderDeparture() {
+  document.getElementById('kidlab').classList.remove('kl-playing');
+  const wrap = document.getElementById('kl-wrap');
+  wrap.innerHTML =
+    '<div class="kl-depart-wrap">' +
+      '<svg class="kl-depart-svg" viewBox="0 0 1280 800" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">' +
+        '<defs>' +
+          '<linearGradient id="kdSpace" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#05030f"/><stop offset="55%" stop-color="#0d0a22"/><stop offset="100%" stop-color="#241a47"/></linearGradient>' +
+          '<radialGradient id="kdPlanet" cx="50%" cy="30%" r="72%"><stop offset="0%" stop-color="#3b2f66"/><stop offset="70%" stop-color="#241a47"/><stop offset="100%" stop-color="#160f30"/></radialGradient>' +
+          '<radialGradient id="kdGlow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#9a7bff" stop-opacity="0.5"/><stop offset="100%" stop-color="#9a7bff" stop-opacity="0"/></radialGradient>' +
+          '<radialGradient id="kdFlame" cx="50%" cy="28%" r="72%"><stop offset="0%" stop-color="#fff2b0"/><stop offset="45%" stop-color="#ffb43a"/><stop offset="100%" stop-color="#ff5a2a" stop-opacity="0"/></radialGradient>' +
+        '</defs>' +
+        '<rect x="0" y="0" width="1280" height="800" fill="url(#kdSpace)"/>' +
+        '<g fill="#fff">' +
+          '<circle cx="180" cy="120" r="1.8" opacity="0.7"/><circle cx="420" cy="80" r="1.3" opacity="0.6"/><circle cx="900" cy="140" r="2" opacity="0.7"/><circle cx="1120" cy="90" r="1.4" opacity="0.6"/><circle cx="1180" cy="300" r="1.6" opacity="0.6"/><circle cx="120" cy="320" r="1.4" opacity="0.6"/><circle cx="700" cy="60" r="1.5" opacity="0.6"/><circle cx="520" cy="240" r="1.2" opacity="0.5"/><circle cx="980" cy="360" r="1.3" opacity="0.5"/><circle cx="300" cy="200" r="1.3" opacity="0.55"/>' +
+          '<circle cx="640" cy="120" r="2.2"><animate attributeName="opacity" values="0.3;1;0.3" dur="3s" repeatCount="indefinite"/></circle>' +
+          '<circle cx="1040" cy="220" r="1.8"><animate attributeName="opacity" values="1;0.3;1" dur="3.6s" repeatCount="indefinite"/></circle>' +
+        '</g>' +
+        '<circle cx="640" cy="1300" r="700" fill="url(#kdPlanet)"/>' +
+        '<path d="M0 615 Q640 545 1280 615" fill="none" stroke="rgba(170,140,255,0.55)" stroke-width="3"/>' +
+        '<g fill="#ffd97a" opacity="0.9"><circle cx="430" cy="610" r="2.4"/><circle cx="520" cy="600" r="2"/><circle cx="760" cy="600" r="2.2"/><circle cx="850" cy="608" r="2"/><circle cx="640" cy="592" r="2.4"/></g>' +
+        '<ellipse cx="640" cy="600" rx="360" ry="40" fill="none" stroke="rgba(150,170,255,0.18)" stroke-width="3"/>' +
+        '<g>' +
+          '<animateMotion dur="4s" begin="0.4s" fill="freeze" rotate="auto" calcMode="spline" keyPoints="0;0.26;0.62;1" keyTimes="0;0.34;0.66;1" keySplines="0.4 0 1 1;0.3 0 0.7 1;0.5 0 0.85 1" path="M360 596 L720 596 Q1000 596 1095 320 Q1150 150 1250 -210"/>' +
+          '<g>' +
+            '<animateTransform attributeName="transform" type="scale" begin="0.4s" dur="4s" fill="freeze" calcMode="spline" values="1;1;0.62;0.3" keyTimes="0;0.34;0.66;1" keySplines="0 0 1 1;0.3 0 0.7 1;0.5 0 0.85 1"/>' +
+            '<g opacity="0"><animate attributeName="opacity" begin="0.4s" dur="4s" values="0;0;1;1" keyTimes="0;0.30;0.36;1" fill="freeze"/>' +
+              '<ellipse cx="0" cy="34" rx="22" ry="60" fill="url(#kdFlame)"/>' +
+              '<path d="M-9 18 L0 78 L9 18 Z" fill="#ffd24a"/>' +
+            '</g>' +
+            '<g>' +
+              '<ellipse cx="0" cy="20" rx="44" ry="9" fill="url(#kdGlow)"/>' +
+              '<rect x="-40" y="-20" width="80" height="34" rx="9" fill="#2dd4bf"/>' +
+              '<rect x="-40" y="-20" width="26" height="34" rx="9" fill="#26b9a6"/>' +
+              '<rect x="-30" y="-13" width="16" height="12" rx="3" fill="#0e3b39"/>' +
+              '<rect x="-8" y="-13" width="18" height="12" rx="3" fill="#0e3b39"/>' +
+              '<rect x="16" y="-13" width="16" height="12" rx="3" fill="#0e3b39"/>' +
+              '<circle cx="38" cy="-2" r="3" fill="#fff2b0"/>' +
+              '<circle cx="-24" cy="16" r="8" fill="#15202b"/><circle cx="-24" cy="16" r="3.4" fill="#3a4a57"/>' +
+              '<circle cx="24" cy="16" r="8" fill="#15202b"/><circle cx="24" cy="16" r="3.4" fill="#3a4a57"/>' +
+            '</g>' +
+          '</g>' +
+        '</g>' +
+      '</svg>' +
+      '<div class="kl-depart-line">Off the planet. Out of the town. The sound goes with you.</div>' +
+      '<button class="kl-tools-link kl-depart-go" onclick="klRenderBetaEnd()">Continue →</button>' +
+    '</div>';
+  try {
+    const ctx = getAudio(); const t0 = ctx.currentTime + 0.4;
+    [0,2,4,5,7,9,11,12].forEach((idx,i) => playTone(midiFreq(KL_SCALE[idx % KL_SCALE.length] + 12), t0 + i * 0.16, 0.5, ctx, 0.18, 'piano'));
+  } catch (e) {}
+  if (klDepartTimer) clearTimeout(klDepartTimer);
+  klDepartTimer = setTimeout(klRenderBetaEnd, 6200);
+}
+
+// THE END OF THE BETA — the thank-you screen.
+function klRenderBetaEnd() {
+  if (klDepartTimer) { clearTimeout(klDepartTimer); klDepartTimer = null; }
   document.getElementById('kidlab').classList.remove('kl-playing');
   klConfetti();
   const wrap = document.getElementById('kl-wrap');
-  const sub = onLoan
-    ? 'You signed for the loan. The van\u2019s yours — payments and all. The open road doesn\u2019t care, and neither do you.'
-    : 'Paid in full. No debt, no leash. Just you, the band, and a tank of gas.';
   wrap.innerHTML =
-    '<div class="kl-win-star" style="font-size:96px;">🚐</div>' +
-    '<div class="kl-title" style="font-size:44px;">YOU MADE IT OUT</div>' +
-    '<div class="kl-subtitle" style="max-width:min(420px,86vw);">' + sub + '</div>' +
+    '<div class="kl-win-star" style="font-size:96px;">🌟</div>' +
+    '<div class="kl-title" style="font-size:44px;">THANK YOU FOR PLAYING</div>' +
+    '<div class="kl-subtitle" style="max-width:min(440px,86vw);">You made it off the planet — paid in full, no leash. Just you, the band, and a tank of gas.</div>' +
     '<div style="margin:14px 0 6px;font-family:\'Barlow Condensed\',sans-serif;font-size:18px;color:#ffd97a;font-weight:800;">' +
       '— END OF BETA —</div>' +
-    '<div class="kl-subtitle" style="font-size:16px;opacity:0.8;max-width:min(420px,86vw);">' +
+    '<div class="kl-subtitle" style="font-size:16px;opacity:0.8;max-width:min(440px,86vw);">' +
       'Days on the grind: ' + klState.day + ' · Shows played: ' + klState.showsPlayed + ' · Level ' + klLevel() + '</div>' +
     '<button class="kl-tools-link" style="margin-top:18px;" onclick="klRenderTown()">← Back to town</button>';
-  const ctx = getAudio(); const t0 = ctx.currentTime + 0.05;
-  [0, 2, 4, 6].forEach((idx, i) => playTone(midiFreq(KL_SCALE[idx % KL_SCALE.length] + 12), t0 + i * 0.12, 0.6, ctx, 0.26, 'piano'));
+  try {
+    const ctx = getAudio(); const t0 = ctx.currentTime + 0.05;
+    [0, 2, 4, 7].forEach((idx, i) => playTone(midiFreq(KL_SCALE[idx % KL_SCALE.length] + 12), t0 + i * 0.14, 0.7, ctx, 0.26, 'piano'));
+  } catch (e) {}
 }
 
 window.klRepairGear = function() {
@@ -19277,7 +19336,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-178'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-179'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
