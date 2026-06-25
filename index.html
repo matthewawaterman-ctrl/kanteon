@@ -3832,7 +3832,7 @@
   .kt-hustle-lbl { font-weight: 900; font-size: 15px; letter-spacing: 1px; }
   .kt-hustle-sub { font-size: 11px; opacity: 0.72; }
   .kt-town-title-top {
-    position: absolute; top: 12px; left: 0; right: 0; z-index: 2;
+    position: absolute; top: 92px; left: 0; right: 0; z-index: 2;
     text-align: center; pointer-events: none;
     font-family: 'Barlow Condensed', sans-serif; font-weight: 900;
     font-size: 22px; letter-spacing: 5px; color: rgba(255,255,255,0.82);
@@ -3881,9 +3881,12 @@
     paint-order: stroke; stroke: rgba(20,12,30,0.65); stroke-width: 3px;
   }
   .kt-hud {
-    position: absolute; top: 16px; right: 16px; z-index: 5;
-    display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end;
+    position: absolute; top: 0; left: 0; right: 0; z-index: 5;
+    height: 80px; padding: 0 18px; box-sizing: border-box; pointer-events: none;
+    display: flex; gap: 10px; align-items: center; flex-wrap: nowrap; justify-content: flex-end;
+    background: linear-gradient(180deg, #0d0a22 0%, #0d0a22 56%, rgba(13,10,34,0.55) 82%, rgba(13,10,34,0) 100%);
   }
+  .kt-hud > * { pointer-events: auto; }
   .kl-fs-btn {
     padding: 0; width: 40px; height: 40px; border-radius: 10px;
     border: 1px solid rgba(255,255,255,0.18); background: rgba(20,16,40,0.5);
@@ -3896,7 +3899,7 @@
   .kt-hud-item {
     font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 22px;
     color: #fff; background: rgba(20,12,30,0.55); border: 1px solid rgba(255,255,255,0.2);
-    padding: 8px 16px; border-radius: 999px;
+    padding: 8px 16px; border-radius: 999px; font-variant-numeric: tabular-nums;
   }
   .kt-hud-show { color: #ffd97a; }
   .kt-hud-level { display: inline-flex; align-items: center; gap: 10px; }
@@ -3905,7 +3908,7 @@
   .kt-xp-num { font-size: 16px; opacity: 0.72; font-weight: 700; }
   /* Phones: dial the bigger HUD back so it doesn't wrap into a wall */
   @media (max-width: 599px) {
-    .kt-hud { gap: 7px; top: 10px; right: 10px; }
+    .kt-hud { gap: 7px; height: 64px; padding: 0 10px; }
     .kt-hud-item { font-size: 17px; padding: 6px 12px; }
     .kt-xpbar { width: 60px; height: 8px; }
     .kt-xp-num { font-size: 13px; }
@@ -3922,7 +3925,7 @@
   @keyframes ktXpFlash { 0%,100% { filter: none; } 40% { filter: brightness(1.9) drop-shadow(0 0 8px #fcd34d); } }
   .kt-hud-rent { color: #fff; background: rgba(220,38,38,0.85); border-color: rgba(255,160,160,0.6); cursor: pointer; font-weight: 800; }
   .kt-hud-rent:hover { background: rgba(220,38,38,1); }
-  .kt-hud-inline { position: static; justify-content: center; margin: 4px 0 10px; }
+  .kt-hud-inline { position: static; justify-content: center; margin: 4px 0 10px; height: auto; padding: 0; background: none; pointer-events: auto; }
   .kt-interior { display: flex; align-items: center; justify-content: center; position: relative; }
   /* Illustrated room scene sits at the back; a vignette floats above it for card
      contrast; the card sits in front. */
@@ -4918,7 +4921,7 @@
     text-shadow: 0 2px 10px rgba(0,0,0,0.9); }
   .kl-garage-title { font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 28px; letter-spacing: 1.5px; color: #fff; }
   .kl-garage-sub { font-family: 'Barlow', sans-serif; font-size: 13.5px; color: #e6e2f5; margin-top: 1px; }
-  .kl-garage-back { position: absolute; left: 24px; bottom: 58px; z-index: 7;
+  .kl-garage-back { position: absolute; left: 16px; top: 20px; z-index: 7;
     font-family: 'Barlow', sans-serif; font-size: 17px; font-weight: 700; color: #fff;
     background: rgba(20,16,40,0.82); border: 1px solid rgba(255,255,255,0.22); border-radius: 13px;
     padding: 13px 22px; cursor: pointer; backdrop-filter: blur(4px); }
@@ -12551,6 +12554,7 @@ function klRadioTowerSVG() {
 function klRenderTown() {
   document.getElementById('kidlab').classList.remove('kl-playing');
   klCloseComposeSong(); // bug #6: leaving via "Back outside" must close the composer AND unfreeze the day clock
+  if (typeof klPerformRemoveKeys === 'function') klPerformRemoveKeys();
   klStopClock(); klStopBeatBar();
   klStartDayClock();
   klState.activeSet = null;
@@ -13885,8 +13889,8 @@ function klRenderInterior(id) {
         '<p class="kt-int-line">The chef wipes his hands and studies you a moment. \u201cWaddy says you put in the reps. Alright \u2014 one night. Folks come for the food; maybe this time they stay for the music. Twenty-five holds a date \u2014 book a Friday or Saturday (🔥) if you want a full room. You can hold a night up to two seasons out.\u201d</p>' +
         '<button class="kt-int-sub" onclick="klTalkTo(\'venue\')">💬 Talk to the chef</button>' +
         '<p class="kt-npc-line" id="kt-npc-line"></p>' +
-        '<p class="kt-int-note">Booking costs $25 · pick a night:</p>' +
-        klCalendarGrid({ fromDay: fsStart, seasons: seasons, enableFrom: today + 1, enableTo: enableTo, selStart: 0, selEnd: 0, today: today, hotWeekends: true, onPick: 'klBookShowDay', theme: 'book' });
+        '<p class="kt-int-note">Booking costs $25 \u00B7 pick a night (at least a week out):</p>' +
+        klCalendarGrid({ fromDay: fsStart, seasons: seasons, enableFrom: today + 7, enableTo: enableTo, selStart: 0, selEnd: 0, today: today, hotWeekends: true, onPick: 'klBookShowDay', theme: 'book' });
     } else if (klState.day < klState.bookedDay) {
       const fill = Math.round(klHypeFill() * 100);
       const dn = klDayName(klState.bookedDay);
@@ -14113,7 +14117,7 @@ function klCalendarGrid(o) {
 // Book a show on an ABSOLUTE day (from the calendar).
 window.klBookShowDay = function(day) {
   if (klState.money < 25) { klToast('💸 Not enough cash to book. ($25)'); return; }
-  if (day <= klState.day) return;
+  if (day - klState.day < 7) { klToast('📅 Book at least a week out — the chef needs notice.'); return; }
   klState.money -= 25;
   klState.bookedDay = day;
   klState.bookedDaysOut = day - klState.day;
@@ -14210,6 +14214,7 @@ function klShowHUD() {
 function klShowCleanup() {
   klShow.active = false;
   klPerform.active = false;
+  klPerformRemoveKeys();
   clearInterval(klShow.timerId);
   const el = document.getElementById('kt-show-hud'); if (el) el.remove();
 }
@@ -14256,7 +14261,7 @@ function klShowSongClear() {
 // ----------------------------------------------------------------------------
 let klPerform = { beat: 0, song: null, notes: [], active: false };
 window.klRenderPerform = function(song) {
-  klPerform = { beat: 0, song: song, notes: (song.melody && song.melody.notes) || [], active: true, lastTapAt: 0, t0: 0 };
+  klPerform = { beat: 0, song: song, notes: (song.melody && song.melody.notes) || [], active: true, lastTapAt: 0, t0: 0, keyHandler: null };
   if (!klClock.active) { klStartClock((song.melody && song.melody.bpm) || 96); klStartBeatBar(); } // groove = the beat reference you tap to
   document.getElementById('kidlab').classList.add('kl-playing');
   const lit = {};
@@ -14273,11 +14278,22 @@ window.klRenderPerform = function(song) {
   document.getElementById('kl-wrap').innerHTML =
     '<div class="kl-perform-stage">' +
       '<div class="kl-perform-title">\uD83C\uDFA4 PERFORM: \u201C' + (song.title || 'your song') + '\u201D</div>' +
-      '<div class="kl-perform-sub">Tap <b>in time with the band</b> to play your song \u00B7 <span id="kl-pf-count">0</span>/8</div>' +
+      '<div class="kl-perform-sub">Tap <b>in time with the band</b> \u2014 click, or press the home-row keys \u00B7 <span id="kl-pf-count">0</span>/8</div>' +
       '<div class="kl-comp">' + head + grid + '</div>' +
       '<button class="kl-listen kt-int-btn kl-perform-tap" id="kl-pf-tap" onclick="klPerformTap()">\uD83D\uDC4F TAP THE BEAT</button>' +
     '</div>';
+  klPerformRemoveKeys();
+  klPerform.keyHandler = function(e) {
+    if (!klPerform.active) return;
+    const tag = (e.target && e.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
+    if (KL_HOMEROW.indexOf(e.code) !== -1) { e.preventDefault(); if (!e.repeat) klPerformTap(); } // any home-row key taps (per-lane mapping later)
+  };
+  window.addEventListener('keydown', klPerform.keyHandler);
 };
+function klPerformRemoveKeys() {
+  if (klPerform && klPerform.keyHandler) { window.removeEventListener('keydown', klPerform.keyHandler); klPerform.keyHandler = null; }
+}
 function klPerformLight(b) {
   for (let s = 0; s < 16; s++) {
     const lit = (b >= 0 && (s === 2 * b || s === 2 * b + 1));
@@ -14315,6 +14331,7 @@ window.klPerformTap = function() {
   const cnt = document.getElementById('kl-pf-count'); if (cnt) cnt.textContent = klPerform.beat;
   if (klPerform.beat >= 8) {
     klPerform.active = false;
+    klPerformRemoveKeys();
     setTimeout(() => klPerformLight(-1), 320);
     klToast('\uD83C\uDF89 You nailed it!');
     setTimeout(() => { if (klShow.active) klWin(); }, 520); // klWin → klShowSongClear during a show
@@ -17679,6 +17696,7 @@ window.klDevShowSong = function(idx) {
   klShow.active = false;
   if (klShow.timerId) { clearInterval(klShow.timerId); klShow.timerId = null; }
   const hud = document.getElementById('kt-show-hud'); if (hud) hud.remove();
+  klState.activeSet = null; // without this, klRenderPuzzle's set-boundary guard rejects out-of-range show indices and bails
   klState.puzzleIdx = idx;
   klState.failCount = 0; klState.hintShown = false; klState.hintNotes = null;
   klRebuildLayersFor(idx);
@@ -17697,6 +17715,19 @@ document.addEventListener('keydown', (e) => {
   if (!klIsDevAvailable()) return;
   e.preventDefault();
   klToggleDevBar();
+});
+// Hotkey: \ completes the CURRENT level (dev only) — fast testing through puzzles
+// and show layers. During a show it clears the active layer; in the perform
+// surface it finishes the song; in a normal puzzle it solves it.
+document.addEventListener('keydown', (e) => {
+  if (e.code !== 'Backslash') return;
+  const tag = (e.target && e.target.tagName) || '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
+  if (!klIsDevAvailable()) return;
+  const kid = document.getElementById('kidlab');
+  if (!kid || !kid.classList.contains('kl-playing')) return; // only while a level/perform is up
+  e.preventDefault();
+  klWin();
 });
 // Fullscreen hotkey: F. Guarded so it never collides with the home-row (A–L) keys
 // used in Chord/Groove/Ear labs — those set klState.activeModule, where F is off.
@@ -19246,7 +19277,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-174'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-176'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
