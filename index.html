@@ -18966,7 +18966,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-167'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-169'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -18986,6 +18986,10 @@ function klUpdateStageReadout(scale) {
 }
 function klApplyStageScale() {
   if (!document.body.classList.contains('kl-staged')) return;
+  // Fill-to-fit (no upscale cap): the block scales up to fill the largest
+  // 1280x800-ratio area the window allows. Prioritises maximal fill on iPad /
+  // iPhone (esp. the 12.9" iPad Pro, which now fills full width) — the cost is
+  // desktop, where this upscales past 100% (the dev readout roams >100%).
   const s = Math.min(window.innerWidth / KL_STAGE_W, window.innerHeight / KL_STAGE_H);
   document.documentElement.style.setProperty('--kl-scale', s);
   klUpdateStageReadout(s);
