@@ -4142,6 +4142,13 @@
     font-size: 12px; color: rgba(220,210,255,0.55); border-radius: 4px;
   }
   .kl-comp-colhead.now { background: rgba(142,240,200,0.3); color: #fff; }
+  /* SLICE 2 — PERFORM YOUR SONG at the show (the melody layer) */
+  .kl-perform-stage { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 8px 0; }
+  .kl-perform-title { font-family: var(--font-display, inherit); font-size: 24px; font-weight: 800; color: #f0c040; letter-spacing: 1px; text-align: center; }
+  .kl-perform-sub { font-size: 15px; color: rgba(224,236,255,0.8); text-align: center; }
+  .kl-perform-stage .kl-comp { width: min(620px, 94%); }
+  .kl-comp-cell.now { box-shadow: 0 0 0 2px #f0c040 inset; }
+  .kl-perform-tap { margin-top: 6px; font-size: 20px; padding: 16px 40px; }
   .kl-snd-tests select, .kl-snd-tests input {
     background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.25);
     border-radius: 8px; padding: 4px 8px; font-family: 'Barlow', sans-serif; font-size: 12px;
@@ -12538,6 +12545,7 @@ function klRadioTowerSVG() {
 
 function klRenderTown() {
   document.getElementById('kidlab').classList.remove('kl-playing');
+  klCloseComposeSong(); // bug #6: leaving via "Back outside" must close the composer AND unfreeze the day clock
   klStopClock(); klStopBeatBar();
   klStartDayClock();
   klState.activeSet = null;
@@ -14125,7 +14133,7 @@ window.klSkipToShow = function() {
 };
 
 // ── THE SHOW: a timed, failable performance of 3 songs you've learned ──
-const klShow = { active: false, songs: [], i: 0, strikes: 0, timerId: null, deadline: 0, late: false, backing: { drums: null, bass: null } };
+const klShow = { active: false, songs: [], i: 0, strikes: 0, timerId: null, deadline: 0, late: false, songOfNight: null, backing: { drums: null, bass: null } };
 
 window.klStartShow = function() {
   // Set list = 3 SHOW-NIGHT songs that BUILD A BAND in layers, mirroring the
@@ -14150,8 +14158,16 @@ window.klStartShow = function() {
   klShow.active = true; klShow.songs = songs; klShow.i = 0; klShow.strikes = 0;
   klShow.late = (klState.hour != null && klState.hour > KL_SHOW_LOADIN); // showed up after 6 PM load-in
   klShow.backing = { drums: null, bass: null }; // fills in as each layer is cleared
+  klShow.songOfNight = klPickSongOfNight(); // SLICE 2: the composed song you'll perform on the melody layer (null = fall back to a stock melody)
   klShowNextSong();
 };
+// The composed song performed at tonight's show = your most recent one that has a
+// melody. Null when you have none, so the show falls back to a stock melody layer
+// (Slice 3 will gate the show on having a song at all).
+function klPickSongOfNight() {
+  const withMel = (klState.songs || []).filter(s => s && s.melody && s.melody.notes && s.melody.notes.length);
+  return withMel.length ? withMel[withMel.length - 1] : null;
+}
 // Apply the accumulated band (cleared layers) so the next song plays OVER them.
 function klShowApplyBacking() {
   klResetLayers();
@@ -14162,7 +14178,9 @@ function klShowApplyBacking() {
 function klShowNextSong() {
   klState.puzzleIdx = klShow.songs[klShow.i];
   klShowApplyBacking(); // layers from songs already cleared tonight play underneath
-  klRenderPuzzle();
+  const _layerP = KL_PUZZLES[klShow.songs[klShow.i]];
+  if (klIsMelodyPuzzle(_layerP) && klShow.songOfNight) klRenderPerform(klShow.songOfNight); // SLICE 2: melody layer = perform YOUR song
+  else klRenderPuzzle();
   klShowHUD();
   // 60 seconds per song. Running out = a strike.
   klShow.deadline = Date.now() + 60000;
@@ -14186,6 +14204,7 @@ function klShowHUD() {
 }
 function klShowCleanup() {
   klShow.active = false;
+  klPerform.active = false;
   clearInterval(klShow.timerId);
   const el = document.getElementById('kt-show-hud'); if (el) el.remove();
 }
@@ -14220,6 +14239,68 @@ function klShowSongClear() {
   if (klShow.i < 3) { klShowNextSong(); return; }
   klFinishShowSuccessfully();
 }
+
+// ============================================================================
+// SLICE 2 — PERFORM YOUR SONG (the show's melody layer).
+// Your composed melody shows on the compose-style grid; drums+bass groove
+// underneath (the band you built on the first two layers). You TAP THE BEAT to
+// drive your melody out — each tap fires that beat's notes and sweeps the
+// playhead, 8 beats across the 2 bars. Finishing routes through klWin(), which
+// during a show calls klShowSongClear() → next layer / payout. Self-contained:
+// renders into #kl-wrap like a puzzle, but never touches the puzzle pipeline.
+// ----------------------------------------------------------------------------
+let klPerform = { beat: 0, song: null, notes: [], active: false };
+window.klRenderPerform = function(song) {
+  klPerform = { beat: 0, song: song, notes: (song.melody && song.melody.notes) || [], active: true };
+  document.getElementById('kidlab').classList.add('kl-playing');
+  const lit = {};
+  klPerform.notes.forEach(n => { lit[n.pitch + '@' + Math.round(n.start * 2)] = true; });
+  let head = '<div class="kl-comp-row kl-comp-head"><span class="kl-comp-rowlabel"></span>';
+  for (let s = 0; s < 16; s++) head += '<span class="kl-comp-colhead" id="kl-pf-col-' + s + '"' + (s === 8 ? ' style="border-left:2px solid rgba(255,255,255,0.4)"' : '') + '>' + ((s % 2 === 0) ? ((s / 2) % 4) + 1 : '\u00B7') + '</span>';
+  head += '</div>';
+  let grid = '';
+  KL_PENTA.forEach(pp => {
+    grid += '<div class="kl-comp-row"><span class="kl-comp-rowlabel">' + KL_PENTA_LBL[pp] + '</span>';
+    for (let s = 0; s < 16; s++) grid += '<button class="kl-comp-cell' + (lit[pp + '@' + s] ? ' on' : '') + '" id="kl-pf-' + pp + '-' + s + '"' + (s === 8 ? ' style="border-left:2px solid rgba(255,255,255,0.4);pointer-events:none"' : ' style="pointer-events:none"') + '></button>';
+    grid += '</div>';
+  });
+  document.getElementById('kl-wrap').innerHTML =
+    '<div class="kl-perform-stage">' +
+      '<div class="kl-perform-title">\uD83C\uDFA4 PERFORM: \u201C' + (song.title || 'your song') + '\u201D</div>' +
+      '<div class="kl-perform-sub">Tap the beat to play your song over the band \u00B7 <span id="kl-pf-count">0</span>/8</div>' +
+      '<div class="kl-comp">' + head + grid + '</div>' +
+      '<button class="kl-listen kt-int-btn kl-perform-tap" id="kl-pf-tap" onclick="klPerformTap()">\uD83D\uDC4F TAP THE BEAT</button>' +
+    '</div>';
+};
+function klPerformLight(b) {
+  for (let s = 0; s < 16; s++) {
+    const lit = (b >= 0 && (s === 2 * b || s === 2 * b + 1));
+    const h = document.getElementById('kl-pf-col-' + s); if (h) h.classList.toggle('now', lit);
+    KL_PENTA.forEach(pp => { const c = document.getElementById('kl-pf-' + pp + '-' + s); if (c) c.classList.toggle('now', lit); });
+  }
+}
+window.klPerformTap = function() {
+  if (!klPerform.active) return;
+  const b = klPerform.beat;                       // beat 0..7 of the 2-bar song
+  const ctx = getAudio();
+  const sub = 0.25;                               // sub-beat spacing for an 8th inside the tapped beat
+  [2 * b, 2 * b + 1].forEach((step, j) => {
+    klPerform.notes.forEach(n => {
+      if (Math.round(n.start * 2) === step) {
+        playTone(midiFreq(klPitchMidi(n.pitch)), ctx.currentTime + j * sub, 0.32, ctx, 0.3, 'klKeys');
+      }
+    });
+  });
+  klPerformLight(b);
+  klPerform.beat++;
+  const cnt = document.getElementById('kl-pf-count'); if (cnt) cnt.textContent = klPerform.beat;
+  if (klPerform.beat >= 8) {
+    klPerform.active = false;
+    setTimeout(() => klPerformLight(-1), 320);
+    klToast('\uD83C\uDF89 You nailed it!');
+    setTimeout(() => { if (klShow.active) klWin(); }, 520); // klWin → klShowSongClear during a show
+  }
+};
 
 // The successful-show payout, factored out so both a real cleared set and the DEV
 // "complete show" shortcut resolve through one source of truth (payout = base ×
@@ -19110,7 +19191,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-171'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-172'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -20128,6 +20209,7 @@ window.klExportSessions = function() {
 // === KIDLAB — END ===
 
 window.showScreen = function(id) {
+  if (typeof klCloseComposeSong === 'function') klCloseComposeSong(); // bug #6: never leave the composer open / time frozen across a screen change
   // GARAGE BRIDGE: when a Book module (Anatomy / Active Listening) was launched
   // from inside the Garage, leaving it (back to the Book home) instead drops the
   // player back at the Garage in the main story — the Book never shows.
