@@ -12800,6 +12800,7 @@ const KL_WORK_SHIFT_HRS = 8, KL_WAGE_PER_HOUR = 15; // an 8h shift = $120
 const KL_BUSK_HR_MIN = 4, KL_BUSK_HR_SPAN = 6;      // $4–10 raw per hour busked
 const KL_WRITE_HRS = 4, KL_RECORD_HRS = 6, KL_PUZZLE_HRS = 4;
 const KL_SONG_HOURS = 4;             // writing + demoing a song = 4 hours of studio work (resumable across days)
+const KL_FEAT_COMPOSE = true;        // SLICE 1: "Write a Song" = compose a 2-bar melody (vs the passive timer). Gated to the dev/matt save via klComposeOn(); set false to fully disable.
 const KL_SHOW_LOADIN = 18;           // load-in is 6:00 PM; arriving later = "late but showed up"
 const KL_SHOW_LATE_MULT = 0.6;       // a late show pays/hypes 40% less than an on-time one
 const KL_CLOCK_FF_MS = 650;                          // fast-forward visual length (tunable)
@@ -12868,9 +12869,10 @@ function klClockFastForward(fromH, toH, done) {
 // exception is the busk/work/songwriter hour-purchase menus + the fast-forward badge,
 // which add their own hours — ticking there too would double-count time.
 const KL_REAL_SEC_PER_GAME_HOUR = 60; // tune this to change the pace
-let klDayClockTimer = null, klDayClockPaused = false, klDayClockSaveAccum = 0;
+let klDayClockTimer = null, klDayClockPaused = false, klDayClockSaveAccum = 0, klComposeFreeze = false;
 function klDayClockShouldTick() {
   if (klDayClockPaused) return false;
+  if (klComposeFreeze) return false; // composing a song freezes time (the act is unpressured; the 4h cost is charged on Finish)
   // STORY mode only. The story lives in the #kidlab screen; Lesson Mode and Arcade
   // are separate screens, so when #kidlab isn't the active screen the day clock
   // holds. This makes the clock run through puzzles/shop/dialogue but not lessons.
@@ -15466,7 +15468,10 @@ function klBestRecordedScore() { return (klState.songs || []).reduce((m, s) => s
 function klRadioUnlocked() { return klBestRecordedScore() >= KL_RADIO_GATE; }
 let klSongDraft = { score: 0 };           // the freshly-finished demo awaiting a name
 let klSongPlanN = 1;                       // hours chosen for THIS work session
-window.klOpenSongwriter = function() { klSongPlanN = 1; klRenderSongwriter('confirm'); };
+window.klOpenSongwriter = function() {
+  if (klComposeOn()) { klOpenComposeSong(); return; } // SLICE 1: compose a melody instead of the passive timer
+  klSongPlanN = 1; klRenderSongwriter('confirm');
+};
 
 // Song Bank = a read-only modal opened from the record crate in YOUR PLACE.
 // Reuses the avatar overlay styling (.kl-av-overlay / .kl-av-card).
@@ -15553,7 +15558,7 @@ window.klSongSave = function() {
   if (name.length > 40) name = name.slice(0, 40);
   if (!klState.songs) klState.songs = [];
   const score = klSongDraft.score;
-  klState.songs.push({ title: name, score: score, day: klState.day });
+  klState.songs.push({ title: name, score: score, day: klState.day, melody: (klSongDraft && klSongDraft.melody) || null });
   klState.songInProgress = null; // demo finished and filed — clear the work-in-progress
   klSaveProgress();
   const el = document.getElementById('kt-songwriter'); if (el) el.remove();
@@ -15561,6 +15566,137 @@ window.klSongSave = function() {
   klNotify(t.emoji, 'Added to your Song Bank!', '\u201C' + name + '\u201D \u2014 a ' + t.label + ' (' + score + '/100). Your catalog now boosts busking & shows \u00D7' + klCatalogMult().toFixed(2) + '.');
   klRenderInterior('home');
 };
+// ============================================================================
+// SLICE 1 — COMPOSE A SONG (feature-flagged via klComposeOn()).
+// "Write a Song" opens a 2-bar, 8th-note, PENTATONIC, MONOPHONIC melody grid in
+// the game skin. Time is FROZEN while open. The work-in-progress melody saves to
+// klState.songInProgress.melody (a {p@s:true} map) so you can leave and come back
+// to EDIT it. "Finish" charges the 4h cost and files the song with .melody.
+// Reuses the engine's note grid CSS (.kl-comp*) and audio (playTone/midiFreq).
+// ----------------------------------------------------------------------------
+let klSongComp = { notes: {}, bpm: 96, gen: 0, raf: null };
+const KL_PENTA = [7, 5, 4, 2, 1, 0];                 // KL_SCALE indices, high→low: C2 A G E D C
+const KL_PENTA_LBL = { 0: 'C', 1: 'D', 2: 'E', 4: 'G', 5: 'A', 7: 'C2' };
+window.klOpenComposeSong = function() {
+  klCloseComposeSong();
+  klComposeFreeze = true;                            // stop the day clock while writing
+  klSongComp.notes = (klState.songInProgress && klState.songInProgress.melody)
+    ? Object.assign({}, klState.songInProgress.melody) : {};
+  klSongComp.bpm = 96; klSongComp.gen = 0; klSongComp.raf = null;
+  const el = document.createElement('div');
+  el.id = 'kl-songcompose'; el.className = 'kl-sndpanel kl-comp';
+  let head = '<div class="kl-comp-row kl-comp-head"><span class="kl-comp-rowlabel"></span>';
+  for (let s = 0; s < 16; s++) {
+    const beat = (s % 2 === 0) ? ((s / 2) % 4) + 1 : '·';
+    head += '<span class="kl-comp-colhead" id="kl-sc-col-' + s + '"' + (s === 8 ? ' style="border-left:2px solid rgba(255,255,255,0.4)"' : '') + '>' + beat + '</span>';
+  }
+  head += '</div>';
+  let grid = '';
+  KL_PENTA.forEach(p => {
+    grid += '<div class="kl-comp-row"><span class="kl-comp-rowlabel">' + KL_PENTA_LBL[p] + '</span>';
+    for (let s = 0; s < 16; s++) {
+      grid += '<button class="kl-comp-cell" id="kl-sc-' + p + '-' + s + '"' + (s === 8 ? ' style="border-left:2px solid rgba(255,255,255,0.4)"' : '') + ' onclick="klSongComposeTap(' + p + ',' + s + ')"></button>';
+    }
+    grid += '</div>';
+  });
+  el.innerHTML =
+    '<div class="kl-snd-head">\uD83C\uDFBC WRITE A SONG \u00B7 2 bars' +
+      '<button class="kt-int-sub" onclick="klSongComposePlay()">\u25B6</button>' +
+      '<button class="kt-int-sub" onclick="klSongComposeStop()">\u25A0</button>' +
+      '<button class="kt-int-sub" onclick="klSongComposeClear()">CLEAR</button>' +
+      '<button class="kt-int-sub" onclick="klSongComposeSaveLater()">\u2715</button>' +
+    '</div>' +
+    '<div class="kl-snd-tests" style="opacity:0.75;">Tap to place a note \u00B7 any notes sound good \u00B7 \u2744 time is frozen while you write</div>' +
+    head + grid +
+    '<div style="display:flex;gap:8px;margin-top:10px;">' +
+      '<button class="kt-int-sub" style="flex:1;" onclick="klSongComposeSaveLater()">Save for later</button>' +
+      '<button class="kt-int-sub" style="flex:1;background:#f0c040;color:#1a0e2e;font-weight:700;border-color:#f0c040;" onclick="klSongComposeFinish()">Finish song (4 hrs)</button>' +
+    '</div>';
+  document.getElementById('kidlab').appendChild(el);
+  Object.keys(klSongComp.notes).forEach(k => {
+    const c = document.getElementById('kl-sc-' + k.replace('@', '-')); if (c) c.classList.add('on');
+  });
+};
+function klSongComposeWIPSave() {
+  klState.songInProgress = klState.songInProgress || { hoursDone: 0 };
+  klState.songInProgress.melody = Object.assign({}, klSongComp.notes);
+  klSaveProgress();
+}
+window.klSongComposeTap = function(p, s) {
+  const k = p + '@' + s;
+  const had = klSongComp.notes[k];
+  // MONOPHONIC: clear whatever note already sits in this time-column
+  Object.keys(klSongComp.notes).forEach(kk => {
+    if (Number(kk.split('@')[1]) === s) {
+      delete klSongComp.notes[kk];
+      const old = document.getElementById('kl-sc-' + kk.replace('@', '-')); if (old) old.classList.remove('on');
+    }
+  });
+  if (!had) {
+    klSongComp.notes[k] = true;
+    const cell = document.getElementById('kl-sc-' + p + '-' + s); if (cell) cell.classList.add('on');
+    const ctx = getAudio(); playTone(midiFreq(klPitchMidi(p)), ctx.currentTime, 0.3, ctx, 0.25, 'klKeys');
+  }
+  klSongComposeWIPSave();
+};
+window.klSongComposePlay = function() {
+  klSongComposeStop();
+  const ctx = getAudio(); const gen = ++klSongComp.gen;
+  const beat = 60 / klSongComp.bpm / 2;              // 16 steps = 8th notes (2 bars)
+  const t0 = ctx.currentTime + 0.1;
+  Object.keys(klSongComp.notes).forEach(k => {
+    const [p, s] = k.split('@').map(Number);
+    playTone(midiFreq(klPitchMidi(p)), t0 + s * beat, beat * 0.9, ctx, 0.25, 'klKeys');
+  });
+  const endT = t0 + 16 * beat;
+  const tick = () => {
+    if (gen !== klSongComp.gen) return;
+    const now = ctx.currentTime;
+    if (now >= endT) { klSongComposeCol(-1); return; }
+    klSongComposeCol(Math.floor((now - t0 + 0.0083) / beat));
+    klSongComp.raf = requestAnimationFrame(tick);
+  };
+  klSongComp.raf = requestAnimationFrame(tick);
+};
+function klSongComposeCol(cur) {
+  for (let s = 0; s < 16; s++) { const h = document.getElementById('kl-sc-col-' + s); if (h) h.classList.toggle('now', s === cur); }
+}
+window.klSongComposeStop = function() { klSongComp.gen++; if (klSongComp.raf) cancelAnimationFrame(klSongComp.raf); klSongComposeCol(-1); };
+window.klSongComposeClear = function() {
+  klSongComp.notes = {};
+  document.querySelectorAll('#kl-songcompose .kl-comp-cell.on').forEach(c => c.classList.remove('on'));
+  klSongComposeWIPSave();
+};
+function klCloseComposeSong() {
+  klSongComposeStop(); klComposeFreeze = false;
+  const el = document.getElementById('kl-songcompose'); if (el) el.remove();
+}
+function klComposeMelodyArray() {
+  return Object.keys(klSongComp.notes).map(k => {
+    const [p, s] = k.split('@').map(Number);
+    return { pitch: p, start: s / 2, dur: 0.5 };     // start in beats (16 steps = 8ths)
+  }).sort((a, b) => a.start - b.start || a.pitch - b.pitch);
+}
+// Step out without finishing — keep the WIP melody, charge NO hours, unfreeze time.
+window.klSongComposeSaveLater = function() {
+  klSongComposeWIPSave();
+  klCloseComposeSong();
+  klToast('\uD83C\uDFB5 Melody saved \u2014 come back to finish it anytime.');
+  klRenderInterior('home');
+};
+// Finish — charge the 4h studio cost, lock the score, file the song WITH its melody.
+window.klSongComposeFinish = function() {
+  if (Object.keys(klSongComp.notes).length < 2) { klToast('Add a few notes first \u2014 even a tiny melody.'); return; }
+  klState.songInProgress = klState.songInProgress || { hoursDone: 0 };
+  const remaining = Math.max(0, KL_SONG_HOURS - (klState.songInProgress.hoursDone || 0));
+  klState.songInProgress.hoursDone = KL_SONG_HOURS;
+  klSongDraft = { score: klSongRollScore(), melody: { bpm: klSongComp.bpm, notes: klComposeMelodyArray() } };
+  klCloseComposeSong();
+  klAdvanceHours(remaining, false);                  // the 4h cost lands here (may roll past midnight)
+  klSaveProgress();
+  klRenderSongwriter('name');                         // reuse the existing name-and-file modal
+};
+
 function klRenderSongwriter(step) {
   const old = document.getElementById('kt-songwriter'); if (old) old.remove();
   const el = document.createElement('div');
@@ -16849,6 +16985,9 @@ window.klDrumCheck = function() {
 // Returns a row of jump buttons so any puzzle can be reached instantly during
 // testing. Renders ONLY when the current player is Matt — invisible to kids.
 function klIsDev() { return klState.kid && klState.kid.id === 'matt'; }
+// SLICE 1 gate: compose-a-song is on only for the dev/matt save for now. Flip to all
+// players by dropping the klIsDev() check; kill entirely via KL_FEAT_COMPOSE = false.
+function klComposeOn() { return KL_FEAT_COMPOSE && klIsDev(); }
 // Dev is "available" if a Matt profile exists — used on the player-select menu,
 // where no kid is selected yet so klIsDev() would be false.
 function klIsDevAvailable() {
@@ -18971,7 +19110,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-170'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-171'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
