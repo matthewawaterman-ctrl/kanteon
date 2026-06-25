@@ -12496,10 +12496,10 @@ function klTownSVG(){
   const street=`<path d="M310 ${H} L${VPX-9} ${VPY+4} L${VPX+9} ${VPY+4} L690 ${H} Z" fill="url(#ktGround)"/>`
     +`<line x1="${VPX}" y1="${VPY+22}" x2="${VPX}" y2="${H}" stroke="rgba(235,225,185,0.4)" stroke-width="3" stroke-dasharray="14 20"/>`;
   const planet=`<ellipse cx="500" cy="118" rx="66" ry="66" fill="url(#ktKant)" opacity="0.55"/><circle cx="500" cy="118" r="32" fill="#7b5ec4"/><path d="M470 110 a32 32 0 0 0 60 -6 a38 38 0 0 1 -60 6 Z" fill="#6a4eb0" opacity="0.7"/><ellipse cx="500" cy="118" rx="55" ry="14" fill="none" stroke="#d8c0ff" stroke-width="2.5" opacity="0.75" transform="rotate(-18 500 118)"/><circle cx="490" cy="107" r="8" fill="#a98fe0" opacity="0.6"/>`;
-  return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" preserveAspectRatio="xMidYMax meet" xmlns="http://www.w3.org/2000/svg" style="display:block;">`
+  return `<svg viewBox="0 -105 ${W} ${H+105}" width="100%" height="100%" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg" style="display:block;">`
     +`<defs><linearGradient id="ktSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1b1436"/><stop offset="52%" stop-color="#3f3160"/><stop offset="82%" stop-color="#a8748a"/><stop offset="100%" stop-color="#caa06e"/></linearGradient><linearGradient id="ktGround" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#7a6f5e"/><stop offset="100%" stop-color="#9a8c76"/></linearGradient><radialGradient id="ktFount" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#c6f8ff"/><stop offset="60%" stop-color="#4fd4ff"/><stop offset="100%" stop-color="#1060a0" stop-opacity="0"/></radialGradient><radialGradient id="ktKant" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffe9fb"/><stop offset="55%" stop-color="#b98cff"/><stop offset="100%" stop-color="#5a3aa0" stop-opacity="0"/></radialGradient><radialGradient id="radioBeacon" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="rgba(255,70,70,0.85)"/><stop offset="100%" stop-color="rgba(255,70,70,0)"/></radialGradient></defs>`
-    +R(0,0,W,H,'url(#ktSky)')+planet
-    +`<circle cx="180" cy="70" r="2" fill="rgba(255,255,255,0.6)"/><circle cx="340" cy="48" r="1.5" fill="rgba(255,255,255,0.5)"/><circle cx="660" cy="60" r="1.8" fill="rgba(255,255,255,0.5)"/><circle cx="820" cy="90" r="1.5" fill="rgba(255,255,255,0.5)"/>`
+    +R(0,-105,W,105,'#1b1436')+R(0,0,W,H,'url(#ktSky)')+planet
+    +`<circle cx="230" cy="-74" r="1.6" fill="rgba(255,255,255,0.5)"/><circle cx="500" cy="-46" r="2" fill="rgba(255,255,255,0.55)"/><circle cx="720" cy="-82" r="1.4" fill="rgba(255,255,255,0.45)"/><circle cx="560" cy="-28" r="1.3" fill="rgba(200,225,255,0.5)"/><circle cx="860" cy="-40" r="1.7" fill="rgba(255,255,255,0.5)"/><circle cx="120" cy="-36" r="1.3" fill="rgba(255,255,255,0.45)"/><circle cx="180" cy="70" r="2" fill="rgba(255,255,255,0.6)"/><circle cx="340" cy="48" r="1.5" fill="rgba(255,255,255,0.5)"/><circle cx="660" cy="60" r="1.8" fill="rgba(255,255,255,0.5)"/><circle cx="820" cy="90" r="1.5" fill="rgba(255,255,255,0.5)"/>`
     +R(0,VPY+4,W,H-VPY-4,'#5b5042')+filler+sidewalks+street+klRadioTowerSVG()
     +sortedArt.map(art).join('')+cars+peds
     +`</svg>`;
@@ -19277,7 +19277,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-177'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-178'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
