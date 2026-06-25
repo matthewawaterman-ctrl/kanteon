@@ -17085,7 +17085,6 @@ function klDevBarMarkup() {
   s += btn("klDevGo('shop')", '🏪 Shop', 'Music Shop');
   s += btn("klDevGo('hater')", '🏚 Neighbor', 'the music-hater neighbor');
   s += btn("klDevGo('radio')", '📻 Radio Tower', 'The radio station (DJ gatekeeper + radio promo)');
-  s += btn("klDevCompleteShow()", '✅ Complete Show', 'DEV: resolve a clean first show instantly — full payout, no set to play');
 
   // ── LESSON / ARCADE — jump straight into the other game modes ──
   s += lbl('nav', '📖 LESSON · 🎧 ARCADE');
@@ -17160,6 +17159,7 @@ function klDevBarMarkup() {
   s += lbl('tools', '✅ COMPLETE');
   s += btn("klDevCompleteAll()", '✅ Complete ALL', 'mark every module done — opens the Restaurant', 'done');
   s += btn("klDevCompleteWaddy()", '🧙 Complete Waddy\u2019s', 'clear every Sweet Waddy\u2019s station + grant the Waddy milestone — opens the Restaurant', 'done');
+  s += btn("klDevCompleteShow()", '🎤 Complete Show', 'register a played show (showsPlayed +1) — with Waddy\u2019s + Garage done, opens the recording studio', 'done');
   s += btn("klDevLockAll()", '🔒 Reset', 'clear all completions (fresh ladder)', 'danger');
   const unlockBtn = m => {
     const done = klModuleIsDone(m.id);
@@ -18937,7 +18937,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-164'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-165'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
