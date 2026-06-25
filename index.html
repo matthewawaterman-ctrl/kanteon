@@ -13507,7 +13507,7 @@ function klHudMarkup() {
   const pct = Math.max(0, Math.min(100, Math.round(xpInto / Math.max(1, xpFor) * 100)));
   const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
   return '<div class="kt-hud">' +
-    '<button class="kl-fs-btn" id="kl-fs-btn" onclick="klToggleFullscreen()" title="Fullscreen (press F)" aria-label="Toggle fullscreen">' + (isFs ? '🗗' : '⛶') + '</button>' +
+    (klIsStandalone() ? '' : '<button class="kl-fs-btn" id="kl-fs-btn" onclick="klToggleFullscreen()" title="Fullscreen (press F)" aria-label="Toggle fullscreen">' + (isFs ? '🗗' : '⛶') + '</button>') +
     '<button class="kl-fs-btn" id="kl-pause-btn" onclick="klOpenPause()" title="Pause game" aria-label="Pause game">' + (klDayClockPaused ? '▶' : '⏸') + '</button>' +
     '<span class="kt-hud-item">💵 $' + klState.money + '</span>' +
     '<span class="kt-hud-item kt-hud-level' + (leveled ? ' leveled' : '') + '">⭐ Lv.' + lvl +
@@ -16179,13 +16179,28 @@ function klRenderPlayerSelect() {
 }
 window.klRenderPlayerSelect = klRenderPlayerSelect; // inline onclick handlers need it global
 // Fullscreen toggle (desktop browsers; iOS uses Add-to-Home-Screen for fullscreen).
+// True when launched as an installed app (Add to Home Screen) — no browser
+// chrome, so it's already effectively fullscreen.
+function klIsStandalone() {
+  return window.navigator.standalone === true ||
+    (window.matchMedia && (matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches));
+}
+
 window.klToggleFullscreen = function() {
   const d = document, el = d.documentElement;
+  const canFs = !!(el.requestFullscreen || el.webkitRequestFullscreen);
+  // iPhone Safari blocks the Fullscreen API for non-video elements. Rather than
+  // silently doing nothing (the old bug), point the user at the real path.
+  if (!canFs) {
+    if (klIsStandalone()) { klToast && klToast('📱 You\u2019re already fullscreen.'); return; }
+    klToast && klToast('📱 iPhone blocks fullscreen in the browser. Tap Share → Add to Home Screen, then open Kanteon from the icon.');
+    return;
+  }
   const isFs = d.fullscreenElement || d.webkitFullscreenElement;
   try {
-    if (!isFs) { (el.requestFullscreen || el.webkitRequestFullscreen || (() => {})).call(el); }
-    else { (d.exitFullscreen || d.webkitExitFullscreen || (() => {})).call(d); }
-  } catch (e) { klToast && klToast('Fullscreen isn\u2019t available here — on iPad/iPhone, use Share → Add to Home Screen.'); }
+    if (!isFs) { (el.requestFullscreen || el.webkitRequestFullscreen).call(el); }
+    else { (d.exitFullscreen || d.webkitExitFullscreen).call(d); }
+  } catch (e) { klToast && klToast('📱 Fullscreen isn\u2019t available here — on iPhone, use Share → Add to Home Screen.'); }
 };
 
 // ── ADD / MANAGE PLAYERS (Netflix-style) ──────────────────────────────────
@@ -19336,7 +19351,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-179'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-180'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
