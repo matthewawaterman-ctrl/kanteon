@@ -97,6 +97,17 @@
     transform: translate(-50%, -50%) scale(var(--kl-scale, 1));
     transform-origin: center center;
   }
+  /* Dev-only readout: pinned to the TRUE window (not inside the stage) so it
+     reports real scale + window size. Lets Matt see "where's baseline" at a
+     glance — 100% browser zoom + maximised window = natural fit. */
+  #kl-stage-readout {
+    position: fixed; right: 12px; bottom: 12px; z-index: 100000;
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 700;
+    font-size: 12px; line-height: 1; letter-spacing: 0.5px;
+    color: #9fe3a0; background: rgba(8,6,20,0.82);
+    border: 1px solid rgba(159,227,160,0.35); border-radius: 8px;
+    padding: 5px 9px; pointer-events: none; white-space: nowrap;
+  }
 
   /* === KIDLAB — START === */
   .home-kids-btn {
@@ -18955,7 +18966,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-166'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-167'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -18963,10 +18974,21 @@ const KL_BUILD_TAG = 'b31-166'; // bump this each ship so the DEV menu shows whe
 // this just keeps --kl-scale = min(fitW, fitH) current on load/resize/rotate so
 // the block always fills the largest area that preserves the 1280x800 ratio.
 const KL_STAGE_W = 1280, KL_STAGE_H = 800;
+function klUpdateStageReadout(scale) {
+  // Dev-only chip showing live scale% + window size. Baseline = the scale shown
+  // at 100% browser zoom (Cmd+0) with the window maximised.
+  let dev = false;
+  try { dev = klIsDevAvailable(); } catch (e) { dev = false; }
+  let el = document.getElementById('kl-stage-readout');
+  if (!dev || !document.body.classList.contains('kl-staged')) { if (el) el.remove(); return; }
+  if (!el) { el = document.createElement('div'); el.id = 'kl-stage-readout'; document.body.appendChild(el); }
+  el.textContent = 'STAGE ' + Math.round(scale * 100) + '% · win ' + window.innerWidth + '×' + window.innerHeight;
+}
 function klApplyStageScale() {
   if (!document.body.classList.contains('kl-staged')) return;
   const s = Math.min(window.innerWidth / KL_STAGE_W, window.innerHeight / KL_STAGE_H);
   document.documentElement.style.setProperty('--kl-scale', s);
+  klUpdateStageReadout(s);
 }
 window.klApplyStageScale = klApplyStageScale;
 window.addEventListener('resize', klApplyStageScale);
@@ -19966,6 +19988,7 @@ window.showScreen = function(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById('kidlab').classList.add('active');
     if (typeof klRenderInterior === 'function') klRenderInterior('garage');
+    if (typeof klApplyStageScale === 'function') klApplyStageScale();
     window.scrollTo(0, 0);
     return;
   }
@@ -19973,6 +19996,7 @@ window.showScreen = function(id) {
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
   if (typeof klDevBar === 'function') klDevBar(); // keep the dev overlay on every screen, incl. Lesson Mode
+  if (typeof klApplyStageScale === 'function') klApplyStageScale(); // refresh fit + dev readout on screen change
 };
 
 function refreshHome() {
