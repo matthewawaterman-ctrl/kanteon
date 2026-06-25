@@ -12462,33 +12462,33 @@ function klTownSVG(){
 // Sits up/left in the back-left so it clears the Plaza and Waddy's; drawn BEFORE
 // the buildings so it reads as background. Click -> klEnterBuilding('radio').
 function klRadioTowerSVG() {
-  const cx = 58, baseY = 420, topY = 150, segs = 7, wbot = 44, wtop = 12;
+  const cx = 52, baseY = 404, topY = 148, segs = 7, wbot = 40, wtop = 11;
   const f = n => (+n).toFixed(1);
   let mast =
-    '<line x1="' + f(cx-wbot/2) + '" y1="' + baseY + '" x2="' + f(cx-wtop/2) + '" y2="' + topY + '" stroke="#8893a5" stroke-width="3"/>' +
-    '<line x1="' + f(cx+wbot/2) + '" y1="' + baseY + '" x2="' + f(cx+wtop/2) + '" y2="' + topY + '" stroke="#8893a5" stroke-width="3"/>';
+    '<line x1="' + f(cx-wbot/2) + '" y1="' + baseY + '" x2="' + f(cx-wtop/2) + '" y2="' + topY + '" stroke="#c2ccde" stroke-width="3"/>' +
+    '<line x1="' + f(cx+wbot/2) + '" y1="' + baseY + '" x2="' + f(cx+wtop/2) + '" y2="' + topY + '" stroke="#c2ccde" stroke-width="3"/>';
   for (let i = 0; i < segs; i++) {
     const t0 = i/segs, t1 = (i+1)/segs;
     const y0 = baseY+(topY-baseY)*t0, y1 = baseY+(topY-baseY)*t1;
     const w0 = (wbot+(wtop-wbot)*t0)/2, w1 = (wbot+(wtop-wbot)*t1)/2;
     mast +=
-      '<line x1="' + f(cx-w0) + '" y1="' + f(y0) + '" x2="' + f(cx+w1) + '" y2="' + f(y1) + '" stroke="#5d6675" stroke-width="1.8"/>' +
-      '<line x1="' + f(cx+w0) + '" y1="' + f(y0) + '" x2="' + f(cx-w1) + '" y2="' + f(y1) + '" stroke="#5d6675" stroke-width="1.8"/>' +
-      '<line x1="' + f(cx-w1) + '" y1="' + f(y1) + '" x2="' + f(cx+w1) + '" y2="' + f(y1) + '" stroke="#6d7585" stroke-width="1.5"/>';
+      '<line x1="' + f(cx-w0) + '" y1="' + f(y0) + '" x2="' + f(cx+w1) + '" y2="' + f(y1) + '" stroke="#9aa4ba" stroke-width="2"/>' +
+      '<line x1="' + f(cx+w0) + '" y1="' + f(y0) + '" x2="' + f(cx-w1) + '" y2="' + f(y1) + '" stroke="#9aa4ba" stroke-width="2"/>' +
+      '<line x1="' + f(cx-w1) + '" y1="' + f(y1) + '" x2="' + f(cx+w1) + '" y2="' + f(y1) + '" stroke="#aeb8cc" stroke-width="1.7"/>';
   }
   return '<g class="kt-bld" onclick="klEnterBuilding(\'radio\')">' +
-      '<ellipse cx="' + cx + '" cy="' + (baseY+5) + '" rx="52" ry="9" fill="rgba(0,0,0,0.26)"/>' +
-      '<g fill="none" stroke="#6ff0e0" opacity="0.45" stroke-width="2.5"><path d="M' + (cx+9) + ' ' + (topY-2) + ' q28 10 36 38"/><path d="M' + (cx+14) + ' ' + (topY-9) + ' q46 16 58 62"/></g>' +
-      '<g fill="none" stroke="#ff7ad9" opacity="0.35" stroke-width="2.5"><path d="M' + (cx-9) + ' ' + (topY-2) + ' q-26 10 -32 36"/><path d="M' + (cx-14) + ' ' + (topY-9) + ' q-40 16 -48 58"/></g>' +
+      '<ellipse cx="' + cx + '" cy="' + (baseY+3) + '" rx="42" ry="8" fill="rgba(0,0,0,0.26)"/>' +
+      '<g fill="none" stroke="#7ef6e6" opacity="0.5" stroke-width="2.5"><path d="M' + (cx+9) + ' ' + (topY-2) + ' q26 9 33 35"/><path d="M' + (cx+13) + ' ' + (topY-9) + ' q42 15 53 57"/></g>' +
+      '<g fill="none" stroke="#ff8fde" opacity="0.4" stroke-width="2.5"><path d="M' + (cx-9) + ' ' + (topY-2) + ' q-24 9 -30 33"/><path d="M' + (cx-13) + ' ' + (topY-9) + ' q-37 15 -45 53"/></g>' +
       mast +
-      '<line x1="' + cx + '" y1="' + topY + '" x2="' + cx + '" y2="' + (topY-18) + '" stroke="#8893a5" stroke-width="3"/>' +
-      '<circle cx="' + cx + '" cy="' + (topY-18) + '" r="13" fill="url(#radioBeacon)"/><circle cx="' + cx + '" cy="' + (topY-18) + '" r="4" fill="#ff4646"/>' +
+      '<line x1="' + cx + '" y1="' + topY + '" x2="' + cx + '" y2="' + (topY-17) + '" stroke="#c2ccde" stroke-width="3"/>' +
+      '<circle cx="' + cx + '" cy="' + (topY-17) + '" r="13" fill="url(#radioBeacon)"/><circle cx="' + cx + '" cy="' + (topY-17) + '" r="4" fill="#ff5252"/>' +
       // broadcast shack labelled RADIO
-      '<rect x="' + (cx-36) + '" y="372" width="72" height="48" rx="3" fill="#2c3340" stroke="#454f60" stroke-width="2.5"/>' +
-      '<rect x="' + (cx-26) + '" y="382" width="20" height="20" rx="2" fill="#ffd97a" opacity="0.9"/>' +
-      '<rect x="' + (cx+6) + '" y="382" width="20" height="20" rx="2" fill="#ffd97a" opacity="0.5"/>' +
-      '<rect x="' + (cx-30) + '" y="402" width="60" height="15" rx="3" fill="#171327" stroke="#b9a9ff" stroke-width="1.6"/>' +
-      '<text x="' + cx + '" y="413.5" text-anchor="middle" font-family="Barlow Condensed" font-weight="900" font-size="12" letter-spacing="1.5" fill="#c9bcff">RADIO</text>' +
+      '<rect x="' + (cx-34) + '" y="358" width="68" height="46" rx="3" fill="#363f50" stroke="#5a6679" stroke-width="2.5"/>' +
+      '<rect x="' + (cx-25) + '" y="368" width="19" height="19" rx="2" fill="#ffe08a" opacity="0.95"/>' +
+      '<rect x="' + (cx+6) + '" y="368" width="19" height="19" rx="2" fill="#ffe08a" opacity="0.55"/>' +
+      '<rect x="' + (cx-29) + '" y="387" width="58" height="14" rx="3" fill="#171327" stroke="#c9bcff" stroke-width="1.6"/>' +
+      '<text x="' + cx + '" y="397.5" text-anchor="middle" font-family="Barlow Condensed" font-weight="900" font-size="11" letter-spacing="1.5" fill="#dcd2ff">RADIO</text>' +
     '</g>';
 }
 
@@ -14210,13 +14210,19 @@ function klFinishShowSuccessfully() {
   klSaveProgress();
   klRenderShowPayout(detail);
 }
-// DEV: resolve a clean, on-time first show without playing the set — runs the real
-// payout path so the dev shortcut can never drift from the live formula.
+// DEV: bypass the book-then-play loop. Just register that a show happened — which
+// (with Waddy's + Garage cleared) opens the recording studio — then back to town.
 window.klDevCompleteShow = function() {
   if (!klIsDevAvailable() || !klDevBecomeMatt()) return;
-  klState.waddyDone = true;             // a real first show implies Waddy's was cleared
-  klShow.active = false; klShow.late = false;
-  klFinishShowSuccessfully();
+  klShowCleanup();                       // kill any live show timer/HUD if one's running
+  klState.showsPlayed = Math.max(1, klState.showsPlayed || 0);
+  klState.bookedDay = null; klState.bookedDaysOut = 0;
+  klState.promo = { flyers: 0, ads: 0, radio: 0 }; klState.promoExp = { flyers: 0, ads: 0, radio: 0 };
+  klSaveProgress();
+  klToast(klStudioUnlocked()
+    ? '✅ Show complete — Waddy\u2019s recording studio is open.'
+    : '✅ Show counted (+1). Studio also needs Waddy\u2019s + Garage cleared.');
+  klRenderTown();
 };
 
 // Show-night payout screen: an explicit money-math breakdown so the player can
@@ -18925,7 +18931,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-162'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-163'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 // ── STALE-BUILD DETECTOR ──────────────────────────────────────────────────
 // The whole app is one cached file, so a stale copy = a deploy that silently
 // never showed up. On launch we fetch the server's current copy (cache-bypassed)
@@ -19520,6 +19526,11 @@ window.klCheck = function() {
 // player had solved it. Stops any running clock first so the advance is clean.
 window.klDevWinLevel = function() {
   if (!klIsDevAvailable()) return;
+  // Only meaningful inside a live puzzle (or a show song). Pressing it from the
+  // town/menu used to silently "complete" whatever puzzleIdx was last loaded.
+  const kidlab = document.getElementById('kidlab');
+  const inPuzzle = klShow.active || (kidlab && kidlab.classList.contains('kl-playing'));
+  if (!inPuzzle) { klToast('🏁 Complete Level only works while you\u2019re in a puzzle.'); return; }
   if (klShow.active) { klWin(); return; }
   if (typeof klStopClock === 'function') klStopClock();
   if (typeof klStopBeatBar === 'function') klStopBeatBar();
