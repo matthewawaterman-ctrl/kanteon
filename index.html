@@ -19351,7 +19351,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-180'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-181'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -19359,6 +19359,14 @@ const KL_BUILD_TAG = 'b31-180'; // bump this each ship so the DEV menu shows whe
 // this just keeps --kl-scale = min(fitW, fitH) current on load/resize/rotate so
 // the block always fills the largest area that preserves the 1280x800 ratio.
 const KL_STAGE_W = 1280, KL_STAGE_H = 800;
+// Mobile-safe viewport size. visualViewport reports the true *settled* dimensions
+// and updates reliably after a rotation — unlike window.innerWidth/Height, which
+// iOS updates late/inconsistently (the cause of the landscape "too tiny" bug).
+function klStageVP() {
+  const vv = window.visualViewport;
+  if (vv && vv.width > 0 && vv.height > 0) return [Math.round(vv.width), Math.round(vv.height)];
+  return [window.innerWidth, window.innerHeight];
+}
 function klUpdateStageReadout(scale) {
   // Dev-only chip showing live scale% + window size. Baseline = the scale shown
   // at 100% browser zoom (Cmd+0) with the window maximised.
@@ -19367,7 +19375,8 @@ function klUpdateStageReadout(scale) {
   let el = document.getElementById('kl-stage-readout');
   if (!dev || !document.body.classList.contains('kl-staged')) { if (el) el.remove(); return; }
   if (!el) { el = document.createElement('div'); el.id = 'kl-stage-readout'; document.body.appendChild(el); }
-  el.textContent = 'STAGE ' + Math.round(scale * 100) + '% · win ' + window.innerWidth + '×' + window.innerHeight;
+  const vp = klStageVP();
+  el.textContent = 'STAGE ' + Math.round(scale * 100) + '% · win ' + vp[0] + '×' + vp[1];
 }
 function klApplyStageScale() {
   if (!document.body.classList.contains('kl-staged')) return;
@@ -19375,13 +19384,21 @@ function klApplyStageScale() {
   // 1280x800-ratio area the window allows. Prioritises maximal fill on iPad /
   // iPhone (esp. the 12.9" iPad Pro, which now fills full width) — the cost is
   // desktop, where this upscales past 100% (the dev readout roams >100%).
-  const s = Math.min(window.innerWidth / KL_STAGE_W, window.innerHeight / KL_STAGE_H);
+  const vp = klStageVP();
+  const s = Math.min(vp[0] / KL_STAGE_W, vp[1] / KL_STAGE_H);
   document.documentElement.style.setProperty('--kl-scale', s);
   klUpdateStageReadout(s);
 }
 window.klApplyStageScale = klApplyStageScale;
 window.addEventListener('resize', klApplyStageScale);
-window.addEventListener('orientationchange', function(){ setTimeout(klApplyStageScale, 60); });
+// visualViewport fires a reliable resize when the viewport actually settles
+// (including the end of a rotation) — this is what fixes landscape on iOS.
+if (window.visualViewport) { window.visualViewport.addEventListener('resize', klApplyStageScale); }
+// Belt-and-suspenders: iOS can report dimensions late after a rotation, so also
+// re-apply on a few staggered ticks to catch the settled size.
+window.addEventListener('orientationchange', function(){
+  [0, 150, 350, 600].forEach(function(ms){ setTimeout(klApplyStageScale, ms); });
+});
 // Turn the stage ON for this prototype and size it immediately.
 document.body.classList.add('kl-staged');
 klApplyStageScale();
