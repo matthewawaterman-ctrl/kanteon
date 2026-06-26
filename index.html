@@ -18649,16 +18649,36 @@ function klGrooveStartMetro() {
       if (t >= ctx.currentTime - 0.02) {
         const bib = klGroove.nextBeat % klGroove.barBeats;
         klTapClick(t, bib === 0 ? 0.34 : 0.2, true);
-        setTimeout(() => klGrooveBeatPulse(bib), Math.max(0, (t - ctx.currentTime) * 1000));
       }
       klGroove.nextBeat++;
     }
   }, 25);
+  klGrooveBeatVis(); // beat flash now rides the audio clock (see below), not a setTimeout
 }
 function klGrooveStop() {
   if (klGroove.metroId) { clearInterval(klGroove.metroId); klGroove.metroId = null; }
   if (klGroove.rafId) { cancelAnimationFrame(klGroove.rafId); klGroove.rafId = null; }
+  if (klGroove.beatVisRaf) { cancelAnimationFrame(klGroove.beatVisRaf); klGroove.beatVisRaf = null; }
   klGroove.recording = false; klGroove.busy = false;
+}
+// Beat flash driven off the AUDIO clock via rAF. Each painted frame reads the
+// true ctx.currentTime and pulses the beat it actually lands on, so on a loaded
+// phone the flash stays locked to the sound (just choppier) instead of trailing
+// behind a starved setTimeout. Mirrors the proven klGrooveLightSync pattern.
+function klGrooveBeatVis() {
+  if (klGroove.beatVisRaf) cancelAnimationFrame(klGroove.beatVisRaf);
+  let lastBeat = -1;
+  const tick = () => {
+    if (!document.getElementById('kl-groove') || !klGroove.metroId) { klGroove.beatVisRaf = null; return; }
+    const ctx = getAudio();
+    const elapsed = ctx.currentTime - klGroove.startTs;
+    if (elapsed >= 0) {
+      const b = Math.floor(elapsed / klGroove.beat);
+      if (b !== lastBeat) { lastBeat = b; klGrooveBeatPulse(b % klGroove.barBeats); }
+    }
+    klGroove.beatVisRaf = requestAnimationFrame(tick);
+  };
+  klGroove.beatVisRaf = requestAnimationFrame(tick);
 }
 // Re-anchor the metronome to NOW and return the downbeat exactly ONE BAR out — a
 // tight count-in of barBeats beats. Also schedules the drummer + 1-2-3-4 visual.
@@ -19351,7 +19371,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-181'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-182'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
