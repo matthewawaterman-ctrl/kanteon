@@ -12559,6 +12559,43 @@ function klRadioTowerSVG() {
 // emoji sign + label, mapped to an entry handler.
 // (KL_TOWN_BUILDINGS removed — buildings are now clickable hotspots inside KL_TOWN_SVG)
 
+// ---- LOW-FX MODE (mobile perf) -------------------------------------------
+// Phones can't afford the always-on ambient SMIL (twinkling stars, shooting
+// stars, driving cars, the swaying band). Those are pure decoration but run
+// repeatCount="indefinite", hogging the main thread that gameplay + audio sync
+// need. In low-fx we FREEZE them (SVGSVGElement.pauseAnimations) — the scene
+// goes still but stays fully drawn. Auto-on for touch devices + reduced-motion;
+// DEV-toggleable (AUTO → ON → OFF) so it's easy to A/B on a real device.
+let klLowFxForce = null; // null = auto, 'on', 'off'
+function klLowFxOn() {
+  if (klLowFxForce === 'on') return true;
+  if (klLowFxForce === 'off') return false;
+  try {
+    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return true;
+    if (window.matchMedia && matchMedia('(pointer: coarse)').matches) return true;
+  } catch (e) {}
+  return false;
+}
+function klApplyAmbientFx() {
+  const on = klLowFxOn();
+  document.body.classList.toggle('kl-lowfx', on);
+  document.querySelectorAll('.kl-scene svg, .kl-scene-sky svg').forEach(svg => {
+    try {
+      if (on) { if (svg.pauseAnimations) svg.pauseAnimations(); }
+      else    { if (svg.unpauseAnimations) svg.unpauseAnimations(); }
+    } catch (e) {}
+  });
+}
+// Call after a scene renders (rAF so the freshly-injected SVG has started before we freeze it).
+function klRefreshLowFx() { requestAnimationFrame(klApplyAmbientFx); }
+window.klToggleLowFx = function() {
+  klLowFxForce = (klLowFxForce === null) ? 'on' : (klLowFxForce === 'on' ? 'off' : null);
+  const el = document.getElementById('kl-lowfx-toggle');
+  if (el) el.textContent = (klLowFxForce === null ? 'AUTO' : klLowFxForce.toUpperCase());
+  klApplyAmbientFx();
+};
+// --------------------------------------------------------------------------
+
 function klRenderTown() {
   document.getElementById('kidlab').classList.remove('kl-playing');
   klCloseComposeSong(); // bug #6: leaving via "Back outside" must close the composer AND unfreeze the day clock
@@ -12579,6 +12616,7 @@ function klRenderTown() {
       '<div class="kt-town-title-top">HOMETOWN</div>' +
       (klIsDevAvailable() ? klDevBar() : '') +
     '</div>';
+  klRefreshLowFx();
   klFlushNotifications(klRenderTown); // any queued rent/promo notices play as cutscenes
 }
 window.klRenderTown = klRenderTown; // inline onclick handlers need it global
@@ -16176,6 +16214,7 @@ function klRenderPlayerSelect() {
       '</div>' +
       (klIsDevAvailable() ? klDevBar() : '') +
     '</div>';
+  klRefreshLowFx();
 }
 window.klRenderPlayerSelect = klRenderPlayerSelect; // inline onclick handlers need it global
 // Fullscreen toggle (desktop browsers; iOS uses Add-to-Home-Screen for fullscreen).
@@ -17565,6 +17604,7 @@ function klDevBarMarkup() {
   s += lbl('tools', '🛠 TOOLS');
   s += btn("klDevWinLevel()", '🏁 Complete Level', 'instantly clear the CURRENT puzzle and advance to the next', 'good');
   s += btn("klToggleDrummerAnim()", 'DRUMMER ' + (klDrummerAnim ? 'ON' : 'OFF'), 'toggle drummer animation (sync test)', '', 'kl-drummer-toggle');
+  s += btn("klToggleLowFx()", 'LOW-FX ' + (klLowFxForce===null?'AUTO':klLowFxForce.toUpperCase()), 'freeze ambient scene anims (mobile perf)', '', 'kl-lowfx-toggle');
   s += btn("klToggleSoundPanel()", '🎛 Sound', 'live soundbank tuner');
   s += btn("klToggleComposePanel()", '🎼 Compose', 'piano-roll composer');
   s += btn("klToggleCutEditor()", '🎬 Cut editor', 'cutscene editor');
@@ -19395,7 +19435,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-184'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-185'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
