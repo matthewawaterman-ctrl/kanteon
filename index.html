@@ -3896,6 +3896,12 @@
   }
   .kl-fs-btn:hover { background: rgba(48,38,84,0.85); color: #fff; }
   .kl-fs-btn:active { transform: scale(0.94); }
+  /* Fullscreen is redundant on touch devices (Add-to-Home-Screen already runs
+     chromeless, and iOS Safari blocks the FS API for non-video) — hide every
+     fullscreen control on coarse-pointer devices. Desktop keeps it. */
+  @media (pointer: coarse) {
+    .kl-fs-corner, .kl-fs-btn, .kl-fs-link { display: none !important; }
+  }
   .kt-hud-item {
     font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 22px;
     color: #fff; background: rgba(20,12,30,0.55); border: 1px solid rgba(255,255,255,0.2);
@@ -4242,10 +4248,17 @@
     content: ''; position: absolute; top: -20%; bottom: -20%; width: 28%;
     left: -40%;
     background: linear-gradient(100deg, transparent, rgba(255,255,255,0.65), transparent);
-    transform: skewX(-12deg);
+    transform: translateX(0) skewX(-12deg);
+    will-change: transform;
     animation: klSweep 1.1s ease-in-out 1.4s both;
   }
-  @keyframes klSweep { from { left: -40%; } to { left: 120%; } }
+  /* Travel the band with transform (compositor-only) instead of `left` (which
+     relayouts every frame — the choppiness). 571% of the band's own 28% width
+     ≈ 160% of the logo, matching the old left:-40%→120% path. */
+  @keyframes klSweep {
+    from { transform: translateX(0) skewX(-12deg); }
+    to   { transform: translateX(571%) skewX(-12deg); }
+  }
   .kl-splash-start {
     position: absolute; bottom: 12vh; left: 0; right: 0; text-align: center;
     font-family: 'Barlow Condensed', sans-serif; font-weight: 700;
@@ -16128,7 +16141,7 @@ window.klShowModeSelect = function() {
       '</div>' +
       '<div class="kl-mode-foot">' +
         '<button class="kl-tools-link" onclick="klRenderPlayerSelect()">← Switch player</button>' +
-        '<button class="kl-tools-link" onclick="klToggleFullscreen()">⛶ Fullscreen</button>' +
+        '<button class="kl-tools-link kl-fs-link" onclick="klToggleFullscreen()">⛶ Fullscreen</button>' +
       '</div>' +
       (klIsDevAvailable() ? klDevBar() : '') +
     '</div>';
@@ -19373,7 +19386,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-187'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-188'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
