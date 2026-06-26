@@ -16933,7 +16933,7 @@ function klRenderDrumPuzzle(p) {
     const o = ctx.createOscillator(); o.connect(g);
     o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.02);
   })();
-  setTimeout(() => klDrumPlayTarget(), 480);
+  setTimeout(() => klDrumPlayTarget(), 600);
 }
 
 function klDrumVoiceSound(voice, t, ctx) {
@@ -17037,10 +17037,12 @@ function klDrumPlaySet(setObj, opts) {
   // While BUILDING the drums there's no backing groove to line up with, so don't
   // quantize to a downbeat — that's just waiting on silence. Fire immediately.
   const hasLayers = Object.keys(klActiveLayers.drumVoices).length > 0 || klActiveLayers.bass;
-  // Small lead before an immediate (non-synced) play. A touch more headroom on
-  // the very first play so a still-warming AudioContext doesn't let the audio
-  // and the setTimeout-driven playhead drift apart.
-  const lead = klDrumFirstPlay ? 0.16 : 0.08;
+  // Lead before an immediate (non-synced) play. On the FIRST play after a level
+  // opens, give a generous runway: the phone is still painting the grid, so this
+  // silent lead lets the paint settle and the playhead rAF warm up before the
+  // first audible step — otherwise the first frames stall and the highlight has
+  // to "catch up" to the sound (the startup looseness on mobile).
+  const lead = klDrumFirstPlay ? 0.32 : 0.08;
   klDrumFirstPlay = false;
   let t0, syncToGroove;
   if (hasLayers && !klClock.active) {
@@ -19371,7 +19373,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-182'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-183'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
