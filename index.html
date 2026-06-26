@@ -12560,12 +12560,11 @@ function klRadioTowerSVG() {
 // (KL_TOWN_BUILDINGS removed — buildings are now clickable hotspots inside KL_TOWN_SVG)
 
 // ---- LOW-FX MODE (mobile perf) -------------------------------------------
-// Phones can't afford the always-on ambient SMIL (twinkling stars, shooting
-// stars, driving cars, the swaying band). Those are pure decoration but run
-// repeatCount="indefinite", hogging the main thread that gameplay + audio sync
-// need. In low-fx we FREEZE them (SVGSVGElement.pauseAnimations) — the scene
-// goes still but stays fully drawn. Auto-on for touch devices + reduced-motion;
-// DEV-toggleable (AUTO → ON → OFF) so it's easy to A/B on a real device.
+// Phones can't afford the always-on ambient SMIL. The heavy part is the
+// cross-screen movers (shooting stars, driving cars, pedestrians) driven by
+// <animateMotion>. In low-fx we HIDE just those, but keep the cheap life —
+// twinkling stars and the band's sway — so the scene stays alive, not dead.
+// Auto-on for touch devices + reduced-motion; DEV-toggleable (AUTO → ON → OFF).
 let klLowFxForce = null; // null = auto, 'on', 'off'
 function klLowFxOn() {
   if (klLowFxForce === 'on') return true;
@@ -12579,11 +12578,14 @@ function klLowFxOn() {
 function klApplyAmbientFx() {
   const on = klLowFxOn();
   document.body.classList.toggle('kl-lowfx', on);
-  document.querySelectorAll('.kl-scene svg, .kl-scene-sky svg').forEach(svg => {
-    try {
-      if (on) { if (svg.pauseAnimations) svg.pauseAnimations(); }
-      else    { if (svg.unpauseAnimations) svg.unpauseAnimations(); }
-    } catch (e) {}
+  // Selective, not all-or-nothing. The expensive part is the cross-screen MOVERS
+  // — shooting stars, driving cars, pedestrians — each driven by <animateMotion>,
+  // repainting a large area every frame. Hide only those. Leave the cheap "life"
+  // running: twinkling stars (<animate opacity>) and the band's sway
+  // (<animateTransform type="rotate">). Scene stays alive, just calmer. Reversible.
+  document.querySelectorAll('.kl-scene svg animateMotion, .kl-scene-sky svg animateMotion').forEach(am => {
+    const g = am.closest('g');
+    if (g) g.style.display = on ? 'none' : '';
   });
 }
 // Call after a scene renders (rAF so the freshly-injected SVG has started before we freeze it).
@@ -19435,7 +19437,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-185'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-186'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
