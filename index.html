@@ -12638,7 +12638,7 @@ function klBuildingModules(building) { return KL_MODULE_DEFS.filter(m => m.build
 // prerequisite in `requires` is cleared. (Completed ⇒ always accessible — a
 // finished station must never render as locked at its own home.)
 // Bonus labs unlock after Active Listening and don't gate the Venue.
-const KL_GARAGE_BONUS = ['garage:mode', 'garage:notation'];
+const KL_GARAGE_BONUS = ['garage:notation'];
 function klModuleUnlocked(mod) {
   if (klModuleIsDone(mod.id)) return true;
   // THE GARAGE is a single gate: nothing inside opens until EVERY station at
@@ -13220,8 +13220,7 @@ function klSceneArt(id) {
       '<line x1="0" y1="250" x2="1200" y2="250" stroke="#000" stroke-width="2" opacity="0.22"/>' +
       '<line x1="400" y1="0" x2="400" y2="470" stroke="#000" stroke-width="2" opacity="0.16"/><line x1="800" y1="0" x2="800" y2="470" stroke="#000" stroke-width="2" opacity="0.16"/>' +
       // fluorescent strip + glow
-      '<rect x="430" y="22" width="340" height="14" rx="4" fill="#dfeaf0"/>' +
-      '<ellipse cx="600" cy="60" rx="420" ry="130" fill="url(#gFluo)"/>' +
+        '<ellipse cx="600" cy="60" rx="420" ry="130" fill="url(#gFluo)"/>' +
       // band poster (left wall)
       '<rect x="296" y="80" width="120" height="152" fill="#15151b" stroke="#3a3a45" stroke-width="3"/>' +
       '<circle cx="356" cy="138" r="34" fill="#b83b5e" opacity="0.8"/><rect x="316" y="188" width="80" height="10" fill="#caa64a" opacity="0.7"/>' +
@@ -13625,13 +13624,6 @@ function klGarageScene() {
       (unlocked ? '' : '<title>' + klModuleLockReason(m) + '</title>') + art(unlocked, done) + '</g>';
   };
 
-  // MODE LAB — framed poster on the left wall (bright/dark disc)
-  const mode = wrap('garage:mode', (u, d) =>
-    '<rect x="294" y="92" width="128" height="150" rx="4" fill="#15151b" stroke="#3a3a45" stroke-width="4"/>' +
-    '<circle cx="358" cy="152" r="40" fill="#1b1640" stroke="#3a3470" stroke-width="2"/>' +
-    '<path d="M358 112 A40 40 0 0 1 358 192 Z" fill="#f0c040"/>' +
-    lbl('MODE', 358, 268, 18) + badge(u, d, 294, 110, 128));
-
   // JAM SESSION — electric guitar leaning on the left amp
   const jam = wrap('garage:jam', (u, d) =>
     '<g transform="rotate(-13 250 545)">' +
@@ -13715,7 +13707,6 @@ function klGarageScene() {
     '<rect x="0" y="0" width="1200" height="470" fill="url(#gWall2)"/>' +
     '<rect x="0" y="470" width="1200" height="150" fill="#14110e"/>' +
     '<line x1="0" y1="250" x2="1200" y2="250" stroke="#000" stroke-width="2" opacity="0.18"/>' +
-    '<rect x="430" y="22" width="340" height="14" rx="4" fill="#dfeaf0"/>' +
     '<ellipse cx="600" cy="60" rx="430" ry="130" fill="url(#gFluo2)"/>' +
     // right-wall pegboard (decor)
     '<rect x="980" y="86" width="150" height="150" fill="#3a2f22" opacity="0.5"/>' +
@@ -13731,7 +13722,7 @@ function klGarageScene() {
     '<g transform="translate(60.84,56.3) scale(0.82)" opacity="0.9">' + ear + '</g>' +
     '<g transform="translate(118.8,50) scale(0.82)" opacity="0.9">' + groove + '</g>' +
     '<g transform="translate(172.44,51.8) scale(0.82)" opacity="0.9">' + anatomy + '</g>' +
-    mode + jam + chord + notation + listen +
+    jam + chord + notation + listen +
   '</svg>';
 }
 
@@ -15004,7 +14995,6 @@ const KL_MODE_START = KL_PUZZLES.length;
 KL_MODE_DEFS.forEach((md, i) => KL_PUZZLES.push({ id: md.id, type: 'mode', dot: 160 + i, mdef: md }));
 (function registerModeStation() {
   const idx = KL_MODE_DEFS.map((md, i) => KL_MODE_START + i);
-  KL_MODULE_DEFS.push({ id: 'garage:mode', building: 'garage', obj: '🌗', name: 'MODE LAB', desc: 'Hear the colour of the scales — bright, dark, and by name.', indices: idx, requires: ['garage:listen'] });
 })();
 
 // ── NOTATION — read notes on the staff (b31-83). Treble clef, name the note.
@@ -19385,7 +19375,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-189'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-190'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
