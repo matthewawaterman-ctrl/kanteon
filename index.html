@@ -12559,45 +12559,6 @@ function klRadioTowerSVG() {
 // emoji sign + label, mapped to an entry handler.
 // (KL_TOWN_BUILDINGS removed — buildings are now clickable hotspots inside KL_TOWN_SVG)
 
-// ---- LOW-FX MODE (mobile perf) -------------------------------------------
-// Phones can't afford the always-on ambient SMIL. The heavy part is the
-// cross-screen movers (shooting stars, driving cars, pedestrians) driven by
-// <animateMotion>. In low-fx we HIDE just those, but keep the cheap life —
-// twinkling stars and the band's sway — so the scene stays alive, not dead.
-// Auto-on for touch devices + reduced-motion; DEV-toggleable (AUTO → ON → OFF).
-let klLowFxForce = null; // null = auto, 'on', 'off'
-function klLowFxOn() {
-  if (klLowFxForce === 'on') return true;
-  if (klLowFxForce === 'off') return false;
-  try {
-    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return true;
-    if (window.matchMedia && matchMedia('(pointer: coarse)').matches) return true;
-  } catch (e) {}
-  return false;
-}
-function klApplyAmbientFx() {
-  const on = klLowFxOn();
-  document.body.classList.toggle('kl-lowfx', on);
-  // Selective, not all-or-nothing. The expensive part is the cross-screen MOVERS
-  // — shooting stars, driving cars, pedestrians — each driven by <animateMotion>,
-  // repainting a large area every frame. Hide only those. Leave the cheap "life"
-  // running: twinkling stars (<animate opacity>) and the band's sway
-  // (<animateTransform type="rotate">). Scene stays alive, just calmer. Reversible.
-  document.querySelectorAll('.kl-scene svg animateMotion, .kl-scene-sky svg animateMotion').forEach(am => {
-    const g = am.closest('g');
-    if (g) g.style.display = on ? 'none' : '';
-  });
-}
-// Call after a scene renders (rAF so the freshly-injected SVG has started before we freeze it).
-function klRefreshLowFx() { requestAnimationFrame(klApplyAmbientFx); }
-window.klToggleLowFx = function() {
-  klLowFxForce = (klLowFxForce === null) ? 'on' : (klLowFxForce === 'on' ? 'off' : null);
-  const el = document.getElementById('kl-lowfx-toggle');
-  if (el) el.textContent = (klLowFxForce === null ? 'AUTO' : klLowFxForce.toUpperCase());
-  klApplyAmbientFx();
-};
-// --------------------------------------------------------------------------
-
 function klRenderTown() {
   document.getElementById('kidlab').classList.remove('kl-playing');
   klCloseComposeSong(); // bug #6: leaving via "Back outside" must close the composer AND unfreeze the day clock
@@ -12618,7 +12579,6 @@ function klRenderTown() {
       '<div class="kt-town-title-top">HOMETOWN</div>' +
       (klIsDevAvailable() ? klDevBar() : '') +
     '</div>';
-  klRefreshLowFx();
   klFlushNotifications(klRenderTown); // any queued rent/promo notices play as cutscenes
 }
 window.klRenderTown = klRenderTown; // inline onclick handlers need it global
@@ -16216,7 +16176,6 @@ function klRenderPlayerSelect() {
       '</div>' +
       (klIsDevAvailable() ? klDevBar() : '') +
     '</div>';
-  klRefreshLowFx();
 }
 window.klRenderPlayerSelect = klRenderPlayerSelect; // inline onclick handlers need it global
 // Fullscreen toggle (desktop browsers; iOS uses Add-to-Home-Screen for fullscreen).
@@ -16974,29 +16933,7 @@ function klRenderDrumPuzzle(p) {
     const o = ctx.createOscillator(); o.connect(g);
     o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.02);
   })();
-  klWhenSettled(() => klDrumPlayTarget());
-}
-
-// Run cb once the main thread has SETTLED after a heavy render — three frames in
-// a row arriving at a smooth cadence (main thread free). Adapts per device: a
-// fast iPad fires almost immediately, a slower iPhone waits out its longer first
-// paint, so audio never starts while the playhead still can't keep up. Bounded by
-// minMs (never absurdly early) and maxMs (always fires, even on a janky device).
-function klWhenSettled(cb, minMs, maxMs) {
-  minMs = (minMs == null) ? 250 : minMs;
-  maxMs = (maxMs == null) ? 1600 : maxMs;
-  const start = performance.now();
-  let last = start, smooth = 0, fired = false;
-  const fire = () => { if (!fired) { fired = true; cb(); } };
-  const tick = (now) => {
-    const dt = now - last; last = now;
-    smooth = (dt < 26) ? smooth + 1 : 0;        // ~<26ms ≈ a frame the thread wasn't blocked
-    const elapsed = now - start;
-    if (elapsed >= maxMs) { fire(); return; }
-    if (elapsed >= minMs && smooth >= 3) { fire(); return; }
-    requestAnimationFrame(tick);
-  };
-  requestAnimationFrame(tick);
+  setTimeout(() => klDrumPlayTarget(), 600);
 }
 
 function klDrumVoiceSound(voice, t, ctx) {
@@ -17606,7 +17543,6 @@ function klDevBarMarkup() {
   s += lbl('tools', '🛠 TOOLS');
   s += btn("klDevWinLevel()", '🏁 Complete Level', 'instantly clear the CURRENT puzzle and advance to the next', 'good');
   s += btn("klToggleDrummerAnim()", 'DRUMMER ' + (klDrummerAnim ? 'ON' : 'OFF'), 'toggle drummer animation (sync test)', '', 'kl-drummer-toggle');
-  s += btn("klToggleLowFx()", 'LOW-FX ' + (klLowFxForce===null?'AUTO':klLowFxForce.toUpperCase()), 'freeze ambient scene anims (mobile perf)', '', 'kl-lowfx-toggle');
   s += btn("klToggleSoundPanel()", '🎛 Sound', 'live soundbank tuner');
   s += btn("klToggleComposePanel()", '🎼 Compose', 'piano-roll composer');
   s += btn("klToggleCutEditor()", '🎬 Cut editor', 'cutscene editor');
@@ -19437,7 +19373,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-186'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-187'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
