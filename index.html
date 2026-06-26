@@ -16933,7 +16933,29 @@ function klRenderDrumPuzzle(p) {
     const o = ctx.createOscillator(); o.connect(g);
     o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.02);
   })();
-  setTimeout(() => klDrumPlayTarget(), 600);
+  klWhenSettled(() => klDrumPlayTarget());
+}
+
+// Run cb once the main thread has SETTLED after a heavy render — three frames in
+// a row arriving at a smooth cadence (main thread free). Adapts per device: a
+// fast iPad fires almost immediately, a slower iPhone waits out its longer first
+// paint, so audio never starts while the playhead still can't keep up. Bounded by
+// minMs (never absurdly early) and maxMs (always fires, even on a janky device).
+function klWhenSettled(cb, minMs, maxMs) {
+  minMs = (minMs == null) ? 250 : minMs;
+  maxMs = (maxMs == null) ? 1600 : maxMs;
+  const start = performance.now();
+  let last = start, smooth = 0, fired = false;
+  const fire = () => { if (!fired) { fired = true; cb(); } };
+  const tick = (now) => {
+    const dt = now - last; last = now;
+    smooth = (dt < 26) ? smooth + 1 : 0;        // ~<26ms ≈ a frame the thread wasn't blocked
+    const elapsed = now - start;
+    if (elapsed >= maxMs) { fire(); return; }
+    if (elapsed >= minMs && smooth >= 3) { fire(); return; }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
 }
 
 function klDrumVoiceSound(voice, t, ctx) {
@@ -19373,7 +19395,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-183'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-184'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
