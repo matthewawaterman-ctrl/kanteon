@@ -107,7 +107,9 @@
     color: #9fe3a0; background: rgba(8,6,20,0.82);
     border: 1px solid rgba(159,227,160,0.35); border-radius: 8px;
     padding: 5px 9px; pointer-events: none; white-space: nowrap;
+    opacity: 0; transition: opacity 0.4s ease;
   }
+  #kl-stage-readout.show { opacity: 1; }
 
   /* === KIDLAB — START === */
   .home-kids-btn {
@@ -18964,11 +18966,17 @@ function klGrooveGrade() {
   }
 }
 // Build REAL rhythmic notation (time signature, noteheads / stems / beams / rests).
+const KL_TREBLE_CLEF_D = 'M52 96 C 40 96 36 86 44 80 C 56 72 70 78 70 90 C 70 104 54 112 42 104 C 28 95 30 70 48 58 C 64 47 62 33 55 30 C 49 27 44 33 44 42 L 44 100 C 44 110 38 112 33 108';
+function klTrebleClefStr(cx, g4Y, lineGap, color) {
+  const s = lineGap / 14;
+  return '<g transform="translate(' + (cx - 50 * s) + ',' + (g4Y - 76 * s) + ') scale(' + s + ')">' +
+    '<path d="' + KL_TREBLE_CLEF_D + '" fill="none" stroke="' + color + '" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></g>';
+}
 function klGrooveNotationSVG(meta, barBeats, ts) {
   barBeats = barBeats || 4; ts = ts || [4, 4];
   const pitched = meta.some(e => e.pitch != null && !e.rest);
   const tsW = 30, beatW = 84, H = 126;
-  const clefW = pitched ? 30 : 0;
+  const clefW = pitched ? 44 : 0;
   const legacyHeadY = 82;
   const leftPad = 26 + clefW + tsW;
   const W = leftPad + barBeats * beatW + 30;
@@ -19063,7 +19071,7 @@ function klGrooveNotationSVG(meta, barBeats, ts) {
   let staff = '', clef = '', ticks = '';
   if (pitched) {
     staffLineY.forEach(y => { staff += '<line x1="' + (leftPad - 6) + '" y1="' + y + '" x2="' + (W - 12) + '" y2="' + y + '" stroke="rgba(255,255,255,0.18)" stroke-width="1.4"/>'; });
-    clef = '<text x="20" y="' + (midY + 20) + '" class="kl-groove-clef" style="font-size:48px" fill="#cdbb8a">\uD834\uDD1E</text>';
+    clef = klTrebleClefStr(24, staffLineY[1], lineGap, '#cdbb8a');  // staffLineY[1] = G4 line
     for (let b = 0; b <= barBeats; b += barBeats) {
       const tx = leftPad + b * beatW;
       ticks += '<line x1="' + tx + '" y1="' + staffLineY[4] + '" x2="' + tx + '" y2="' + staffLineY[0] + '" stroke="rgba(255,255,255,0.30)" stroke-width="2.2"/>';
@@ -19074,7 +19082,7 @@ function klGrooveNotationSVG(meta, barBeats, ts) {
       ticks += '<line x1="' + (leftPad + b * beatW) + '" y1="' + (legacyHeadY - 4) + '" x2="' + (leftPad + b * beatW) + '" y2="' + (legacyHeadY + 4) + '" stroke="rgba(255,255,255,0.22)" stroke-width="' + (b % barBeats === 0 ? 2.5 : 1) + '"/>';
     }
   }
-  const tsX = (pitched ? 26 + clefW : 20) + tsW / 2;
+  const tsX = pitched ? (leftPad - tsW / 2 - 8) : (20 + tsW / 2);
   const tsCy = pitched ? midY : legacyHeadY;
   const tsSVG = '<text x="' + tsX + '" y="' + (tsCy - 1) + '" class="kl-groove-ts" text-anchor="middle">' + ts[0] + '</text>' +
                 '<text x="' + tsX + '" y="' + (tsCy + 22) + '" class="kl-groove-ts" text-anchor="middle">' + ts[1] + '</text>';
@@ -19559,7 +19567,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-203'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-204'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -19575,6 +19583,7 @@ function klStageVP() {
   if (vv && vv.width > 0 && vv.height > 0) return [Math.round(vv.width), Math.round(vv.height)];
   return [window.innerWidth, window.innerHeight];
 }
+let klStageReadoutTimer = null;
 function klUpdateStageReadout(scale) {
   // Dev-only chip showing live scale% + window size. Baseline = the scale shown
   // at 100% browser zoom (Cmd+0) with the window maximised.
@@ -19585,6 +19594,9 @@ function klUpdateStageReadout(scale) {
   if (!el) { el = document.createElement('div'); el.id = 'kl-stage-readout'; document.body.appendChild(el); }
   const vp = klStageVP();
   el.textContent = 'STAGE ' + Math.round(scale * 100) + '% · win ' + vp[0] + '×' + vp[1];
+  el.classList.add('show');                       // pop in on change...
+  clearTimeout(klStageReadoutTimer);
+  klStageReadoutTimer = setTimeout(function () { if (el) el.classList.remove('show'); }, 2600);  // ...fade after a few sec
 }
 function klApplyStageScale() {
   if (!document.body.classList.contains('kl-staged')) return;
@@ -24907,17 +24919,18 @@ function renderClefSVG(clef, item, small) {
 
   drawStaff(svg, x0, midY, staffWidth, lineGap);
 
-  // Clef glyph — use unicode characters at appropriate position
-  const clefGlyph = clef === 'treble' ? '\uD834\uDD1E' : '\uD834\uDD22'; // U+1D11E G clef, U+1D122 F clef
-  const clefSize = small ? lineGap * 4.5 : lineGap * 4.5;
-  // Position the clef. Treble: vertical center around G4 (pos -2). Bass: vertical center around F3 (pos +2).
-  const clefY = clef === 'treble' ? midY + lineGap * 1.5 : midY - lineGap * 0.5;
-  svgEl('text', {
-    x: x0 + 6, y: clefY,
-    class: 'notation-clef-symbol',
-    'font-size': clefSize,
-    'dominant-baseline': 'middle'
-  }, svg).textContent = clefGlyph;
+  // Clef as a drawn shape (reliable positioning on the staff)
+  if (clef === 'treble') {
+    const sc = lineGap / 14, cx = x0 + lineGap * 0.9, g4Y = midY + lineGap; // G4 = pos -2
+    const gg = svgEl('g', { transform: 'translate(' + (cx - 50 * sc) + ',' + (g4Y - 76 * sc) + ') scale(' + sc + ')' }, svg);
+    svgEl('path', { d: KL_TREBLE_CLEF_D, fill: 'none', stroke: 'var(--text)', 'stroke-width': 3.2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, gg);
+  } else {
+    const fY = midY - lineGap, bx = x0 + lineGap * 0.9;   // F3 line = pos +2
+    svgEl('circle', { cx: bx, cy: fY - lineGap * 0.1, r: lineGap * 0.42, fill: 'var(--text)' }, svg);
+    svgEl('path', { d: 'M ' + bx + ' ' + (fY - lineGap * 0.5) + ' C ' + (bx + lineGap * 1.5) + ' ' + (fY - lineGap * 1.4) + ', ' + (bx + lineGap * 1.9) + ' ' + (fY + lineGap * 0.5) + ', ' + (bx + lineGap * 0.2) + ' ' + (fY + lineGap * 1.9), fill: 'none', stroke: 'var(--text)', 'stroke-width': lineGap * 0.34, 'stroke-linecap': 'round' }, svg);
+    svgEl('circle', { cx: bx + lineGap * 1.7, cy: fY - lineGap * 0.55, r: lineGap * 0.16, fill: 'var(--text)' }, svg);
+    svgEl('circle', { cx: bx + lineGap * 1.7, cy: fY + lineGap * 0.55, r: lineGap * 0.16, fill: 'var(--text)' }, svg);
+  }
 
   // Notehead — placed roughly centered on the staff width
   const headX = x0 + staffWidth * 0.65;
@@ -24961,9 +24974,9 @@ function renderClefSVG(clef, item, small) {
 
 // ── Drum notation renderer ─────────────────────────────────────────────────
 function renderDrumSVG(item, small) {
-  const W = small ? 140 : 300;
-  const H = small ? 100 : 200;
-  const lineGap = small ? 8 : 16;
+  const W = small ? 190 : 300;
+  const H = small ? 128 : 200;
+  const lineGap = small ? 13 : 16;
   const midY = H / 2;
   const x0 = 12;
   const staffWidth = W - 24;
@@ -25313,36 +25326,37 @@ function renderTabSVG(item, small) {
       svgEl('text', { x: x1, y: y + lineGap * 0.22, class: 'notation-tab-fret', 'font-size': small ? 13 : 20 }, svg).textContent = '5';
       svgEl('text', { x: x2, y: y + lineGap * 0.22, class: 'notation-tab-fret', 'font-size': small ? 13 : 20 }, svg).textContent = '5';
     } else if (item.symbol === '~') {
-      // Single fret number with a wavy line after it
-      svgEl('text', { x: x0 + staffWidth * 0.4, y: y + lineGap * 0.22, class: 'notation-tab-fret', 'font-size': small ? 13 : 20 }, svg).textContent = '7';
-      // Wavy line
-      const baseX = x0 + staffWidth * 0.5;
-      const wavePath = 'M ' + baseX + ' ' + y +
-                       ' q ' + (lineGap * 0.5) + ' ' + (-lineGap * 0.35) + ', ' + (lineGap) + ' 0 ' +
-                       ' t ' + (lineGap) + ' 0 ' +
-                       ' t ' + (lineGap) + ' 0';
-      svgEl('path', {
-        d: wavePath, fill: 'none',
-        stroke: 'var(--cyan)', 'stroke-width': 2
-      }, svg);
+      // Fret number with a vibrato wavy line directly ABOVE it
+      const cx = x0 + staffWidth * 0.5;
+      svgEl('text', { x: cx, y: y + lineGap * 0.22, class: 'notation-tab-fret', 'font-size': small ? 13 : 20 }, svg).textContent = '7';
+      const waveY = y - lineGap * 1.05;
+      const baseX = cx - lineGap * 1.1;
+      const wavePath = 'M ' + baseX + ' ' + waveY +
+                       ' q ' + (lineGap * 0.5) + ' ' + (-lineGap * 0.4) + ', ' + lineGap + ' 0 ' +
+                       ' t ' + lineGap + ' 0' +
+                       ' t ' + lineGap + ' 0';
+      svgEl('path', { d: wavePath, fill: 'none', stroke: 'var(--cyan)', 'stroke-width': 2, 'stroke-linecap': 'round' }, svg);
     } else {
-      // h, p, b, /, \\
-      svgEl('text', { x: x1, y: y + lineGap * 0.22, class: 'notation-tab-fret', 'font-size': small ? 13 : 20 }, svg).textContent = (item.symbol === 'b' ? '7' : '5');
-      svgEl('text', { x: x2, y: y + lineGap * 0.22, class: 'notation-tab-fret', 'font-size': small ? 13 : 20 }, svg).textContent = (item.symbol === 'b' ? '9' : (item.symbol === '\\' ? '3' : '7'));
-      // Symbol in between
-      svgEl('text', {
-        x: (x1 + x2) / 2, y: y - lineGap * 0.4,
-        class: 'notation-tab-symbol',
-        'font-size': small ? 14 : 18
-      }, svg).textContent = showSymbol;
-      // Connecting arc
-      const path = 'M ' + (x1 + lineGap * 0.4) + ' ' + (y - lineGap * 0.2) +
-                   ' Q ' + ((x1 + x2) / 2) + ' ' + (y - lineGap * 0.7) +
-                   ', ' + (x2 - lineGap * 0.4) + ' ' + (y - lineGap * 0.2);
-      svgEl('path', {
-        d: path, fill: 'none',
-        stroke: 'var(--cyan)', 'stroke-width': 1.5
-      }, svg);
+      // h (hammer 5->7), p (pull 7->5), b (bend 7->9), / (slide up 5->7), \\ (slide down 5->3)
+      const isSlide = (item.symbol === '/' || item.symbol === '\\');
+      const f1 = (item.symbol === 'p' || item.symbol === 'b') ? '7' : '5';
+      const f2 = item.symbol === 'p' ? '5' : (item.symbol === 'b' ? '9' : (item.symbol === '\\' ? '3' : '7'));
+      svgEl('text', { x: x1, y: y + lineGap * 0.22, class: 'notation-tab-fret', 'font-size': small ? 13 : 20 }, svg).textContent = f1;
+      svgEl('text', { x: x2, y: y + lineGap * 0.22, class: 'notation-tab-fret', 'font-size': small ? 13 : 20 }, svg).textContent = f2;
+      if (isSlide) {
+        // a slide is a straight diagonal slash between the frets (not a slur)
+        const k = lineGap * 0.42;
+        const yA = item.symbol === '/' ? y + k : y - k;
+        const yB = item.symbol === '/' ? y - k : y + k;
+        svgEl('line', { x1: x1 + lineGap * 0.7, y1: yA, x2: x2 - lineGap * 0.7, y2: yB, stroke: 'var(--cyan)', 'stroke-width': 2.4, 'stroke-linecap': 'round' }, svg);
+      } else {
+        // hammer / pull / bend: slur arc + letter symbol
+        svgEl('text', { x: (x1 + x2) / 2, y: y - lineGap * 0.55, class: 'notation-tab-symbol', 'font-size': small ? 14 : 18 }, svg).textContent = showSymbol;
+        const path = 'M ' + (x1 + lineGap * 0.4) + ' ' + (y - lineGap * 0.2) +
+                     ' Q ' + ((x1 + x2) / 2) + ' ' + (y - lineGap * 0.9) +
+                     ', ' + (x2 - lineGap * 0.4) + ' ' + (y - lineGap * 0.2);
+        svgEl('path', { d: path, fill: 'none', stroke: 'var(--cyan)', 'stroke-width': 1.6 }, svg);
+      }
     }
   }
 
