@@ -1862,6 +1862,17 @@
   .build-prompt .vm {
     color: #9b8fff; font-weight: 900;
   }
+  .build-subprompt {
+    margin-top: 6px;
+    font-family: var(--font-display); font-size: 14px; font-weight: 700;
+    color: var(--text2); letter-spacing: 1px;
+  }
+  .build-subprompt .vm { color: #9b8fff; font-weight: 900; }
+  .build-drag-hint {
+    margin-top: 8px; text-align: center;
+    font-family: var(--font-display); font-size: 11px; font-weight: 700;
+    color: var(--text3); letter-spacing: 1.5px; text-transform: uppercase;
+  }
   /* Piano strip */
   .build-strip-wrap {
     position: relative;
@@ -1879,6 +1890,10 @@
     border: 1px solid rgba(124,111,247,0.18);
     border-radius: 6px;
     overflow: hidden;
+    cursor: pointer;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
   }
   .build-ruler-tick {
     position: absolute;
@@ -1927,7 +1942,7 @@
     border: 2px solid rgba(255,255,255,0.5);
     box-shadow: 0 0 14px rgba(124,111,247,0.7), inset 0 1px 0 rgba(255,255,255,0.4);
     transform: translateX(-50%);
-    transition: left 0.12s cubic-bezier(0.2,0.7,0.3,1);
+    transition: left 0.04s linear;
     z-index: 6;
     pointer-events: none;
     display: flex; align-items: center; justify-content: center;
@@ -5958,10 +5973,10 @@
 <div class="screen" id="build-config">
   <div class="module-header">
     <button class="back-btn" onclick="showScreen('home')">←</button>
-    <div class="module-header-title">BUILD MODE</div>
+    <div class="module-header-title">BUILD</div>
   </div>
 
-  <!-- Mode selector (intervals only active; chords/scales coming soon) -->
+  <!-- Mode selector — intervals, chords, scales all build by ear -->
   <div class="ear-mode-list">
     <div class="ear-mode-row" data-mode="intervals">
       <span class="ear-toggle ear-include-tog on" id="build-include-intervals-tog" onclick="toggleBuildInclude('intervals', event)">
@@ -5970,18 +5985,18 @@
       <button class="ear-mode-label" data-mode="intervals" onclick="setBuildTab('intervals')">INTERVALS</button>
       <span class="ear-mode-count" id="build-mode-count-intervals">0</span>
     </div>
-    <div class="ear-mode-row disabled" data-mode="chords">
-      <span class="ear-toggle ear-include-tog" id="build-include-chords-tog">
+    <div class="ear-mode-row" data-mode="chords">
+      <span class="ear-toggle ear-include-tog" id="build-include-chords-tog" onclick="toggleBuildInclude('chords', event)">
         <span class="ear-toggle-track"><span class="ear-toggle-thumb"></span></span>
       </span>
-      <button class="ear-mode-label" data-mode="chords">CHORDS</button>
+      <button class="ear-mode-label" data-mode="chords" onclick="setBuildTab('chords')">CHORDS</button>
       <span class="ear-mode-count" id="build-mode-count-chords">0</span>
     </div>
-    <div class="ear-mode-row disabled" data-mode="scales">
-      <span class="ear-toggle ear-include-tog" id="build-include-scales-tog">
+    <div class="ear-mode-row" data-mode="scales">
+      <span class="ear-toggle ear-include-tog" id="build-include-scales-tog" onclick="toggleBuildInclude('scales', event)">
         <span class="ear-toggle-track"><span class="ear-toggle-thumb"></span></span>
       </span>
-      <button class="ear-mode-label" data-mode="scales">SCALES</button>
+      <button class="ear-mode-label" data-mode="scales" onclick="setBuildTab('scales')">SCALES</button>
       <span class="ear-mode-count" id="build-mode-count-scales">0</span>
     </div>
   </div>
@@ -6000,7 +6015,39 @@
       </div>
       <div class="ear-item-grid" id="build-intervals-grid" style="margin-top:8px;"></div>
       <div style="margin-top:10px; font-family:var(--font-display); font-size:11px; color:var(--text3); letter-spacing:1px;">
-        You'll be given an interval name and asked to build it from a root note by sliding a marker on the piano strip.
+        You'll hear a root note and an interval name. Drag the bar to build it by ear — within 20 cents counts.
+      </div>
+    </div>
+
+    <!-- CHORDS section -->
+    <div class="ear-config-section" id="build-chords-section" style="display:none;">
+      <div class="ear-section-title">
+        Chords <span class="ear-count" id="build-chords-count">0</span>
+      </div>
+      <div class="ear-quick-actions">
+        <button class="ear-quick-btn" onclick="buildQuickSelect('chords','all')">ALL</button>
+        <button class="ear-quick-btn" onclick="buildQuickSelect('chords','none')">NONE</button>
+        <button class="ear-quick-btn" onclick="buildQuickSelect('chords','starter')">STARTER</button>
+      </div>
+      <div class="ear-item-grid" id="build-chords-grid" style="margin-top:8px;"></div>
+      <div style="margin-top:10px; font-family:var(--font-display); font-size:11px; color:var(--text3); letter-spacing:1px;">
+        Build a chord one note at a time — each tone above the root, by ear.
+      </div>
+    </div>
+
+    <!-- SCALES section -->
+    <div class="ear-config-section" id="build-scales-section" style="display:none;">
+      <div class="ear-section-title">
+        Scales <span class="ear-count" id="build-scales-count">0</span>
+      </div>
+      <div class="ear-quick-actions">
+        <button class="ear-quick-btn" onclick="buildQuickSelect('scales','all')">ALL</button>
+        <button class="ear-quick-btn" onclick="buildQuickSelect('scales','none')">NONE</button>
+        <button class="ear-quick-btn" onclick="buildQuickSelect('scales','starter')">STARTER</button>
+      </div>
+      <div class="ear-item-grid" id="build-scales-grid" style="margin-top:8px;"></div>
+      <div style="margin-top:10px; font-family:var(--font-display); font-size:11px; color:var(--text3); letter-spacing:1px;">
+        Build a scale degree by degree, climbing from the root — by ear.
       </div>
     </div>
 
@@ -6031,17 +6078,6 @@
       </div>
     </div>
 
-    <div class="ear-options-divider"></div>
-
-    <div class="ear-options-group">
-      <span class="ear-options-group-label">EXPERT</span>
-      <div class="ear-options-group-controls">
-        <label class="ear-toggle" data-build-toggle="expertMode" onclick="toggleBuildOption('expertMode')">
-          <span class="ear-toggle-track"><span class="ear-toggle-thumb"></span></span>
-        </label>
-      </div>
-    </div>
-
   </div>
 
   <!-- Root picker row -->
@@ -6057,7 +6093,7 @@
 <div class="screen" id="build-session">
   <div class="module-header">
     <button class="back-btn" onclick="endBuildSession()">←</button>
-    <div class="module-header-title" id="build-session-title">BUILD MODE</div>
+    <div class="module-header-title" id="build-session-title">BUILD</div>
   </div>
 
   <div class="build-session-body">
@@ -6073,7 +6109,8 @@
     <!-- Half-step ruler -->
     <div class="build-strip-wrap">
       <div class="build-ruler" id="build-ruler"></div>
-      <div class="build-slider-row">
+      <div class="build-drag-hint">Drag the bar to build the note — by ear</div>
+      <div class="build-slider-row" style="display:none;">
         <div class="build-slider-readout" id="build-slider-readout">0</div>
         <input type="range" class="build-slider" id="build-slider" min="-14" max="14" step="1" value="0">
       </div>
@@ -8219,11 +8256,25 @@ function refreshEarScore() {
 // The reverse of Ear Training: user is given a name and constructs it by
 // moving a marker on a piano strip. Intervals only in v1; chords/scales next.
 
-const BUILD_MODES = ['intervals'];
+const BUILD_MODES = ['intervals', 'chords', 'scales'];
 
-// Build mode has its own starter set so it can diverge from Ear Training's
+// Scale catalog for Build mode — degs = scale degrees ABOVE the root (semitones),
+// excluding the root (which is given). The player builds each degree by ear.
+const BUILD_SCALES = [
+  { id: 'major',      label: 'Major',            degs: [2, 4, 5, 7, 9, 11, 12], mnemonic: 'The major scale — do re mi fa sol la ti do.' },
+  { id: 'nat_minor',  label: 'Natural Minor',    degs: [2, 3, 5, 7, 8, 10, 12], mnemonic: 'The natural minor scale.' },
+  { id: 'dorian',     label: 'Dorian',           degs: [2, 3, 5, 7, 9, 10, 12], mnemonic: 'Minor with a raised 6th.' },
+  { id: 'mixolydian', label: 'Mixolydian',       degs: [2, 4, 5, 7, 9, 10, 12], mnemonic: 'Major with a flat 7th.' },
+  { id: 'penta_maj',  label: 'Major Pentatonic', degs: [2, 4, 7, 9, 12],        mnemonic: 'Five-note major scale.' },
+  { id: 'penta_min',  label: 'Minor Pentatonic', degs: [3, 5, 7, 10, 12],       mnemonic: 'Five-note minor / blues scale.' },
+  { id: 'blues',      label: 'Blues',            degs: [3, 5, 6, 7, 10, 12],    mnemonic: 'Minor pentatonic plus the blue note.' },
+];
+
+// Build mode has its own starter sets so it can diverge from Ear Training's
 // (e.g. excludes unison, which has nothing to construct).
 const BUILD_STARTER_INTERVALS = ['m3', 'M3', 'P4', 'P5', 'M6', 'P8'];
+const BUILD_STARTER_CHORDS    = ['major', 'minor', 'dom7', 'maj7', 'min7'];
+const BUILD_STARTER_SCALES    = ['major', 'nat_minor', 'penta_maj', 'penta_min'];
 
 const BUILD_MODE_META = {
   intervals: {
@@ -8236,44 +8287,86 @@ const BUILD_MODE_META = {
     includeTogId: 'build-include-intervals-tog',
     starter:    BUILD_STARTER_INTERVALS,
   },
+  chords: {
+    catalog:    EAR_CHORDS,
+    setKey:     'selectedChords',
+    gridId:     'build-chords-grid',
+    countIds:   ['build-chords-count', 'build-mode-count-chords'],
+    sectionId:  'build-chords-section',
+    includeKey: 'includeChords',
+    includeTogId: 'build-include-chords-tog',
+    starter:    BUILD_STARTER_CHORDS,
+  },
+  scales: {
+    catalog:    BUILD_SCALES,
+    setKey:     'selectedScales',
+    gridId:     'build-scales-grid',
+    countIds:   ['build-scales-count', 'build-mode-count-scales'],
+    sectionId:  'build-scales-section',
+    includeKey: 'includeScales',
+    includeTogId: 'build-include-scales-tog',
+    starter:    BUILD_STARTER_SCALES,
+  },
 };
 
 // State
 const buildState = {
   activeTab: 'intervals',
   includeIntervals: true,
+  includeChords: false,
+  includeScales: false,
   selectedIntervals: new Set(),
-  direction: 'above',          // 'above' | 'below' | 'both'
+  selectedChords: new Set(),
+  selectedScales: new Set(),
+  direction: 'above',          // 'above' | 'below' | 'both' (intervals only)
   fixedRoot: false,
   rootNote: 'C',
-  expertMode: false,
-  // Session
+  // Session — marker is a single continuous CENTS offset from the root.
+  // markerSemis is kept at 0 so existing (markerSemis + markerCents/100) math holds.
   currentQ:  null,
-  markerSemis: 0,              // current slider value in semitones (or cents/100 in expert)
-  markerCents: 0,              // expert mode cents offset
+  markerSemis: 0,
+  markerCents: 0,              // total cents above/below the root (continuous, ear-based)
   attempts: 0,
   answered: false,
   score: { correct: 0, wrong: 0, xp: 0 },
 };
 
+// Tolerance for "you nailed it" — ±20 cents on either side (pure ear, no snapping).
+const BUILD_CENTS_TOLERANCE = 20;
+// The semitone offset the player is currently building (current note of the chord/scale).
+function buildCurTarget() {
+  const q = buildState.currentQ;
+  if (!q || !q.targets) return 0;
+  return q.targets[q.noteIdx || 0];
+}
+// Name a semitone offset as an interval label (for the "Note X of N" hint).
+function buildIntervalName(semis) {
+  const a = Math.abs(semis);
+  const def = EAR_INTERVALS.find(i => i.semis === a);
+  return def ? def.label : (a + ' semitones');
+}
+
 // ── Config screen ─────────────────────────────────────────────────────────
 window.initBuildConfig = function() {
   // Default starter selection if empty
-  if (buildState.selectedIntervals.size === 0) {
-    buildQuickSelect('intervals', 'starter', false);
-  }
+  if (buildState.selectedIntervals.size === 0) buildQuickSelect('intervals', 'starter', false);
+  if (buildState.selectedChords.size === 0)    buildQuickSelect('chords', 'starter', false);
+  if (buildState.selectedScales.size === 0)    buildQuickSelect('scales', 'starter', false);
   buildBuildItemGrids();
   buildBuildRootPicker();
-  // Apply include toggle visual state
-  const tog = document.getElementById('build-include-intervals-tog');
-  if (tog) tog.classList.toggle('on', buildState.includeIntervals);
+  // Apply include toggle visual state for all three modes
+  BUILD_MODES.forEach(mode => {
+    const meta = BUILD_MODE_META[mode];
+    const tog = document.getElementById(meta.includeTogId);
+    if (tog) tog.classList.toggle('on', buildState[meta.includeKey]);
+  });
   setBuildTab(buildState.activeTab);
   // Apply direction button state
   document.querySelectorAll('#build-direction-group .ear-opt-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.bdir === buildState.direction);
   });
   // Apply option toggles
-  ['fixedRoot', 'expertMode'].forEach(k => {
+  ['fixedRoot'].forEach(k => {
     const t = document.querySelector('.ear-toggle[data-build-toggle="' + k + '"]');
     if (t) t.classList.toggle('on', buildState[k]);
   });
@@ -8478,25 +8571,33 @@ function generateBuildQuestion() {
     rootMidi = 48 + Math.floor(Math.random() * 13); // C3-C4 (keep middle range so strip has room both directions)
   }
 
-  // Direction
-  let dir;
-  if (buildState.direction === 'both') {
-    dir = Math.random() < 0.5 ? 'above' : 'below';
-  } else {
-    dir = buildState.direction;
-  }
+  // Direction (intervals only — chords/scales build upward)
+  let dir = buildState.direction;
+  if (dir === 'both') dir = Math.random() < 0.5 ? 'above' : 'below';
 
   if (pick.kind === 'intervals') {
     const def = EAR_INTERVALS.find(i => i.id === pick.id);
+    const t = dir === 'above' ? def.semis : -def.semis;
     return {
-      kind: 'intervals',
-      id: def.id,
-      label: def.label,
-      mnemonic: def.mnemonic,
-      semis: def.semis,
-      rootMidi,
-      direction: dir,
-      targetSemis: dir === 'above' ? def.semis : -def.semis,
+      kind: 'intervals', id: def.id, label: def.label, mnemonic: def.mnemonic,
+      rootMidi, direction: dir,
+      targets: [t], noteIdx: 0, builtCents: [], harmonic: true, missed: false,
+    };
+  }
+  if (pick.kind === 'chords') {
+    const def = EAR_CHORDS.find(c => c.id === pick.id);
+    return {
+      kind: 'chords', id: def.id, label: def.label, mnemonic: def.mnemonic || '',
+      rootMidi, direction: 'above',
+      targets: def.ints.slice(1), noteIdx: 0, builtCents: [], harmonic: true, missed: false,
+    };
+  }
+  if (pick.kind === 'scales') {
+    const def = BUILD_SCALES.find(s => s.id === pick.id);
+    return {
+      kind: 'scales', id: def.id, label: def.label, mnemonic: def.mnemonic || '',
+      rootMidi, direction: 'above',
+      targets: def.degs.slice(), noteIdx: 0, builtCents: [], harmonic: false, missed: false,
     };
   }
   return null;
@@ -8504,31 +8605,32 @@ function generateBuildQuestion() {
 
 function renderBuildQuestion(q) {
   if (!q) return;
-  const rootName = midiToNoteName(q.rootMidi);
-  const dirWord = q.direction === 'above' ? 'above' : 'below';
+  const rootName = midiToNoteName(q.rootMidi).replace(/-?\d+$/, '');
   const prompt = document.getElementById('build-prompt');
-  prompt.innerHTML = 'Build a <span class="v">' + q.label + '</span> ' + dirWord + ' <span class="v">' + rootName + '</span>';
 
-  // Slider setup
-  const slider = document.getElementById('build-slider');
-  if (slider) {
-    slider.disabled = false;
-    if (buildState.expertMode) {
-      slider.min = '-1400';
-      slider.max = '1400';
-      slider.step = '5';
-      slider.value = '0';
-    } else {
-      slider.min = '-14';
-      slider.max = '14';
-      slider.step = '1';
-      slider.value = '0';
-    }
+  let html;
+  if (q.kind === 'intervals') {
+    const dirWord = q.direction === 'above' ? 'above' : 'below';
+    html = 'Build a <span class="v">' + q.label + '</span> ' + dirWord + ' <span class="v">' + rootName + '</span>';
+  } else {
+    const kindWord = q.kind === 'chords' ? '' : ' scale';
+    const total = q.targets.length;
+    const step = (q.noteIdx || 0) + 1;
+    const noteName = buildIntervalName(buildCurTarget());
+    html = 'Build a <span class="v">' + q.label + kindWord + '</span> from <span class="v">' + rootName + '</span>'
+         + '<div class="build-subprompt">Note <span class="vm">' + step + '</span> of <span class="vm">' + total
+         + '</span> — the <span class="vm">' + noteName + '</span></div>';
   }
+  prompt.innerHTML = html;
+
+  // Marker resets to the root each note
+  buildState.markerSemis = 0;
+  buildState.markerCents = 0;
   updateBuildSliderReadout();
   drawBuildStrip();
   hideBuildTargetMarker();
-  // Re-enable buttons
+  wireBuildRulerDrag();
+  // Re-enable controls
   const ht = document.getElementById('build-hear-target-btn');
   const hy = document.getElementById('build-hear-yours-btn');
   if (ht) ht.disabled = false;
@@ -8537,30 +8639,51 @@ function renderBuildQuestion(q) {
 }
 
 function onBuildSliderInput(ev) {
+  // Legacy hidden slider — the ruler drag is the real control now.
   const v = parseFloat(ev.target.value);
-  if (buildState.expertMode) {
-    // value is in cents
-    buildState.markerSemis = Math.trunc(v / 100);
-    buildState.markerCents = v - buildState.markerSemis * 100;
-  } else {
-    buildState.markerSemis = Math.round(v);
-    buildState.markerCents = 0;
-  }
+  buildState.markerSemis = 0;
+  buildState.markerCents = v;
   updateBuildSliderReadout();
   positionBuildMarker();
 }
 
 function updateBuildSliderReadout() {
+  // Readout is hidden in ear mode (no numbers shown), but keep it harmless.
   const out = document.getElementById('build-slider-readout');
   if (!out) return;
-  const totalSemis = buildState.markerSemis + (buildState.markerCents / 100);
-  const sign = totalSemis > 0 ? '+' : '';
-  if (buildState.expertMode) {
-    const totalCents = Math.round(buildState.markerSemis * 100 + buildState.markerCents);
-    out.textContent = (totalCents >= 0 ? '+' : '') + totalCents + '¢';
-  } else {
-    out.textContent = sign + buildState.markerSemis + ' st';
-  }
+  const totalCents = Math.round(buildState.markerSemis * 100 + buildState.markerCents);
+  out.textContent = (totalCents >= 0 ? '+' : '') + totalCents + '\u00a2';
+}
+
+// Drag the big ruler itself to build the note by ear (no second slider, no labels).
+function wireBuildRulerDrag() {
+  const ruler = document.getElementById('build-ruler');
+  if (!ruler || ruler._dragWired) return;
+  ruler._dragWired = true;
+  let dragging = false;
+  const setFromX = (clientX) => {
+    if (buildState.answered) return;
+    const rect = ruler.getBoundingClientRect();
+    if (!rect.width) return;
+    let f = (clientX - rect.left) / rect.width;
+    f = Math.max(0, Math.min(1, f));
+    const range = ruler._range || BUILD_STRIP_RANGE;
+    const semis = -range + f * 2 * range;
+    buildState.markerSemis = 0;
+    buildState.markerCents = Math.round(semis * 100);
+    updateBuildSliderReadout();
+    positionBuildMarker();
+  };
+  ruler.addEventListener('pointerdown', (e) => {
+    if (buildState.answered) return;
+    dragging = true;
+    try { ruler.setPointerCapture(e.pointerId); } catch (err) {}
+    setFromX(e.clientX);
+    e.preventDefault();
+  });
+  ruler.addEventListener('pointermove', (e) => { if (dragging) setFromX(e.clientX); });
+  ruler.addEventListener('pointerup',   () => { dragging = false; });
+  ruler.addEventListener('pointercancel', () => { dragging = false; });
 }
 
 // ── Piano strip ─────────────────────────────────────────────────────────
@@ -8598,7 +8721,8 @@ function drawBuildStrip() {
   rail.className = 'build-ruler-rail';
   ruler.appendChild(rail);
 
-  // Draw ticks for every semitone
+  // Draw subtle ticks for every semitone — but NO number/letter labels.
+  // Unmarked on purpose: the player has to use their ears, not read positions.
   for (let semi = -range; semi <= range; semi++) {
     const pct = ((semi + range) / totalSpan) * 100;
     const tick = document.createElement('div');
@@ -8607,17 +8731,6 @@ function drawBuildStrip() {
     tick.className = 'build-ruler-tick' + (isRoot ? ' root' : isMajor ? ' major' : '');
     tick.style.left = pct + '%';
     ruler.appendChild(tick);
-
-    // Labels for root and every 2 semitones (or just key intervals to keep it readable)
-    const showLabel = isRoot || isMajor || (Math.abs(semi) <= 12 && (semi % 2 === 0));
-    if (showLabel) {
-      const lbl = document.createElement('div');
-      lbl.className = 'build-ruler-label' + (isRoot ? ' root' : isMajor ? ' major' : '');
-      lbl.style.left = pct + '%';
-      if (isRoot) lbl.textContent = midiToNoteName(q.rootMidi).replace(/-?\d+$/, '');
-      else lbl.textContent = (semi > 0 ? '+' : '') + semi;
-      ruler.appendChild(lbl);
-    }
   }
 
   // Save bounds for marker positioning
@@ -8678,16 +8791,19 @@ window.playBuildTarget = function() {
   const q = buildState.currentQ;
   if (!q) return;
   const ctx = getAudio();
-  const t = ctx.currentTime + 0.05;
-  const rootMidi = q.rootMidi;
-  const targetMidi = rootMidi + q.targetSemis;
-  // Harmonic — both at once so the user hears the target interval
-  playTone(midiFreq(rootMidi),   t, 1.6, ctx, 0.25, 'piano');
-  playTone(midiFreq(targetMidi), t, 1.6, ctx, 0.25, 'piano');
+  const t0 = ctx.currentTime + 0.05;
+  const rootFreq = midiFreq(q.rootMidi);
+  const semisList = [0].concat(q.targets); // root + every target tone (semitones)
+  if (q.harmonic) {
+    semisList.forEach(s => playTone(rootFreq * Math.pow(2, s / 12), t0, 1.6, ctx, 0.22, 'piano'));
+  } else {
+    semisList.forEach((s, i) => playTone(rootFreq * Math.pow(2, s / 12), t0 + i * 0.34, 0.42, ctx, 0.25, 'piano'));
+  }
   const btn = document.getElementById('build-hear-target-btn');
   if (btn) {
     btn.classList.add('playing');
-    setTimeout(() => btn.classList.remove('playing'), 1600);
+    const ms = q.harmonic ? 1600 : (semisList.length * 340 + 200);
+    setTimeout(() => btn.classList.remove('playing'), ms);
   }
 };
 
@@ -8695,16 +8811,22 @@ window.playBuildYours = function() {
   const q = buildState.currentQ;
   if (!q) return;
   const ctx = getAudio();
-  const t = ctx.currentTime + 0.05;
-  const rootMidi = q.rootMidi;
-  const totalSemis = buildState.markerSemis + (buildState.markerCents / 100);
-  const markerFreq = midiFreq(rootMidi) * Math.pow(2, totalSemis / 12);
-  playTone(midiFreq(rootMidi), t, 1.6, ctx, 0.25, 'piano');
-  playTone(markerFreq,         t, 1.6, ctx, 0.25, 'piano');
+  const t0 = ctx.currentTime + 0.05;
+  const rootFreq = midiFreq(q.rootMidi);
+  // root + notes already locked in + the current marker (in cents above root)
+  const centsList = [0];
+  for (let i = 0; i < (q.noteIdx || 0); i++) centsList.push(q.builtCents[i]);
+  centsList.push(buildState.markerSemis * 100 + buildState.markerCents);
+  if (q.harmonic) {
+    centsList.forEach(c => playTone(rootFreq * Math.pow(2, c / 1200), t0, 1.6, ctx, 0.22, 'piano'));
+  } else {
+    centsList.forEach((c, i) => playTone(rootFreq * Math.pow(2, c / 1200), t0 + i * 0.34, 0.42, ctx, 0.25, 'piano'));
+  }
   const btn = document.getElementById('build-hear-yours-btn');
   if (btn) {
     btn.classList.add('playing');
-    setTimeout(() => btn.classList.remove('playing'), 1600);
+    const ms = q.harmonic ? 1600 : (centsList.length * 340 + 200);
+    setTimeout(() => btn.classList.remove('playing'), ms);
   }
 };
 
@@ -8717,95 +8839,91 @@ window.submitBuildAnswer = function() {
   if (!q || buildState.answered) return;
   buildState.attempts++;
 
-  const userTotal = buildState.markerSemis * 100 + buildState.markerCents; // in cents
-  const targetTotal = q.targetSemis * 100;
-  const errCents = userTotal - targetTotal;
-  const tolerance = buildState.expertMode ? 20 : 50; // standard: anywhere within ±50 cents = exact semi
-  // In standard mode, slider is locked to semitone steps so errCents will be a multiple of 100;
-  // effective check is errCents === 0. The 50¢ window is a safety only.
-  const isCorrect = Math.abs(errCents) <= tolerance;
+  const userCents   = buildState.markerSemis * 100 + buildState.markerCents;
+  const targetCents = buildCurTarget() * 100;
+  const errCents    = userCents - targetCents;
+  const isCorrect   = Math.abs(errCents) <= BUILD_CENTS_TOLERANCE; // pure ear, +/-20 cents
 
   const marker = document.getElementById('build-marker');
 
   if (isCorrect) {
-    buildState.answered = true;
-    buildState.score.correct++;
-    const xpGain = buildState.attempts === 1 ? 10 : buildState.attempts === 2 ? 5 : 0;
-    buildState.score.xp += xpGain;
+    q.builtCents[q.noteIdx] = userCents;
     if (marker) marker.classList.add('correct');
-    showBuildTargetMarker(q.targetSemis);
+    showBuildTargetMarker(buildCurTarget());
     document.getElementById('build-submit-btn').disabled = true;
-    document.getElementById('build-slider').disabled = true;
-    showBuildFeedback(true, xpGain, errCents);
+    advanceBuildNote();
   } else {
     if (marker) {
       marker.classList.add('wrong');
       setTimeout(() => marker.classList.remove('wrong'), 600);
     }
     if (buildState.attempts >= 3) {
-      // Show answer and move on (no XP)
-      buildState.answered = true;
-      buildState.score.wrong++;
-      // Snap marker to target visually and reveal target ghost
-      buildState.markerSemis = q.targetSemis;
-      buildState.markerCents = 0;
-      const slider = document.getElementById('build-slider');
-      if (slider) {
-        slider.value = buildState.expertMode ? (q.targetSemis * 100) : q.targetSemis;
-        slider.disabled = true;
-      }
-      updateBuildSliderReadout();
+      // Reveal this note, mark the whole question missed, move on
+      q.missed = true;
+      q.builtCents[q.noteIdx] = targetCents;
+      buildState.markerSemis = 0;
+      buildState.markerCents = targetCents;
       positionBuildMarker();
-      showBuildTargetMarker(q.targetSemis);
+      showBuildTargetMarker(buildCurTarget());
       if (marker) marker.classList.add('correct');
       document.getElementById('build-submit-btn').disabled = true;
-      showBuildFeedback(false, 0, errCents);
+      advanceBuildNote();
     } else {
-      // TRY AGAIN — same question, show target on the ruler so they can see how far off they are
-      showBuildTargetMarker(q.targetSemis);
+      // Try again, same note. No target reveal — keep it ear-based, just say how far off.
       showBuildFeedback(false, 0, errCents, true);
     }
   }
   refreshBuildScore();
 };
 
+// Move to the next note of the chord/scale, or finish the question if this was the last note.
+function advanceBuildNote() {
+  const q = buildState.currentQ;
+  const wasLast = (q.noteIdx + 1 >= q.targets.length);
+  q.noteIdx++;
+  buildState.attempts = 0;
+  if (wasLast) {
+    buildState.answered = true;
+    const questionCorrect = !q.missed;
+    if (questionCorrect) { buildState.score.correct++; buildState.score.xp += 10; }
+    else                 { buildState.score.wrong++; }
+    document.getElementById('build-submit-btn').disabled = true;
+    showBuildFeedback(questionCorrect, questionCorrect ? 10 : 0, 0);
+  } else {
+    // Brief beat so the green/locked note registers, then render the next note.
+    setTimeout(() => { renderBuildQuestion(q); }, 650);
+  }
+}
+
 window.buildTryAgain = function() {
-  // Hide feedback, keep same question
   document.getElementById('build-feedback-bar').classList.remove('show');
   document.getElementById('build-tryagain-btn').style.display = 'none';
 };
 
 function showBuildFeedback(isCorrect, xpGain, errCents, retryable = false) {
-  const bar = document.getElementById('build-feedback-bar');
-  const result = document.getElementById('build-feedback-result');
-  const expl = document.getElementById('build-feedback-explanation');
-  const tryBtn = document.getElementById('build-tryagain-btn');
+  const bar     = document.getElementById('build-feedback-bar');
+  const result  = document.getElementById('build-feedback-result');
+  const expl    = document.getElementById('build-feedback-explanation');
+  const tryBtn  = document.getElementById('build-tryagain-btn');
   const nextBtn = document.getElementById('build-feedback-next');
   const q = buildState.currentQ;
+  const dash = ' \u2014 ';
 
-  if (isCorrect) {
-    result.textContent = xpGain === 10 ? 'CORRECT' : 'GOT IT';
-    result.className = 'feedback-result correct';
-    let detail = q.label + ' — ' + q.mnemonic;
-    if (buildState.expertMode && Math.abs(errCents) > 0) {
-      detail += ' (' + (errCents > 0 ? '+' : '') + Math.round(errCents) + '¢)';
-    }
-    expl.textContent = detail;
-  } else if (retryable) {
+  if (retryable) {
     result.textContent = 'NOT QUITE';
     result.className = 'feedback-result wrong';
     const dirSign = errCents > 0 ? 'too high' : 'too low';
-    if (buildState.expertMode) {
-      expl.textContent = 'Off by ' + Math.round(Math.abs(errCents)) + '¢ — ' + dirSign + '.';
-    } else {
-      const semOff = Math.round(Math.abs(errCents) / 100);
-      expl.textContent = semOff + ' semitone' + (semOff === 1 ? '' : 's') + ' ' + dirSign + '.';
-    }
+    expl.textContent = 'Off by ' + Math.round(Math.abs(errCents)) + '\u00a2 ' + dirSign + '. Listen again.';
+  } else if (isCorrect) {
+    result.textContent = 'CORRECT';
+    result.className = 'feedback-result correct';
+    const kindWord = q.kind === 'intervals' ? '' : (q.kind === 'chords' ? ' chord' : ' scale');
+    expl.textContent = q.label + kindWord + (q.mnemonic ? (dash + q.mnemonic) : '');
   } else {
-    // Final wrong
     result.textContent = 'ANSWER SHOWN';
     result.className = 'feedback-result wrong';
-    expl.textContent = q.label + ' — ' + q.mnemonic;
+    const kindWord = q.kind === 'intervals' ? '' : (q.kind === 'chords' ? ' chord' : ' scale');
+    expl.textContent = q.label + kindWord + (q.mnemonic ? (dash + q.mnemonic) : '');
   }
 
   tryBtn.style.display  = retryable ? 'inline-block' : 'none';
@@ -12230,7 +12348,7 @@ const CAROUSEL_DATA = {
   play: [
     { id: 'ear',      icon: '👂', name: 'EAR TRAINING',      sub: 'INTERVALS · CHORDS', cls: 'mod-ear',      action: 'mod:ear_training',       desc: 'Identify intervals, chords, scales, progressions, and scale degrees by ear. Five modes, fully customizable.' },
     { id: 'listen',   icon: '🔊', name: 'ACTIVE LISTENING', sub: '5 MODES',            cls: 'mod-listen',   action: 'mod:active_listening',   desc: 'Identify instruments, dynamics, articulation, tempo, and texture in synthetic audio examples.' },
-    { id: 'build',    icon: '🛠️', name: 'CHORD',             sub: 'CONSTRUCT BY EAR',   cls: 'mod-build',    action: 'mod:build_mode',         desc: 'Hear an interval and build it yourself with sliders. The reverse of ear training.' },
+    { id: 'build',    icon: '🛠️', name: 'BUILD', sub: 'CONSTRUCT BY EAR',   cls: 'mod-build',    action: 'mod:build_mode',         desc: 'Hear an interval and build it yourself with sliders. The reverse of ear training.' },
     { id: 'tx',       icon: '🎹', name: 'JAM SESSION',       sub: 'NOTATE WHAT YOU HEAR',cls: 'mod-tx',      action: 'mod:transcription_lab',  desc: 'Listen to drum and melodic patterns and place the notes on the staff yourself.' }
   ],
   read: [
@@ -17903,15 +18021,46 @@ document.addEventListener('keydown', (e) => {
 // Hotkey: \ completes the CURRENT level (dev only) — fast testing through puzzles
 // and show layers. During a show it clears the active layer; in the perform
 // surface it finishes the song; in a normal puzzle it solves it.
+// Auto-solve the current Build-mode question (sets the marker dead-on each note).
+function klAutoSolveBuild() {
+  const solveOne = () => {
+    if (buildState.answered || !buildState.currentQ) return;
+    buildState.markerSemis = 0;
+    buildState.markerCents = buildCurTarget() * 100;
+    positionBuildMarker();
+    submitBuildAnswer();
+    if (!buildState.answered) setTimeout(solveOne, 720); // multi-note: wait out the render beat
+  };
+  solveOne();
+}
+// Auto-solve / fast-forward a LESSON-mode question (mirrors story mode's \ key).
+function klSolveLessonQuestion() {
+  const bs = document.getElementById('build-session');
+  if (bs && bs.classList.contains('active')) { klAutoSolveBuild(); return true; }
+  const qs = document.getElementById('question-screen');
+  if (qs && qs.classList.contains('active')) {
+    const q = sessionQuestions[sessionIdx];
+    const body = document.getElementById('q-body');
+    const btns = body ? body.querySelectorAll('.answer-btn') : [];
+    if (q && typeof q.correctIndex === 'number' && btns[q.correctIndex]) {
+      btns[q.correctIndex].click();           // pick the right MCQ answer
+    } else {
+      (window.nextQuestion || function(){})(); // rhythm/transcription: just skip ahead
+    }
+    return true;
+  }
+  return false;
+}
 document.addEventListener('keydown', (e) => {
   if (e.code !== 'Backslash') return;
   const tag = (e.target && e.target.tagName) || '';
   if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
   if (!klIsDevAvailable()) return;
+  // Story mode: clear the active layer / finish the song / solve the puzzle.
   const kid = document.getElementById('kidlab');
-  if (!kid || !kid.classList.contains('kl-playing')) return; // only while a level/perform is up
-  e.preventDefault();
-  klWin();
+  if (kid && kid.classList.contains('kl-playing')) { e.preventDefault(); klWin(); return; }
+  // Lesson mode: solve the current question (Build, MCQ) or skip (rhythm/transcription).
+  if (klSolveLessonQuestion()) { e.preventDefault(); return; }
 });
 // Fullscreen hotkey: F. Guarded so it never collides with the home-row (A–L) keys
 // used in Chord/Groove/Ear labs — those set klState.activeModule, where F is off.
@@ -19567,7 +19716,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-205'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-207'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -25274,11 +25423,7 @@ function renderTabSVG(item, small) {
       x1: x0, y1: y, x2: x0 + staffWidth, y2: y,
       class: 'notation-tab-string'
     }, svg);
-    // String label on the left
-    svgEl('text', {
-      x: x0 - 8, y: y + lineGap * 0.18,
-      class: 'notation-tab-string-label'
-    }, svg).textContent = stringNames[s - 1];
+    // (string letters intentionally omitted — real tabs rarely label every line, and it can give away the answer)
   }
 
   // Render based on kind
@@ -25910,7 +26055,7 @@ function buildMtRound(pick) {
     const rootMidi = 48 + Math.floor(Math.random() * 12); // C3 to B3
     const direction = (def.semis > 0 && Math.random() < 0.3) ? 'below' : 'above';
     return {
-      module: 'BUILD MODE', moduleClass: 'mod-build',
+      module: 'BUILD', moduleClass: 'mod-build',
       typeLabel: 'BUILD THE INTERVAL',
       prompt: 'Build a ' + def.label + ' ' + direction + ' ' + midiToNoteName(rootMidi).replace(/-?\d+$/, ''),
       isBuild: true,
