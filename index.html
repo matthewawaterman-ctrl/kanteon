@@ -807,6 +807,11 @@
   }
   .tap-zone.counting { border-color: var(--gold); border-style: solid; }
   .tap-zone.counting .tap-zone-label { color: var(--text3); }
+  .tap-zone.result { cursor: default; }
+  .tap-zone.result .tap-zone-beat { font-size: 40px; letter-spacing: 0; min-height: 56px; }
+  .tap-zone.result.result-correct .tap-zone-beat { color: var(--green); }
+  .tap-zone.result.result-wrong .tap-zone-beat { color: var(--red); }
+  .tap-zone.result .tap-zone-sub { color: var(--text); font-size: 15px; }
   /* === CHAT D: RHYTHM KEYBOARD + CALIBRATE — START === */
   /* Input hint shown above tap zone */
   .rhythm-input-hint {
@@ -7074,6 +7079,18 @@ function klRhyTapStop() {
     g.gain.setValueAtTime(Math.max(0.0001, g.gain.value), ctx.currentTime);
     g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.045);
     o.stop(ctx.currentTime + 0.07);
+  } catch (e) {}
+}
+// Short beep used to play the correct rhythm back on out-of-tries.
+function klRhyBeep(t, ctx) {
+  try {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'triangle'; o.frequency.value = 523;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.2, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(t); o.stop(t + 0.18);
   } catch (e) {}
 }
 function stopAllAudio() {
@@ -19414,7 +19431,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-195'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-196'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -21192,10 +21209,37 @@ function renderRhythmQ(q, body) {
     // and surface NEXT beneath the gold button instead.
     var _ft = document.getElementById('feedback-try-again'); if (_ft) _ft.style.display = 'none';
     var _fn = document.getElementById('feedback-next');      if (_fn) _fn.style.display = 'none';
+    // Move the verdict OFF the top bar and INTO the tap zone (the count-in space).
+    var _fbar = document.getElementById('feedback-bar'); if (_fbar) _fbar.classList.remove('show');
+    var _oot = !correct && questionAttempts >= MAX_ATTEMPTS;
+    var _lbl = document.getElementById('tap-label');
+    var _bt  = document.getElementById('tap-beat');
+    var _sb  = document.getElementById('tap-sub');
+    tapZone.classList.remove('armed', 'counting');
+    tapZone.classList.add('result', correct ? 'result-correct' : 'result-wrong');
+    if (_lbl) _lbl.textContent = 'TAP HERE';
+    if (_bt)  _bt.textContent  = correct ? 'CORRECT' : (_oot ? 'OUT OF TRIES' : 'NOT QUITE');
+    var _tl = MAX_ATTEMPTS - questionAttempts;
+    var _det = hits + '/' + beats + ' hit · ' + perfects + ' perfect' + (extraTaps ? ' · ' + extraTaps + ' extra' : '') + ' · ' + Math.round(score * 100) + '%';
+    if (_oot) _det = 'HERE IS THE ANSWER · ' + _det;
+    else if (!correct) _det += ' · ' + _tl + ' TR' + (_tl === 1 ? 'Y' : 'IES') + ' LEFT';
+    if (_sb) _sb.textContent = _det;
     if (correct) { showRhythmNext(); }
     else if (questionAttempts >= MAX_ATTEMPTS) { playBtn.style.display = 'none'; showRhythmNext(); }
   };
 
+  // Out-of-tries: "HERE IS THE ANSWER" plays the correct rhythm back with light-up.
+  function playRhythmAnswer() {
+    if (!onsetBeats || !onsetBeats.length) return;
+    const ctx = getAudio();
+    const start = ctx.currentTime + 0.35;
+    onsetBeats.forEach((o, i) => {
+      const t = start + o * beatInterval;
+      klRhyBeep(t, ctx);
+      setTimeout(() => klLmLightNote(onsetEventIdx[i]), Math.max(0, (t - ctx.currentTime) * 1000));
+    });
+  }
+  currentRevealAnswer = playRhythmAnswer;
   const playBtn = document.createElement('button');
   playBtn.className = 'play-btn';
   playBtn.innerHTML = '▶ COUNT IN &amp; TAP';
@@ -21218,7 +21262,7 @@ function renderRhythmQ(q, body) {
     const subEl    = document.getElementById('tap-sub');
     const labelEl  = document.getElementById('tap-label');
     tapZone.classList.add('counting');
-    tapZone.classList.remove('armed');
+    tapZone.classList.remove('armed', 'result', 'result-correct', 'result-wrong');
     if (subEl)   subEl.textContent  = 'COUNT-IN...';
     if (labelEl) labelEl.textContent = 'TAP HERE';
     if (beatEl)  beatEl.textContent  = '';
