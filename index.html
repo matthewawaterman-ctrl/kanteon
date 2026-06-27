@@ -19567,7 +19567,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-204'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-205'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -25336,11 +25336,20 @@ function renderTabSVG(item, small) {
                        ' t ' + lineGap + ' 0' +
                        ' t ' + lineGap + ' 0';
       svgEl('path', { d: wavePath, fill: 'none', stroke: 'var(--cyan)', 'stroke-width': 2, 'stroke-linecap': 'round' }, svg);
+    } else if (item.symbol === 'b') {
+      // Bend: ONE fret with an upward curved arrow + amount label (not two connected frets)
+      const cx = x0 + staffWidth * 0.4;
+      svgEl('text', { x: cx, y: y + lineGap * 0.22, class: 'notation-tab-fret', 'font-size': small ? 13 : 20 }, svg).textContent = '7';
+      const ax = cx + lineGap * 0.95, topY = y - lineGap * 1.9;
+      svgEl('path', { d: 'M ' + ax + ' ' + (y - lineGap * 0.15) + ' C ' + (ax + lineGap * 1.2) + ' ' + (y - lineGap * 0.2) + ', ' + (ax + lineGap * 1.5) + ' ' + (y - lineGap * 1.0) + ', ' + (ax + lineGap * 1.55) + ' ' + topY, fill: 'none', stroke: 'var(--cyan)', 'stroke-width': 2, 'stroke-linecap': 'round' }, svg);
+      const hx = ax + lineGap * 1.55;
+      svgEl('path', { d: 'M ' + (hx - lineGap * 0.3) + ' ' + (topY + lineGap * 0.38) + ' L ' + hx + ' ' + topY + ' L ' + (hx + lineGap * 0.3) + ' ' + (topY + lineGap * 0.38), fill: 'none', stroke: 'var(--cyan)', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, svg);
+      svgEl('text', { x: hx, y: topY - lineGap * 0.3, class: 'notation-tab-symbol', 'font-size': small ? 10 : 13, 'text-anchor': 'middle' }, svg).textContent = 'full';
     } else {
-      // h (hammer 5->7), p (pull 7->5), b (bend 7->9), / (slide up 5->7), \\ (slide down 5->3)
+      // h (hammer 5->7), p (pull 7->5), / (slide up 5->7), \\ (slide down 5->3)
       const isSlide = (item.symbol === '/' || item.symbol === '\\');
-      const f1 = (item.symbol === 'p' || item.symbol === 'b') ? '7' : '5';
-      const f2 = item.symbol === 'p' ? '5' : (item.symbol === 'b' ? '9' : (item.symbol === '\\' ? '3' : '7'));
+      const f1 = (item.symbol === 'p') ? '7' : '5';
+      const f2 = item.symbol === 'p' ? '5' : (item.symbol === '\\' ? '3' : '7');
       svgEl('text', { x: x1, y: y + lineGap * 0.22, class: 'notation-tab-fret', 'font-size': small ? 13 : 20 }, svg).textContent = f1;
       svgEl('text', { x: x2, y: y + lineGap * 0.22, class: 'notation-tab-fret', 'font-size': small ? 13 : 20 }, svg).textContent = f2;
       if (isSlide) {
