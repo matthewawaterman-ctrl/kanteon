@@ -7089,30 +7089,41 @@ function getAudio() {
 
 // Held tap tone for the rhythm module: on while a tap key/zone is held, off on release.
 let klRhyTapOsc = null, klRhyTapGain = null;
-function klRhyTapStart() {
-  const ctx = getAudio();
+// Persistent, pre-warmed tap oscillator. Created ONCE (during count-in) and left
+// running silently so the first tap has zero oscillator-creation latency — every tap
+// is just a fast gain ramp. It dies with the AudioContext (stopAllAudio closes it).
+function klRhyTapPrime() {
   if (klRhyTapOsc) return;
+  const ctx = getAudio();
   try {
     klRhyTapOsc = ctx.createOscillator();
     klRhyTapGain = ctx.createGain();
     klRhyTapOsc.type = 'triangle';
     klRhyTapOsc.frequency.value = 330;
     klRhyTapGain.gain.setValueAtTime(0, ctx.currentTime);
-    klRhyTapGain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + 0.003);
     klRhyTapOsc.connect(klRhyTapGain); klRhyTapGain.connect(ctx.destination);
     klRhyTapOsc.start();
   } catch (e) { klRhyTapOsc = null; klRhyTapGain = null; }
 }
-function klRhyTapStop() {
-  if (!klRhyTapOsc) return;
+function klRhyTapStart() {
+  klRhyTapPrime();
+  if (!klRhyTapGain) return;
   const ctx = getAudio();
-  const o = klRhyTapOsc, g = klRhyTapGain;
-  klRhyTapOsc = null; klRhyTapGain = null;
   try {
-    g.gain.cancelScheduledValues(ctx.currentTime);
-    g.gain.setValueAtTime(Math.max(0.0001, g.gain.value), ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.045);
-    o.stop(ctx.currentTime + 0.07);
+    const now = ctx.currentTime;
+    klRhyTapGain.gain.cancelScheduledValues(now);
+    klRhyTapGain.gain.setValueAtTime(klRhyTapGain.gain.value, now);
+    klRhyTapGain.gain.linearRampToValueAtTime(0.18, now + 0.0015);  // ~1.5ms attack: tight, pop-free
+  } catch (e) {}
+}
+function klRhyTapStop() {
+  if (!klRhyTapGain) return;
+  const ctx = getAudio();
+  try {
+    const now = ctx.currentTime;
+    klRhyTapGain.gain.cancelScheduledValues(now);
+    klRhyTapGain.gain.setValueAtTime(Math.max(0.0001, klRhyTapGain.gain.value), now);
+    klRhyTapGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.03);  // quick release; osc keeps running
   } catch (e) {}
 }
 // Short beep used to play the correct rhythm back on out-of-tries.
@@ -19497,7 +19508,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-200'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-201'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -21202,7 +21213,7 @@ function renderRhythmQ(q, body) {
   const beats = onsetBeats ? onsetBeats.length : (parseInt(q.tapCount) || 4);
   const beatInterval = 60 / bpm; // seconds per beat
   let expectedTimes = null;      // real per-note tap times once armed (notation mode)
-  const tolerances = { beginner: 0.200, intermediate: 0.160, advanced: 0.120, expert: 0.110 };
+  const tolerances = { beginner: 0.220, intermediate: 0.180, advanced: 0.140, expert: 0.130 };
   const tolerance = tolerances[currentLevel] || 0.150;
 
   const bpmRow = document.createElement('div');
@@ -21342,6 +21353,7 @@ function renderRhythmQ(q, body) {
     if (beatEl)  beatEl.textContent  = '';
 
     const ctx = getAudio();
+    klRhyTapPrime();              // warm the tap tone during the count-in
     const interval = 60 / bpm;
     const countBeats = meterBeats;  // count in matches the time signature
     const startT = ctx.currentTime + 0.15;
