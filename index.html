@@ -7105,12 +7105,13 @@ function klRhyTapPrime() {
     klRhyTapOsc.start();
   } catch (e) { klRhyTapOsc = null; klRhyTapGain = null; }
 }
-function klRhyTapStart() {
+function klRhyTapStart(freq) {
   klRhyTapPrime();
   if (!klRhyTapGain) return;
   const ctx = getAudio();
   try {
     const now = ctx.currentTime;
+    if (freq && klRhyTapOsc) klRhyTapOsc.frequency.setValueAtTime(freq, now);  // play the melody pitch
     klRhyTapGain.gain.cancelScheduledValues(now);
     klRhyTapGain.gain.setValueAtTime(klRhyTapGain.gain.value, now);
     klRhyTapGain.gain.linearRampToValueAtTime(0.18, now + 0.0015);  // ~1.5ms attack: tight, pop-free
@@ -7127,10 +7128,10 @@ function klRhyTapStop() {
   } catch (e) {}
 }
 // Short beep used to play the correct rhythm back on out-of-tries.
-function klRhyBeep(t, ctx) {
+function klRhyBeep(t, ctx, freq) {
   try {
     const o = ctx.createOscillator(), g = ctx.createGain();
-    o.type = 'triangle'; o.frequency.value = 523;
+    o.type = 'triangle'; o.frequency.value = freq || 523;
     g.gain.setValueAtTime(0, t);
     g.gain.linearRampToValueAtTime(0.2, t + 0.005);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
@@ -18965,103 +18966,144 @@ function klGrooveGrade() {
 // Build REAL rhythmic notation (time signature, noteheads / stems / beams / rests).
 function klGrooveNotationSVG(meta, barBeats, ts) {
   barBeats = barBeats || 4; ts = ts || [4, 4];
-  const tsW = 34, beatW = 84, headY = 82, stemTopY = 30, H = 120;
-  const leftPad = 30 + tsW; // room for the time signature at the left
+  const pitched = meta.some(e => e.pitch != null && !e.rest);
+  const tsW = 30, beatW = 84, H = 126;
+  const clefW = pitched ? 30 : 0;
+  const legacyHeadY = 82;
+  const leftPad = 26 + clefW + tsW;
   const W = leftPad + barBeats * beatW + 30;
   const xOf = bp => leftPad + bp * beatW;
-  let notes = '', beams = '';
   const stemX = bp => xOf(bp) + 7;
+  // staff geometry (pitched mode): 5 lines E4 G4 B4 D5 F5, bottom-up
+  const lineGap = 11, E4Y = 78;
+  const staffLineY = [0, 1, 2, 3, 4].map(i => E4Y - i * lineGap);
+  const midY = staffLineY[2];
+  const PC2STEP = { 0:0, 1:0, 2:1, 3:1, 4:2, 5:3, 6:3, 7:4, 8:4, 9:5, 10:5, 11:6 };
+  const diatonic = midi => (Math.floor(midi / 12) - 1) * 7 + PC2STEP[((midi % 12) + 12) % 12];
+  const E4DIA = diatonic(64);
+  const pitchY = midi => E4Y - (diatonic(midi) - E4DIA) * (lineGap / 2);
+  const noteY = e => (pitched && e.pitch != null) ? pitchY(e.pitch) : legacyHeadY;
+  const restY = pitched ? midY : legacyHeadY;
+  const STEMLEN = pitched ? 32 : 52;
   const isDotted = d => (d === 0.75 || d === 1.5 || d === 3);
-  const subBeams = d => (d <= 0.25 + 1e-6 ? 2 : 1);   // 2 beams/flags for 16ths, 1 for 8ths
-  // Beam groups: runs of consecutive non-rest sub-beat notes (d < 1).
-  const beamed = new Set();
-  const SECG = 8;  // vertical gap between primary and secondary beam
-  {
-    // Real beaming rule: beam WITHIN the beat only — never one beam across the bar.
-    // Simple meters beam per quarter; compound (6/8, 9/8, 12/8) per dotted-quarter.
-    const num = (ts && ts[0]) || 4, den = (ts && ts[1]) || 4;
-    const beamUnit = (den === 8 && num % 3 === 0) ? 1.5 : 1.0;
-    const unitOf = on => Math.floor((on + 1e-6) / beamUnit);
-    const groups = [];
-    let run = [], runUnit = -1;
+  const subBeams = d => (d <= 0.25 + 1e-6 ? 2 : 1);
+
+  // Beam groups: beam WITHIN the beat only (compound meters per dotted-quarter).
+  const num = (ts && ts[0]) || 4, den = (ts && ts[1]) || 4;
+  const beamUnit = (den === 8 && num % 3 === 0) ? 1.5 : 1.0;
+  const unitOf = on => Math.floor((on + 1e-6) / beamUnit);
+  const groups = [];
+  { let run = [], runUnit = -1;
     const flushRun = () => { if (run.length) groups.push(run.slice()); run = []; };
     for (let k = 0; k < meta.length; k++) {
       const e = meta[k];
-      if (e.rest || e.d >= 1) { flushRun(); continue; }   // break at rests & beat-or-longer notes
+      if (e.rest || e.d >= 1) { flushRun(); continue; }
       const u = unitOf(e.onset);
-      if (run.length && u !== runUnit) flushRun();          // break at the beat boundary
+      if (run.length && u !== runUnit) flushRun();
       run.push(k); runUnit = u;
     }
     flushRun();
-    groups.forEach(grp => {
-      if (grp.length < 2) return;
-      grp.forEach(k => beamed.add(k));
-      const xA = stemX(meta[grp[0]].onset), xB = stemX(meta[grp[grp.length - 1]].onset);
-      beams += '<line x1="' + xA + '" y1="' + stemTopY + '" x2="' + xB + '" y2="' + stemTopY + '" stroke="#cdbb8a" stroke-width="5" stroke-linecap="round"/>';
-      let sp = 0;
-      while (sp < grp.length) {
-        if (meta[grp[sp]].d <= 0.25 + 1e-6) {
-          let ep = sp; while (ep + 1 < grp.length && meta[grp[ep + 1]].d <= 0.25 + 1e-6) ep++;
-          const y2b = stemTopY + SECG;
-          if (ep > sp) {
-            beams += '<line x1="' + stemX(meta[grp[sp]].onset) + '" y1="' + y2b + '" x2="' + stemX(meta[grp[ep]].onset) + '" y2="' + y2b + '" stroke="#cdbb8a" stroke-width="5" stroke-linecap="round"/>';
-          } else {
-            const xc = stemX(meta[grp[sp]].onset), dir = (sp > 0 ? -1 : 1);
-            beams += '<line x1="' + xc + '" y1="' + y2b + '" x2="' + (xc + dir * 12) + '" y2="' + y2b + '" stroke="#cdbb8a" stroke-width="5" stroke-linecap="round"/>';
-          }
-          sp = ep + 1;
-        } else sp++;
-      }
-    });
   }
-  // each event
+  const beamed = new Set(), beamYOf = {}, SECG = 8;
+  let beams = '';
+  groups.forEach(grp => {
+    if (grp.length < 2) return;
+    const beamY = Math.min.apply(null, grp.map(k => noteY(meta[k]))) - STEMLEN;
+    grp.forEach(k => { beamed.add(k); beamYOf[k] = beamY; });
+    const xA = stemX(meta[grp[0]].onset), xB = stemX(meta[grp[grp.length - 1]].onset);
+    beams += '<line x1="' + xA + '" y1="' + beamY + '" x2="' + xB + '" y2="' + beamY + '" stroke="#cdbb8a" stroke-width="5" stroke-linecap="round"/>';
+    let sp = 0;
+    while (sp < grp.length) {
+      if (meta[grp[sp]].d <= 0.25 + 1e-6) {
+        let ep = sp; while (ep + 1 < grp.length && meta[grp[ep + 1]].d <= 0.25 + 1e-6) ep++;
+        const y2b = beamY + SECG;
+        if (ep > sp) beams += '<line x1="' + stemX(meta[grp[sp]].onset) + '" y1="' + y2b + '" x2="' + stemX(meta[grp[ep]].onset) + '" y2="' + y2b + '" stroke="#cdbb8a" stroke-width="5" stroke-linecap="round"/>';
+        else { const xc = stemX(meta[grp[sp]].onset), dir = (sp > 0 ? -1 : 1); beams += '<line x1="' + xc + '" y1="' + y2b + '" x2="' + (xc + dir * 12) + '" y2="' + y2b + '" stroke="#cdbb8a" stroke-width="5" stroke-linecap="round"/>'; }
+        sp = ep + 1;
+      } else sp++;
+    }
+  });
+
+  let notes = '';
   meta.forEach((e, idx) => {
-    const x = xOf(e.onset), cy = headY;
+    const x = xOf(e.onset);
     let g = '<g id="kl-gnote-' + idx + '" class="kl-gnote">';
     if (e.rest) {
-      if (e.d >= 2) { // half rest — block sitting on a ledger
+      const cy = restY;
+      if (e.d >= 2) {
         g += '<rect x="' + (x - 10) + '" y="' + (cy - 16) + '" width="20" height="7" fill="currentColor"/>' +
              '<line x1="' + (x - 14) + '" y1="' + (cy - 9) + '" x2="' + (x + 14) + '" y2="' + (cy - 9) + '" stroke="currentColor" stroke-width="2"/>';
-      } else if (e.d === 1) { // quarter rest — zigzag
+      } else if (e.d === 1) {
         g += '<path d="M' + (x - 5) + ',' + (cy - 26) + ' L' + (x + 5) + ',' + (cy - 16) +
              ' L' + (x - 4) + ',' + (cy - 7) + ' L' + (x + 6) + ',' + (cy + 4) +
              '" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round"/>' +
              '<path d="M' + (x + 6) + ',' + (cy + 4) + ' q-9,-4 -2,-12" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/>';
-      } else { // eighth / sixteenth rest — slash + hook(s)
+      } else {
         g += '<line x1="' + (x + 6) + '" y1="' + (cy - 22) + '" x2="' + (x - 5) + '" y2="' + (cy + 2) + '" stroke="currentColor" stroke-width="3"/>' +
              '<circle cx="' + (x + 4) + '" cy="' + (cy - 20) + '" r="4" fill="currentColor"/>';
         if (e.d <= 0.25 + 1e-6) g += '<circle cx="' + (x + 1) + '" cy="' + (cy - 9) + '" r="4" fill="currentColor"/>';
       }
     } else {
-      const open = e.d >= 2; // half/whole = open head
+      const cy = noteY(e);
+      const open = e.d >= 2;
+      const stemTop = beamed.has(idx) ? beamYOf[idx] : (cy - STEMLEN);
       g += '<ellipse cx="' + x + '" cy="' + cy + '" rx="8.5" ry="6.4" transform="rotate(-20 ' + x + ' ' + cy + ')" ' +
         (open ? 'fill="none" stroke="currentColor" stroke-width="2.6"' : 'fill="currentColor"') + '/>';
-      g += '<line x1="' + (x + 7) + '" y1="' + (cy - 2) + '" x2="' + (x + 7) + '" y2="' + stemTopY + '" stroke="currentColor" stroke-width="2.4"/>';
+      g += '<line x1="' + (x + 7) + '" y1="' + (cy - 2) + '" x2="' + (x + 7) + '" y2="' + stemTop + '" stroke="currentColor" stroke-width="2.4"/>';
       if (isDotted(e.d)) g += '<circle cx="' + (x + 14) + '" cy="' + (cy - 3) + '" r="2.5" fill="currentColor"/>';
-      // a LONE sub-beat note (not beamed) gets flag(s): 1 for 8th, 2 for 16th
       if (e.d < 1 && !beamed.has(idx)) {
         const nf = subBeams(e.d);
-        for (let f = 0; f < nf; f++) {
-          const fy = stemTopY + f * 9;
-          g += '<path d="M' + (x + 7) + ',' + fy + ' q12,4 8,16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>';
-        }
+        for (let f = 0; f < nf; f++) { const fy = stemTop + f * 9; g += '<path d="M' + (x + 7) + ',' + fy + ' q12,4 8,16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>'; }
       }
     }
     g += '</g>';
     notes += g;
   });
-  // time signature: two stacked numbers at the left of the staff
-  const tsX = 20 + tsW / 2;
-  const tsSVG = '<text x="' + tsX + '" y="' + (headY - 9) + '" class="kl-groove-ts" text-anchor="middle">' + ts[0] + '</text>' +
-                '<text x="' + tsX + '" y="' + (headY + 19) + '" class="kl-groove-ts" text-anchor="middle">' + ts[1] + '</text>';
-  // beat ticks 0..barBeats (accent the bar lines)
-  let ticks = '';
-  for (let b = 0; b <= barBeats; b++) {
-    ticks += '<line x1="' + (leftPad + b * beatW) + '" y1="' + (headY - 4) + '" x2="' + (leftPad + b * beatW) + '" y2="' + (headY + 4) + '" stroke="rgba(255,255,255,0.22)" stroke-width="' + (b % barBeats === 0 ? 2.5 : 1) + '"/>';
+
+  let staff = '', clef = '', ticks = '';
+  if (pitched) {
+    staffLineY.forEach(y => { staff += '<line x1="' + (leftPad - 6) + '" y1="' + y + '" x2="' + (W - 12) + '" y2="' + y + '" stroke="rgba(255,255,255,0.18)" stroke-width="1.4"/>'; });
+    clef = '<text x="20" y="' + (midY + 20) + '" class="kl-groove-clef" style="font-size:48px" fill="#cdbb8a">\uD834\uDD1E</text>';
+    for (let b = 0; b <= barBeats; b += barBeats) {
+      const tx = leftPad + b * beatW;
+      ticks += '<line x1="' + tx + '" y1="' + staffLineY[4] + '" x2="' + tx + '" y2="' + staffLineY[0] + '" stroke="rgba(255,255,255,0.30)" stroke-width="2.2"/>';
+    }
+  } else {
+    staff = '<line x1="' + (leftPad - 6) + '" y1="' + legacyHeadY + '" x2="' + (W - 12) + '" y2="' + legacyHeadY + '" stroke="rgba(255,255,255,0.18)" stroke-width="2"/>';
+    for (let b = 0; b <= barBeats; b++) {
+      ticks += '<line x1="' + (leftPad + b * beatW) + '" y1="' + (legacyHeadY - 4) + '" x2="' + (leftPad + b * beatW) + '" y2="' + (legacyHeadY + 4) + '" stroke="rgba(255,255,255,0.22)" stroke-width="' + (b % barBeats === 0 ? 2.5 : 1) + '"/>';
+    }
   }
+  const tsX = (pitched ? 26 + clefW : 20) + tsW / 2;
+  const tsCy = pitched ? midY : legacyHeadY;
+  const tsSVG = '<text x="' + tsX + '" y="' + (tsCy - 1) + '" class="kl-groove-ts" text-anchor="middle">' + ts[0] + '</text>' +
+                '<text x="' + tsX + '" y="' + (tsCy + 22) + '" class="kl-groove-ts" text-anchor="middle">' + ts[1] + '</text>';
   return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="kl-groove-svg" xmlns="http://www.w3.org/2000/svg">' +
-    '<line x1="' + (leftPad - 6) + '" y1="' + headY + '" x2="' + (W - 12) + '" y2="' + headY + '" stroke="rgba(255,255,255,0.18)" stroke-width="2"/>' +
-    tsSVG + ticks + beams + notes + '</svg>';
+    staff + clef + tsSVG + ticks + beams + notes + '</svg>';
+}
+// Assign a simple monophonic pentatonic melody (one pitch per onset) so tapping
+// performs a tune and pitch contour shows on the staff. Deterministic per question.
+function klRhyMelody(events, onsetEventIdx, seed) {
+  const scale = [64, 67, 69, 72, 74, 76];  // E4 G4 A4 C5 D5 E5 = C-major pentatonic, fits the staff
+  const rng = klRhyRng(((seed || 1) ^ 0x6d2b79f5) >>> 0);
+  let idx = 2 + Math.floor(rng() * 2);
+  const n = onsetEventIdx.length, pitches = [];
+  for (let i = 0; i < n; i++) {
+    idx = Math.max(0, Math.min(scale.length - 1, idx));
+    pitches.push(scale[idx]);
+    events[onsetEventIdx[i]].pitch = scale[idx];
+    const r = rng();
+    let step;
+    if (r < 0.50) step = (rng() < 0.5 ? -1 : 1);
+    else if (r < 0.72) step = (rng() < 0.5 ? -2 : 2);
+    else if (r < 0.86) step = 0;
+    else step = (rng() < 0.5 ? -1 : 1);
+    idx += step;
+    if (idx < 0) idx = 1;
+    if (idx > scale.length - 1) idx = scale.length - 2;
+  }
+  if (n > 0) { events[onsetEventIdx[n - 1]].pitch = 72; pitches[n - 1] = 72; }  // resolve to tonic
+  return pitches;
 }
 function klRenderGroovePuzzle(p) {
   document.getElementById('kidlab').classList.add('kl-playing');
@@ -19517,7 +19559,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-202'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-203'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -21180,9 +21222,10 @@ function klRhythmNotation(visual, meterBeats, ts, level, seed) {
     }
   }
   if (!parsed) return null;
+  var pitches = klRhyMelody(parsed.events, parsed.onsetEventIdx, seed || 1);
   var svg = klGrooveNotationSVG(parsed.events, meterBeats, ts);
   svg = svg.split('id="kl-gnote-').join('id="lm-gnote-'); // namespace so it can't collide
-  return { svg: svg, onsets: parsed.onsets, onsetEventIdx: parsed.onsetEventIdx };
+  return { svg: svg, onsets: parsed.onsets, onsetEventIdx: parsed.onsetEventIdx, pitches: pitches };
 }
 function klLmLightNote(idx) {
   var g = document.getElementById('lm-gnote-' + idx);
@@ -21219,6 +21262,10 @@ function renderRhythmQ(q, body) {
   const bpm = 80;
   const onsetBeats = notation ? notation.onsets : null;
   const onsetEventIdx = notation ? notation.onsetEventIdx : null;
+  const midiToFreq = m => 440 * Math.pow(2, (m - 69) / 12);
+  const melodyFreqs = (notation && notation.pitches && notation.pitches.length) ? notation.pitches.map(midiToFreq) : null;
+  let tapSeq = 0;  // each tap plays the next melody pitch (Option A: tapping performs the tune)
+  function tapToneOn() { klRhyTapStart(melodyFreqs ? melodyFreqs[tapSeq % melodyFreqs.length] : 330); tapSeq++; }
   const beats = onsetBeats ? onsetBeats.length : (parseInt(q.tapCount) || 4);
   const beatInterval = 60 / bpm; // seconds per beat
   let expectedTimes = null;      // real per-note tap times once armed (notation mode)
@@ -21329,7 +21376,7 @@ function renderRhythmQ(q, body) {
     const start = ctx.currentTime + 0.35;
     onsetBeats.forEach((o, i) => {
       const t = start + o * beatInterval;
-      klRhyBeep(t, ctx);
+      klRhyBeep(t, ctx, melodyFreqs ? melodyFreqs[i] : 523);
       setTimeout(() => klLmLightNote(onsetEventIdx[i]), Math.max(0, (t - ctx.currentTime) * 1000));
     });
   }
@@ -21348,6 +21395,7 @@ function renderRhythmQ(q, body) {
     armed = false;
     tapResults = [];
     extraTaps = 0;
+    tapSeq = 0;
     rhythmDone = false;
     updateDots();
 
@@ -21490,10 +21538,10 @@ function renderRhythmQ(q, body) {
     // No early scoring: wait for the full bar (scoringTimeout) so a tap over a
     // trailing rest still counts. The message can't appear until the bar ends.
   };
-  tapZone.addEventListener('mousedown', () => { onTap(); if (armed) klRhyTapStart(); });
+  tapZone.addEventListener('mousedown', () => { onTap(); if (armed) tapToneOn(); });
   tapZone.addEventListener('mouseup', klRhyTapStop);
   tapZone.addEventListener('mouseleave', klRhyTapStop);
-  tapZone.addEventListener('touchstart', (e) => { e.preventDefault(); onTap(); if (armed) klRhyTapStart(); }, { passive: false });
+  tapZone.addEventListener('touchstart', (e) => { e.preventDefault(); onTap(); if (armed) tapToneOn(); }, { passive: false });
   tapZone.addEventListener('touchend', (e) => { e.preventDefault(); klRhyTapStop(); }, { passive: false });
   tapZone.addEventListener('touchcancel', klRhyTapStop);
   // Space/Enter: tap when armed (with held tap-tone) or start the count-in when idle.
@@ -21505,7 +21553,7 @@ function renderRhythmQ(q, body) {
     if (e.code !== 'Space') { const f = document.activeElement; if (f && f.tagName === 'BUTTON') f.blur(); }
     e.preventDefault();
     if (e.repeat) return;            // ignore auto-repeat; one hold is one tap
-    if (armed) { onTap(); klRhyTapStart(); }
+    if (armed) { onTap(); tapToneOn(); }
     else if (!playBtn.disabled && playBtn.style.display !== 'none') { playBtn.click(); }
   }
   function onRhythmKeyUp(e) {
