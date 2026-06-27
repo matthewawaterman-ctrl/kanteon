@@ -19461,7 +19461,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-197'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-198'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -21161,7 +21161,7 @@ function renderRhythmQ(q, body) {
   const beats = onsetBeats ? onsetBeats.length : (parseInt(q.tapCount) || 4);
   const beatInterval = 60 / bpm; // seconds per beat
   let expectedTimes = null;      // real per-note tap times once armed (notation mode)
-  const tolerances = { beginner: 0.150, intermediate: 0.100, advanced: 0.075 };
+  const tolerances = { beginner: 0.200, intermediate: 0.160, advanced: 0.120 };
   const tolerance = tolerances[currentLevel] || 0.150;
 
   const bpmRow = document.createElement('div');
@@ -21229,8 +21229,8 @@ function renderRhythmQ(q, body) {
       tapResults.push({ status: 'miss', deltaMs: null });
     }
     const hits = tapResults.filter(r => r.status === 'perfect' || r.status === 'close').length;
-    const score = Math.max(0, (hits - extraTaps) / beats);
-    const correct = score >= 0.7;
+    const score = Math.max(0, (hits - extraTaps * 0.5) / beats);
+    const correct = score >= 0.6;
     const perfects = tapResults.filter(r => r.status === 'perfect').length;
     const xpMod = correct ? (score) : 0;
     updateDots();
