@@ -1990,6 +1990,33 @@
     text-shadow: 0 0 6px rgba(240,192,64,0.6);
   }
   .build-target-marker.show { display: block; }
+  /* Fixed ROOT marker — the reference tone, always a real chord tone, not draggable */
+  .build-root-marker {
+    position: absolute; top: 26px;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #ffe39a 0%, #f0c040 55%, #c79420 100%);
+    border: 2px solid rgba(255,255,255,0.55);
+    box-shadow: 0 0 12px rgba(240,192,64,0.7), inset 0 1px 0 rgba(255,255,255,0.5);
+    transform: translateX(-50%);
+    z-index: 5; pointer-events: none;
+  }
+  .build-root-marker::after {
+    content: 'ROOT'; position: absolute; top: -16px; left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--font-display); font-size: 11px; font-weight: 900;
+    color: var(--gold); letter-spacing: 1.5px;
+    text-shadow: 0 0 6px rgba(240,192,64,0.6);
+  }
+  /* Chord tones — several slidable markers; only the active one is labelled YOU */
+  .build-cmarker { width: 24px; height: 24px; opacity: 0.9; }
+  .build-cmarker::after,
+  .build-cmarker.correct::after,
+  .build-cmarker.wrong::after { content: ''; }
+  .build-cmarker.active {
+    width: 28px; height: 28px; opacity: 1;
+    box-shadow: 0 0 16px rgba(124,111,247,0.95), inset 0 1px 0 rgba(255,255,255,0.4);
+  }
+  .build-cmarker.active::after { content: 'YOU'; color: #9b8fff; }
   /* Slider */
   .build-slider-row {
     display: flex; align-items: center; gap: 12px;
@@ -8325,7 +8352,9 @@ const buildState = {
   // markerSemis is kept at 0 so existing (markerSemis + markerCents/100) math holds.
   currentQ:  null,
   markerSemis: 0,
-  markerCents: 0,              // total cents above/below the root (continuous, ear-based)
+  markerCents: 0,              // total cents above/below the root (single-marker modes)
+  chordCents: [],             // one cents value per slidable note (chord mode — all at once)
+  activeMarker: 0,            // which slidable chord marker is being dragged
   attempts: 0,
   answered: false,
   score: { correct: 0, wrong: 0, xp: 0 },
@@ -8590,6 +8619,7 @@ function generateBuildQuestion() {
       kind: 'chords', id: def.id, label: def.label, mnemonic: def.mnemonic || '',
       rootMidi, direction: 'above',
       targets: def.ints.slice(1), noteIdx: 0, builtCents: [], harmonic: true, missed: false,
+      multiMarker: true,        // root fixed + every other tone slidable, all at once
     };
   }
   if (pick.kind === 'scales') {
@@ -8612,20 +8642,34 @@ function renderBuildQuestion(q) {
   if (q.kind === 'intervals') {
     const dirWord = q.direction === 'above' ? 'above' : 'below';
     html = 'Build a <span class="v">' + q.label + '</span> ' + dirWord + ' <span class="v">' + rootName + '</span>';
+  } else if (q.multiMarker) {
+    // Chord — root is fixed, build every other tone at once.
+    const n = q.targets.length;
+    html = 'Build a <span class="v">' + q.label + ' chord</span> from <span class="v">' + rootName + '</span>'
+         + '<div class="build-subprompt">Root is fixed — drag the <span class="vm">' + n + '</span> other note'
+         + (n === 1 ? '' : 's') + ' into place</div>';
   } else {
-    const kindWord = q.kind === 'chords' ? '' : ' scale';
+    // Scale — one degree at a time, climbing.
     const total = q.targets.length;
     const step = (q.noteIdx || 0) + 1;
     const noteName = buildIntervalName(buildCurTarget());
-    html = 'Build a <span class="v">' + q.label + kindWord + '</span> from <span class="v">' + rootName + '</span>'
+    html = 'Build a <span class="v">' + q.label + ' scale</span> from <span class="v">' + rootName + '</span>'
          + '<div class="build-subprompt">Note <span class="vm">' + step + '</span> of <span class="vm">' + total
          + '</span> — the <span class="vm">' + noteName + '</span></div>';
   }
   prompt.innerHTML = html;
 
-  // Marker resets to the root each note
+  // Reset markers. Chord markers start spread out (whole-step apart) so each is grabbable;
+  // their start positions deliberately do NOT match the answer.
   buildState.markerSemis = 0;
   buildState.markerCents = 0;
+  if (q.multiMarker) {
+    buildState.chordCents = q.targets.map((_, i) => (i + 1) * 200);
+    buildState.activeMarker = 0;
+  } else {
+    buildState.chordCents = [];
+    buildState.activeMarker = 0;
+  }
   updateBuildSliderReadout();
   drawBuildStrip();
   hideBuildTargetMarker();
@@ -8655,33 +8699,57 @@ function updateBuildSliderReadout() {
   out.textContent = (totalCents >= 0 ? '+' : '') + totalCents + '\u00a2';
 }
 
-// Drag the big ruler itself to build the note by ear (no second slider, no labels).
+// Drag the big ruler itself to build the note(s) by ear (no second slider, no labels).
 function wireBuildRulerDrag() {
   const ruler = document.getElementById('build-ruler');
   if (!ruler || ruler._dragWired) return;
   ruler._dragWired = true;
   let dragging = false;
-  const setFromX = (clientX) => {
-    if (buildState.answered) return;
+  const xToCents = (clientX) => {
     const rect = ruler.getBoundingClientRect();
-    if (!rect.width) return;
+    if (!rect.width) return null;
     let f = (clientX - rect.left) / rect.width;
     f = Math.max(0, Math.min(1, f));
     const range = ruler._range || BUILD_STRIP_RANGE;
-    const semis = -range + f * 2 * range;
-    buildState.markerSemis = 0;
-    buildState.markerCents = Math.round(semis * 100);
+    return Math.round((-range + f * 2 * range) * 100);
+  };
+  const moveActive = (clientX) => {
+    if (buildState.answered) return;
+    const cents = xToCents(clientX);
+    if (cents == null) return;
+    const q = buildState.currentQ;
+    if (q && q.multiMarker) {
+      buildState.chordCents[buildState.activeMarker] = cents;
+    } else {
+      buildState.markerSemis = 0;
+      buildState.markerCents = cents;
+    }
     updateBuildSliderReadout();
     positionBuildMarker();
+  };
+  const pickNearest = (clientX) => {
+    const q = buildState.currentQ;
+    if (!q || !q.multiMarker) return;
+    const cents = xToCents(clientX);
+    if (cents == null) return;
+    let best = 0, bestD = Infinity;
+    buildState.chordCents.forEach((c, i) => { const d = Math.abs(c - cents); if (d < bestD) { bestD = d; best = i; } });
+    buildState.activeMarker = best;
   };
   ruler.addEventListener('pointerdown', (e) => {
     if (buildState.answered) return;
     dragging = true;
     try { ruler.setPointerCapture(e.pointerId); } catch (err) {}
-    setFromX(e.clientX);
+    const q = buildState.currentQ;
+    if (q && q.multiMarker) {
+      pickNearest(e.clientX);   // grab the closest note (no yank) — then drag to move it
+      positionBuildMarker();
+    } else {
+      moveActive(e.clientX);    // single marker: jump straight to where you tapped
+    }
     e.preventDefault();
   });
-  ruler.addEventListener('pointermove', (e) => { if (dragging) setFromX(e.clientX); });
+  ruler.addEventListener('pointermove', (e) => { if (dragging) moveActive(e.clientX); });
   ruler.addEventListener('pointerup',   () => { dragging = false; });
   ruler.addEventListener('pointercancel', () => { dragging = false; });
 }
@@ -8737,35 +8805,59 @@ function drawBuildStrip() {
   ruler._range = range;
   ruler._totalSpan = totalSpan;
 
-  // Target ghost marker (hidden by default — shown after submit)
+  // Fixed ROOT marker at 0 — always shown; it's the chord/interval reference and a real chord tone.
+  const rootM = document.createElement('div');
+  rootM.className = 'build-root-marker';
+  rootM.style.left = '50%';
+  ruler.appendChild(rootM);
+
+  // Target ghost marker (single-marker modes; hidden until reveal)
   const target = document.createElement('div');
   target.className = 'build-target-marker';
   target.id = 'build-target-marker';
   ruler.appendChild(target);
 
-  // User marker
-  const marker = document.createElement('div');
-  marker.className = 'build-marker';
-  marker.id = 'build-marker';
-  ruler.appendChild(marker);
+  if (q.multiMarker) {
+    // One slidable marker per non-root chord tone — build them all at once.
+    buildState.chordCents.forEach((c, i) => {
+      const m = document.createElement('div');
+      m.className = 'build-marker build-cmarker' + (i === buildState.activeMarker ? ' active' : '');
+      m.dataset.idx = i;
+      ruler.appendChild(m);
+    });
+  } else {
+    const marker = document.createElement('div');
+    marker.className = 'build-marker';
+    marker.id = 'build-marker';
+    ruler.appendChild(marker);
+  }
 
   positionBuildMarker();
+}
+
+function buildPlaceMarker(el, cents, ruler) {
+  const range = ruler._range;
+  let semis = cents / 100;
+  if (semis < -range) semis = -range;
+  if (semis > range) semis = range;
+  el.style.left = ((semis + range) / ruler._totalSpan * 100) + '%';
 }
 
 function positionBuildMarker() {
   const q = buildState.currentQ;
   if (!q) return;
   const ruler = document.getElementById('build-ruler');
-  const marker = document.getElementById('build-marker');
-  if (!ruler || !marker || !ruler._range) return;
-  const range = ruler._range;
-  // Total offset in semitones (incl cents)
-  const totalSemis = buildState.markerSemis + (buildState.markerCents / 100);
-  let clamped = totalSemis;
-  if (clamped < -range) clamped = -range;
-  if (clamped > range) clamped = range;
-  const pct = ((clamped + range) / ruler._totalSpan) * 100;
-  marker.style.left = pct + '%';
+  if (!ruler || !ruler._range) return;
+  if (q.multiMarker) {
+    ruler.querySelectorAll('.build-cmarker').forEach(el => {
+      const i = +el.dataset.idx;
+      buildPlaceMarker(el, buildState.chordCents[i], ruler);
+      el.classList.toggle('active', i === buildState.activeMarker);
+    });
+  } else {
+    const marker = document.getElementById('build-marker');
+    if (marker) buildPlaceMarker(marker, buildState.markerSemis * 100 + buildState.markerCents, ruler);
+  }
 }
 
 function showBuildTargetMarker(targetSemis) {
@@ -8813,10 +8905,16 @@ window.playBuildYours = function() {
   const ctx = getAudio();
   const t0 = ctx.currentTime + 0.05;
   const rootFreq = midiFreq(q.rootMidi);
-  // root + notes already locked in + the current marker (in cents above root)
-  const centsList = [0];
-  for (let i = 0; i < (q.noteIdx || 0); i++) centsList.push(q.builtCents[i]);
-  centsList.push(buildState.markerSemis * 100 + buildState.markerCents);
+  let centsList;
+  if (q.multiMarker) {
+    // root + every note you've placed — the chord as it stands
+    centsList = [0].concat(buildState.chordCents);
+  } else {
+    // root + notes already locked in + the current marker
+    centsList = [0];
+    for (let i = 0; i < (q.noteIdx || 0); i++) centsList.push(q.builtCents[i]);
+    centsList.push(buildState.markerSemis * 100 + buildState.markerCents);
+  }
   if (q.harmonic) {
     centsList.forEach(c => playTone(rootFreq * Math.pow(2, c / 1200), t0, 1.6, ctx, 0.22, 'piano'));
   } else {
@@ -8839,6 +8937,8 @@ window.submitBuildAnswer = function() {
   if (!q || buildState.answered) return;
   buildState.attempts++;
 
+  if (q.multiMarker) { submitBuildChord(q); refreshBuildScore(); return; }
+
   const userCents   = buildState.markerSemis * 100 + buildState.markerCents;
   const targetCents = buildCurTarget() * 100;
   const errCents    = userCents - targetCents;
@@ -8858,7 +8958,6 @@ window.submitBuildAnswer = function() {
       setTimeout(() => marker.classList.remove('wrong'), 600);
     }
     if (buildState.attempts >= 3) {
-      // Reveal this note, mark the whole question missed, move on
       q.missed = true;
       q.builtCents[q.noteIdx] = targetCents;
       buildState.markerSemis = 0;
@@ -8869,12 +8968,75 @@ window.submitBuildAnswer = function() {
       document.getElementById('build-submit-btn').disabled = true;
       advanceBuildNote();
     } else {
-      // Try again, same note. No target reveal — keep it ear-based, just say how far off.
       showBuildFeedback(false, 0, errCents, true);
     }
   }
   refreshBuildScore();
 };
+
+// Greedily match each placed note to the nearest unused target tone (±20¢).
+function gradeChord(q) {
+  const tgt = q.targets.map(s => s * 100);
+  const used = new Array(tgt.length).fill(false);
+  const perMarker = [];
+  let off = 0;
+  buildState.chordCents.forEach((c, idx) => {
+    let best = -1, bestD = Infinity;
+    tgt.forEach((tc, ti) => { if (!used[ti]) { const d = Math.abs(c - tc); if (d < bestD) { bestD = d; best = ti; } } });
+    const ok = best >= 0 && bestD <= BUILD_CENTS_TOLERANCE;
+    if (ok) used[best] = true; else off++;
+    perMarker.push({ idx, ok });
+  });
+  return { off, perMarker };
+}
+
+function submitBuildChord(q) {
+  const { off, perMarker } = gradeChord(q);
+  const total = q.targets.length;
+  const cmarkers = document.querySelectorAll('#build-ruler .build-cmarker');
+
+  if (off === 0) {
+    buildState.answered = true;
+    buildState.score.correct++;
+    buildState.score.xp += 10;
+    cmarkers.forEach(m => m.classList.add('correct'));
+    document.getElementById('build-submit-btn').disabled = true;
+    showBuildFeedback(true, 10, 0);
+  } else if (buildState.attempts >= 3) {
+    // Reveal — snap every marker onto a target tone and lock green.
+    buildState.answered = true;
+    buildState.score.wrong++;
+    q.missed = true;
+    buildState.chordCents = q.targets.map(s => s * 100).sort((a, b) => a - b);
+    positionBuildMarker();
+    document.querySelectorAll('#build-ruler .build-cmarker').forEach(m => m.classList.add('correct'));
+    document.getElementById('build-submit-btn').disabled = true;
+    showBuildFeedback(false, 0, 0);
+  } else {
+    // Per-marker hint flash, then try again — no positions revealed.
+    perMarker.forEach(pm => {
+      const m = document.querySelector('#build-ruler .build-cmarker[data-idx="' + pm.idx + '"]');
+      if (!m) return;
+      m.classList.add(pm.ok ? 'correct' : 'wrong');
+      setTimeout(() => m.classList.remove('correct', 'wrong'), 750);
+    });
+    showBuildChordRetry(total - off, total);
+  }
+}
+
+function showBuildChordRetry(inPlace, total) {
+  const bar     = document.getElementById('build-feedback-bar');
+  const result  = document.getElementById('build-feedback-result');
+  const expl    = document.getElementById('build-feedback-explanation');
+  const tryBtn  = document.getElementById('build-tryagain-btn');
+  const nextBtn = document.getElementById('build-feedback-next');
+  result.textContent = 'NOT QUITE';
+  result.className = 'feedback-result wrong';
+  expl.textContent = inPlace + ' of ' + total + ' notes in place — keep listening.';
+  tryBtn.style.display = 'inline-block';
+  nextBtn.style.display = 'none';
+  bar.classList.add('show');
+}
 
 // Move to the next note of the chord/scale, or finish the question if this was the last note.
 function advanceBuildNote() {
@@ -18024,12 +18186,19 @@ document.addEventListener('keydown', (e) => {
 // Auto-solve the current Build-mode question (sets the marker dead-on each note).
 function klAutoSolveBuild() {
   const solveOne = () => {
-    if (buildState.answered || !buildState.currentQ) return;
-    buildState.markerSemis = 0;
-    buildState.markerCents = buildCurTarget() * 100;
-    positionBuildMarker();
-    submitBuildAnswer();
-    if (!buildState.answered) setTimeout(solveOne, 720); // multi-note: wait out the render beat
+    const q = buildState.currentQ;
+    if (!q || buildState.answered) return;
+    if (q.multiMarker) {
+      buildState.chordCents = q.targets.map(s => s * 100);
+      positionBuildMarker();
+      submitBuildAnswer();             // one shot — all chord tones on target
+    } else {
+      buildState.markerSemis = 0;
+      buildState.markerCents = buildCurTarget() * 100;
+      positionBuildMarker();
+      submitBuildAnswer();
+      if (!buildState.answered) setTimeout(solveOne, 720); // scale: next degree
+    }
   };
   solveOne();
 }
@@ -19716,7 +19885,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-207'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-208'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
