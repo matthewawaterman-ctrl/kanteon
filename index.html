@@ -540,6 +540,9 @@
   }
   .back-btn:hover { background: rgba(255,255,255,0.13); }
   .back-btn:active { transform: scale(0.95); }
+  /* Feedback bar is fixed and overlays the header; hide the header while it's up
+     so the back button can't peek out beneath it as a ghost sliver. */
+  #question-screen:has(.feedback-bar.show) .q-header { visibility: hidden; }
   .module-header-title {
     font-family: var(--font-display); font-size: 28px; font-weight: 800;
     letter-spacing: -0.5px;
@@ -7055,8 +7058,8 @@ function klRhyTapStart() {
     klRhyTapGain = ctx.createGain();
     klRhyTapOsc.type = 'triangle';
     klRhyTapOsc.frequency.value = 330;
-    klRhyTapGain.gain.setValueAtTime(0.0001, ctx.currentTime);
-    klRhyTapGain.gain.exponentialRampToValueAtTime(0.16, ctx.currentTime + 0.012);
+    klRhyTapGain.gain.setValueAtTime(0, ctx.currentTime);
+    klRhyTapGain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + 0.003);
     klRhyTapOsc.connect(klRhyTapGain); klRhyTapGain.connect(ctx.destination);
     klRhyTapOsc.start();
   } catch (e) { klRhyTapOsc = null; klRhyTapGain = null; }
@@ -19411,7 +19414,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-193'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-194'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
