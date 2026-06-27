@@ -18923,16 +18923,40 @@ function klGrooveNotationSVG(meta, barBeats, ts) {
   const W = leftPad + barBeats * beatW + 30;
   const xOf = bp => leftPad + bp * beatW;
   let notes = '', beams = '';
-  // beam runs of consecutive eighth NOTES (non-rest)
-  let i = 0;
   const stemX = bp => xOf(bp) + 7;
-  while (i < meta.length) {
-    const e = meta[i];
-    if (e.d === 0.5 && !e.rest) {
-      let j = i; while (j + 1 < meta.length && meta[j + 1].d === 0.5 && !meta[j + 1].rest) j++;
-      if (j > i) beams += '<line x1="' + stemX(meta[i].onset) + '" y1="' + stemTopY + '" x2="' + stemX(meta[j].onset) + '" y2="' + stemTopY + '" stroke="#cdbb8a" stroke-width="5" stroke-linecap="round"/>';
-      i = j + 1;
-    } else i++;
+  const isDotted = d => (d === 0.75 || d === 1.5 || d === 3);
+  const subBeams = d => (d <= 0.25 + 1e-6 ? 2 : 1);   // 2 beams/flags for 16ths, 1 for 8ths
+  // Beam groups: runs of consecutive non-rest sub-beat notes (d < 1).
+  const beamed = new Set();
+  const SECG = 8;  // vertical gap between primary and secondary beam
+  {
+    const groups = [];
+    let run = [];
+    for (let k = 0; k < meta.length; k++) {
+      if (!meta[k].rest && meta[k].d < 1) run.push(k);
+      else { if (run.length) groups.push(run.slice()); run.length = 0; }
+    }
+    if (run.length) groups.push(run.slice());
+    groups.forEach(grp => {
+      if (grp.length < 2) return;
+      grp.forEach(k => beamed.add(k));
+      const xA = stemX(meta[grp[0]].onset), xB = stemX(meta[grp[grp.length - 1]].onset);
+      beams += '<line x1="' + xA + '" y1="' + stemTopY + '" x2="' + xB + '" y2="' + stemTopY + '" stroke="#cdbb8a" stroke-width="5" stroke-linecap="round"/>';
+      let sp = 0;
+      while (sp < grp.length) {
+        if (meta[grp[sp]].d <= 0.25 + 1e-6) {
+          let ep = sp; while (ep + 1 < grp.length && meta[grp[ep + 1]].d <= 0.25 + 1e-6) ep++;
+          const y2b = stemTopY + SECG;
+          if (ep > sp) {
+            beams += '<line x1="' + stemX(meta[grp[sp]].onset) + '" y1="' + y2b + '" x2="' + stemX(meta[grp[ep]].onset) + '" y2="' + y2b + '" stroke="#cdbb8a" stroke-width="5" stroke-linecap="round"/>';
+          } else {
+            const xc = stemX(meta[grp[sp]].onset), dir = (sp > 0 ? -1 : 1);
+            beams += '<line x1="' + xc + '" y1="' + y2b + '" x2="' + (xc + dir * 12) + '" y2="' + y2b + '" stroke="#cdbb8a" stroke-width="5" stroke-linecap="round"/>';
+          }
+          sp = ep + 1;
+        } else sp++;
+      }
+    });
   }
   // each event
   meta.forEach((e, idx) => {
@@ -18947,18 +18971,24 @@ function klGrooveNotationSVG(meta, barBeats, ts) {
              ' L' + (x - 4) + ',' + (cy - 7) + ' L' + (x + 6) + ',' + (cy + 4) +
              '" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round"/>' +
              '<path d="M' + (x + 6) + ',' + (cy + 4) + ' q-9,-4 -2,-12" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/>';
-      } else { // eighth rest — slash + flag dot
+      } else { // eighth / sixteenth rest — slash + hook(s)
         g += '<line x1="' + (x + 6) + '" y1="' + (cy - 22) + '" x2="' + (x - 5) + '" y2="' + (cy + 2) + '" stroke="currentColor" stroke-width="3"/>' +
              '<circle cx="' + (x + 4) + '" cy="' + (cy - 20) + '" r="4" fill="currentColor"/>';
+        if (e.d <= 0.25 + 1e-6) g += '<circle cx="' + (x + 1) + '" cy="' + (cy - 9) + '" r="4" fill="currentColor"/>';
       }
     } else {
-      const open = e.d >= 2; // half note = open head
+      const open = e.d >= 2; // half/whole = open head
       g += '<ellipse cx="' + x + '" cy="' + cy + '" rx="8.5" ry="6.4" transform="rotate(-20 ' + x + ' ' + cy + ')" ' +
         (open ? 'fill="none" stroke="currentColor" stroke-width="2.6"' : 'fill="currentColor"') + '/>';
       g += '<line x1="' + (x + 7) + '" y1="' + (cy - 2) + '" x2="' + (x + 7) + '" y2="' + stemTopY + '" stroke="currentColor" stroke-width="2.4"/>';
-      // lone eighth (not part of a beam run) gets a flag
-      if (e.d === 0.5 && !e._beamed) {
-        g += '<path d="M' + (x + 7) + ',' + stemTopY + ' q12,4 8,16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>';
+      if (isDotted(e.d)) g += '<circle cx="' + (x + 14) + '" cy="' + (cy - 3) + '" r="2.5" fill="currentColor"/>';
+      // a LONE sub-beat note (not beamed) gets flag(s): 1 for 8th, 2 for 16th
+      if (e.d < 1 && !beamed.has(idx)) {
+        const nf = subBeams(e.d);
+        for (let f = 0; f < nf; f++) {
+          const fy = stemTopY + f * 9;
+          g += '<path d="M' + (x + 7) + ',' + fy + ' q12,4 8,16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>';
+        }
       }
     }
     g += '</g>';
@@ -19431,7 +19461,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-196'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-197'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -20724,9 +20754,8 @@ function renderQuestion() {
   currentRevealAnswer = null;
 
   const q = sessionQuestions[sessionIdx];
-  const pct = (sessionIdx / sessionQuestions.length) * 100;
-  document.getElementById('q-progress-label').textContent =
-    'QUESTION ' + (sessionIdx + 1) + ' / ' + sessionQuestions.length;
+  const pct = ((sessionIdx % SESSION_LEN) / SESSION_LEN) * 100;   // rolling — indefinite practice
+  document.getElementById('q-progress-label').textContent = 'QUESTION ' + (sessionIdx + 1);
   document.getElementById('q-progress-fill').style.width = pct + '%';
   document.getElementById('q-session-xp').textContent = '+' + sessionXp + ' XP';
   document.getElementById('feedback-bar').classList.remove('show');
@@ -21059,10 +21088,14 @@ function klRhyGen(barBeats, denom, level, seed) {
     // quarter-beat meters: 1-beat cells, plus the odd half note.
     var beg = [[{ d: 1 }], [{ d: 1 }], [{ d: 1 }]];
     var inter = [[{ d: 1 }], [{ d: 0.5 }, { d: 0.5 }], [{ d: 0.5 }, { d: 0.5 }], [{ d: 0.5, rest: true }, { d: 0.5 }], [{ d: 1, rest: true }]];
-    var adv = [[{ d: 0.5 }, { d: 0.5 }], [{ d: 0.25 }, { d: 0.25 }, { d: 0.25 }, { d: 0.25 }], [{ d: 0.75 }, { d: 0.25 }], [{ d: 0.5 }, { d: 0.25 }, { d: 0.25 }], [{ d: 0.5, rest: true }, { d: 0.5 }], [{ d: 1 }]];
+    var adv = [[{ d: 0.5 }, { d: 0.5 }], [{ d: 0.25 }, { d: 0.25 }, { d: 0.25 }, { d: 0.25 }], [{ d: 0.75 }, { d: 0.25 }], [{ d: 0.75 }, { d: 0.25, rest: true }], [{ d: 0.5 }, { d: 0.25 }, { d: 0.25 }], [{ d: 0.5, rest: true }, { d: 0.5 }], [{ d: 1 }]];
     var vocab = level === 'advanced' ? adv : (level === 'intermediate' ? inter : beg);
     var left = barBeats;
     while (left >= 1) {
+      if (left >= 2 && level === 'advanced' && rng() < 0.32) {  // dotted-quarter groups
+        clone(pick([[{ d: 1.5 }, { d: 0.5 }], [{ d: 1.5 }, { d: 0.5, rest: true }], [{ d: 2 }]])).forEach(function (e) { events.push(e); });
+        left -= 2; continue;
+      }
       if (left >= 2 && level !== 'advanced' && rng() < 0.22) { events.push({ d: 2, rest: false }); left -= 2; continue; }
       clone(pick(vocab)).forEach(function (e) { events.push(e); });
       left -= 1;
@@ -23421,8 +23454,12 @@ window.nextQuestion = async function() {
       showScreen(returnScreen);
       return;
     }
-    await finishSession();
-    return;
+    // Lesson Mode is indefinite practice — pull another question instead of ending.
+    const lvl = currentLevel || (sessionQuestions[0] && sessionQuestions[0].level) || 'beginner';
+    let nq = kanteon.getQuestion(currentModule, lvl, seenIds);
+    if (!nq) { seenIds = []; nq = kanteon.getQuestion(currentModule, lvl, seenIds); } // reshuffle when pool exhausted
+    if (nq) { seenIds.push(nq.id); sessionQuestions.push(nq); }
+    else { await finishSession(); return; }  // safety: truly no questions
   }
   renderQuestion();
 };
