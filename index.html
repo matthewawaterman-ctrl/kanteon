@@ -7045,7 +7045,36 @@ function getAudio() {
   return audioCtx;
 }
 
+// Held tap tone for the rhythm module: on while a tap key/zone is held, off on release.
+let klRhyTapOsc = null, klRhyTapGain = null;
+function klRhyTapStart() {
+  const ctx = getAudio();
+  if (klRhyTapOsc) return;
+  try {
+    klRhyTapOsc = ctx.createOscillator();
+    klRhyTapGain = ctx.createGain();
+    klRhyTapOsc.type = 'triangle';
+    klRhyTapOsc.frequency.value = 330;
+    klRhyTapGain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    klRhyTapGain.gain.exponentialRampToValueAtTime(0.16, ctx.currentTime + 0.012);
+    klRhyTapOsc.connect(klRhyTapGain); klRhyTapGain.connect(ctx.destination);
+    klRhyTapOsc.start();
+  } catch (e) { klRhyTapOsc = null; klRhyTapGain = null; }
+}
+function klRhyTapStop() {
+  if (!klRhyTapOsc) return;
+  const ctx = getAudio();
+  const o = klRhyTapOsc, g = klRhyTapGain;
+  klRhyTapOsc = null; klRhyTapGain = null;
+  try {
+    g.gain.cancelScheduledValues(ctx.currentTime);
+    g.gain.setValueAtTime(Math.max(0.0001, g.gain.value), ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.045);
+    o.stop(ctx.currentTime + 0.07);
+  } catch (e) {}
+}
 function stopAllAudio() {
+  klRhyTapOsc = null; klRhyTapGain = null;
   if (audioCtx) {
     try { audioCtx.close(); } catch(e) {}
     audioCtx = null;
@@ -12135,7 +12164,7 @@ const CAROUSEL_DATA = {
     { id: 'tx',       icon: '🎹', name: 'JAM SESSION',       sub: 'NOTATE WHAT YOU HEAR',cls: 'mod-tx',      action: 'mod:transcription_lab',  desc: 'Listen to drum and melodic patterns and place the notes on the staff yourself.' }
   ],
   read: [
-    { id: 'rhythm',   icon: '🥁', name: 'GROOVE',            sub: 'READ & TAP',         cls: 'mod-rhythm',   action: 'mod:rhythm_comprehension',desc: 'Read rhythmic patterns and tap them in time with the metronome.' },
+    { id: 'rhythm',   icon: '🥁', name: 'RHYTHM',            sub: 'READ & TAP',         cls: 'mod-rhythm',   action: 'mod:rhythm_comprehension',desc: 'Read rhythmic patterns and tap them in time with the metronome.' },
     { id: 'notation', icon: '📖', name: 'NOTATION',         sub: '5 SYSTEMS',          cls: 'mod-notation', action: 'mod:notation',           desc: 'Treble clef, bass clef, drum notation, rhythm symbols, and guitar tab — all in one place.' }
   ],
   study: [
@@ -13671,7 +13700,7 @@ function klGarageScene() {
     '<ellipse cx="628" cy="452" rx="26" ry="9" fill="#8fb0e8"/><rect x="602" y="452" width="52" height="20" fill="#5d7fc0"/><ellipse cx="628" cy="472" rx="26" ry="9" fill="#4a6aa8"/>' +
     '<ellipse cx="700" cy="470" rx="24" ry="8" fill="#fb7185"/><rect x="676" y="470" width="48" height="18" fill="#e0556a"/><ellipse cx="700" cy="488" rx="24" ry="8" fill="#c9485c"/>' +
     '<circle cx="660" cy="512" r="50" fill="#c084fc" stroke="#a855f7" stroke-width="6"/><circle cx="660" cy="512" r="15" fill="#9333ea"/>' +
-    lbl('GROOVE', 660, 600, 18) + badge(u, d, 600, 420, 120));
+    lbl('RHYTHM', 660, 600, 18) + badge(u, d, 600, 420, 120));
 
   // NOTATION — sheet music on a stand
   const notation = wrap('garage:notation', (u, d) =>
@@ -14769,7 +14798,7 @@ KL_TAP_DEFS.forEach((td, i) => {
 });
 (function registerTapStations() {
   const waddyIdx = KL_TAP_DEFS.map((td, i) => KL_TAP_START + i);
-  KL_MODULE_DEFS.push({ id: 'waddy:tap', building: 'waddy', obj: '🥁', name: 'GROOVE', desc: 'Read & play rhythms from notation.', indices: waddyIdx, requires: ['waddy:drums', 'waddy:bass', 'waddy:melody'] });
+  KL_MODULE_DEFS.push({ id: 'waddy:tap', building: 'waddy', obj: '🥁', name: 'RHYTHM', desc: 'Read & play rhythms from notation.', indices: waddyIdx, requires: ['waddy:drums', 'waddy:bass', 'waddy:melody'] });
 })();
 
 // ── GROOVE LAB (b31-47) ─────────────────────────────────────────────────────
@@ -14808,7 +14837,7 @@ KL_GROOVE_DEFS.forEach((gd, i) => {
 });
 (function registerGrooveStation() {
   const idx = KL_GROOVE_DEFS.map((gd, i) => KL_GROOVE_START + i);
-  KL_MODULE_DEFS.push({ id: 'garage:tap', building: 'garage', obj: '🥁', name: 'GROOVE', desc: 'Read & play rhythms from notation.', indices: idx, requires: ['waddy:tap'] });
+  KL_MODULE_DEFS.push({ id: 'garage:tap', building: 'garage', obj: '🥁', name: 'RHYTHM', desc: 'Read & play rhythms from notation.', indices: idx, requires: ['waddy:tap'] });
 })();
 
 // ── EAR ID (b31-39) ────────────────────────────────────────────────────────
@@ -19382,7 +19411,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-192'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-193'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -21225,6 +21254,8 @@ function renderRhythmQ(q, body) {
     const { firstTapBeatTime: ftbt } = playCountIn(bpm, countBeats, () => {
       armed = true;
       firstBeatTime = firstTapBeatTime;
+      // steady metronome click through the perform bar so the player can keep time
+      for (let _b = 0; _b < meterBeats; _b++) playClick(firstBeatTime + _b * beatInterval, ctx, _b === 0);
       tapZone.classList.remove('counting');
       tapZone.classList.add('armed');
       if (subEl)   subEl.textContent  = 'TAP THE PATTERN';
@@ -21316,54 +21347,34 @@ function renderRhythmQ(q, body) {
       setTimeout(scoreTaps, 200);
     }
   };
-  tapZone.addEventListener('click', onTap);
-  tapZone.addEventListener('touchstart', (e) => { e.preventDefault(); onTap(); }, { passive: false });
-  // === CHAT D: RHYTHM KEYBOARD + CALIBRATE — START ===
-  // Spacebar OR Enter: trigger play/count-in if idle, or tap if armed
-  function onRhythmKey(e) {
+  tapZone.addEventListener('mousedown', () => { onTap(); klRhyTapStart(); });
+  tapZone.addEventListener('mouseup', klRhyTapStop);
+  tapZone.addEventListener('mouseleave', klRhyTapStop);
+  tapZone.addEventListener('touchstart', (e) => { e.preventDefault(); onTap(); klRhyTapStart(); }, { passive: false });
+  tapZone.addEventListener('touchend', (e) => { e.preventDefault(); klRhyTapStop(); }, { passive: false });
+  tapZone.addEventListener('touchcancel', klRhyTapStop);
+  // Space/Enter: tap when armed (with held tap-tone) or start the count-in when idle.
+  function onRhythmKeyDown(e) {
     if (e.code !== 'Space' && e.code !== 'Enter' && e.code !== 'NumpadEnter') return;
     const tag = document.activeElement?.tagName;
     const type = document.activeElement?.type;
     if (tag === 'TEXTAREA' || tag === 'SELECT' || (tag === 'INPUT' && type !== 'range')) return;
-    // Prevent Enter from re-triggering a focused button (browser default)
-    if (e.code !== 'Space') {
-      const focused = document.activeElement;
-      if (focused && focused.tagName === 'BUTTON') focused.blur();
-    }
+    if (e.code !== 'Space') { const f = document.activeElement; if (f && f.tagName === 'BUTTON') f.blur(); }
     e.preventDefault();
-    if (armed) {
-      onTap();
-    } else if (!rhythmDone && !playBtn.disabled) {
-      playBtn.click();
-    }
+    if (e.repeat) return;            // ignore auto-repeat; one hold is one tap
+    if (armed) { onTap(); klRhyTapStart(); }
+    else if (!rhythmDone && !playBtn.disabled) { playBtn.click(); }
   }
-  // Remove any previous key handler before registering
-  if (window._activeSpaceHandler) {
-    document.removeEventListener('keydown', window._activeSpaceHandler);
+  function onRhythmKeyUp(e) {
+    if (e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter') klRhyTapStop();
   }
-  window._activeSpaceHandler = onRhythmKey;
-  document.addEventListener('keydown', onRhythmKey);
-  // === CHAT D: RHYTHM KEYBOARD + CALIBRATE — END ===
-
-  // Spacebar: trigger play/count-in if idle, or tap if armed
-  function onRhythmSpace(e) {
-    if (e.code !== 'Space') return;
-    const tag = document.activeElement?.tagName;
-    const type = document.activeElement?.type;
-    if (tag === 'TEXTAREA' || tag === 'SELECT' || (tag === 'INPUT' && type !== 'range')) return;
-    e.preventDefault();
-    if (armed) {
-      onTap();
-    } else if (!rhythmDone && !playBtn.disabled) {
-      playBtn.click();
-    }
-  }
-  // Remove any previous space handler before registering
-  if (window._activeSpaceHandler) {
-    document.removeEventListener('keydown', window._activeSpaceHandler);
-  }
-  window._activeSpaceHandler = onRhythmSpace;
-  document.addEventListener('keydown', onRhythmSpace);
+  if (window._activeSpaceHandler) document.removeEventListener('keydown', window._activeSpaceHandler);
+  if (window._activeRhythmKeyUp) document.removeEventListener('keyup', window._activeRhythmKeyUp);
+  klRhyTapStop();
+  window._activeSpaceHandler = onRhythmKeyDown;
+  window._activeRhythmKeyUp = onRhythmKeyUp;
+  document.addEventListener('keydown', onRhythmKeyDown);
+  document.addEventListener('keyup', onRhythmKeyUp);
 }
 
 // ── TRANSCRIPTION LAB ──────────────────────────────────────────────────────
@@ -23338,6 +23349,11 @@ window.nextQuestion = async function() {
     document.removeEventListener('keydown', window._activeSpaceHandler);
     window._activeSpaceHandler = null;
   }
+  if (window._activeRhythmKeyUp) {
+    document.removeEventListener('keyup', window._activeRhythmKeyUp);
+    window._activeRhythmKeyUp = null;
+  }
+  klRhyTapStop();
   // Stop ALL audio aggressively before advancing
   stopAllAudio();
   if (audioCtx) { try { audioCtx.close(); } catch(e) {} audioCtx = null; }
