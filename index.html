@@ -5466,24 +5466,31 @@
   </div>
   <div class="level-cards">
     <div class="level-card" onclick="startSession('beginner')">
-      <div class="level-card-name" style="color: var(--green)">BEGINNER</div>
-      <div class="level-card-desc" id="beginner-desc">Quarter notes · Half notes · Whole notes</div>
+      <div class="level-card-name" style="color: var(--green)">EASY</div>
+      <div class="level-card-desc" id="beginner-desc"></div>
       <div class="level-card-meta">
         <span class="meta-pill" id="beginner-count"></span>
       </div>
     </div>
     <div class="level-card" onclick="startSession('intermediate')">
-      <div class="level-card-name" style="color: var(--gold)">INTERMEDIATE</div>
-      <div class="level-card-desc" id="intermediate-desc">8th notes · Dotted quarters · Syncopation</div>
+      <div class="level-card-name" style="color: var(--gold)">MEDIUM</div>
+      <div class="level-card-desc" id="intermediate-desc"></div>
       <div class="level-card-meta">
         <span class="meta-pill" id="intermediate-count"></span>
       </div>
     </div>
     <div class="level-card" onclick="startSession('advanced')">
-      <div class="level-card-name" style="color: var(--red)">ADVANCED</div>
-      <div class="level-card-desc" id="advanced-desc">16th notes · Dotted 8ths · Triplets · Odd meters</div>
+      <div class="level-card-name" style="color: #ff7a59">HARD</div>
+      <div class="level-card-desc" id="advanced-desc"></div>
       <div class="level-card-meta">
         <span class="meta-pill" id="advanced-count"></span>
+      </div>
+    </div>
+    <div class="level-card" onclick="startSession('expert')">
+      <div class="level-card-name" style="color: var(--red)">EXPERT</div>
+      <div class="level-card-desc" id="expert-desc"></div>
+      <div class="level-card-meta">
+        <span class="meta-pill" id="expert-count"></span>
       </div>
     </div>
   </div>
@@ -6750,8 +6757,7 @@
   <div class="q-header">
     <button class="back-btn" onclick="endSession()">←</button>
     <div class="q-progress-wrap">
-      <div class="q-progress-label" id="q-progress-label">QUESTION 1 / 5</div>
-      <div class="q-progress-track"><div class="q-progress-fill" id="q-progress-fill" style="width:0%"></div></div>
+      <div class="q-progress-label" id="q-progress-label">QUESTION 1</div>
     </div>
     <div class="q-xp-badge" id="q-session-xp">+0 XP</div>
   </div>
@@ -6866,7 +6872,7 @@ class KanteonContent {
     this.modules['transcription_lab'] = data.transcription;
     this.loaded = true;
   }
-  _pool(moduleKey) {
+  _pool3(moduleKey) {
     const m = this.modules[moduleKey];
     if (!m) throw new Error('Module not found: ' + moduleKey);
     if (moduleKey === 'rhythm_comprehension') {
@@ -6898,6 +6904,33 @@ class KanteonContent {
       };
     }
     return { beginner: [], intermediate: [], advanced: [] };
+  }
+  _pool(moduleKey) {
+    return this._withExpert(moduleKey, this._pool3(moduleKey));
+  }
+  _withExpert(moduleKey, base) {
+    const adv = (base.advanced || []).slice();
+    let keep, exp;
+    if (moduleKey === 'rhythm_comprehension') {
+      keep = []; exp = [];
+      adv.forEach(q => {
+        const m = String(q.meter || q.timeSignature || '');
+        const desc = String(q.patternDescription || q.patternName || '').toLowerCase();
+        const num = parseInt(m.split('/')[0], 10);
+        const den = parseInt(m.split('/')[1], 10);
+        const oddMeter = (num === 5 || num === 7 || num === 9 || num === 11) || (den === 8 && num !== 4);
+        const hardName = /displac|polymeter|polyrhythm|grid|hemiola|cross|metric|against|over \d/.test(desc + ' ' + m.toLowerCase());
+        if (oddMeter || hardName) exp.push(q); else keep.push(q);
+      });
+    } else {
+      const half = Math.ceil(adv.length / 2);
+      keep = adv.slice(0, half); exp = adv.slice(half);
+    }
+    if (!exp.length && adv.length) {           // guarantee a non-empty Expert tier
+      const n = Math.max(1, Math.ceil(adv.length / 3));
+      exp = adv.slice(adv.length - n); keep = adv.slice(0, adv.length - n);
+    }
+    return { beginner: base.beginner || [], intermediate: base.intermediate || [], advanced: keep, expert: exp };
   }
   _shuffle(answers) {
     const arr = [...answers];
@@ -6947,11 +6980,12 @@ class KanteonContent {
       beginner: (pool.beginner || []).length,
       intermediate: (pool.intermediate || []).length,
       advanced: (pool.advanced || []).length,
+      expert: (pool.expert || []).length,
     };
   }
   totalCount(moduleKey) {
     const c = this.levelCounts(moduleKey);
-    return (c.beginner || 0) + (c.intermediate || 0) + (c.advanced || 0);
+    return (c.beginner || 0) + (c.intermediate || 0) + (c.advanced || 0) + (c.expert || 0);
   }
 }
 </script>
@@ -11997,11 +12031,11 @@ function buildTxIndex() {
   if (!tbody || tbody.dataset.built === '1') return;
   tbody.dataset.built = '1';
 
-  const levelColors = { beginner: 'var(--green)', intermediate: 'var(--gold)', advanced: 'var(--red)' };
-  const levelLabels = { beginner: 'BEG', intermediate: 'INT', advanced: 'ADV' };
+  const levelColors = { beginner: 'var(--green)', intermediate: 'var(--gold)', advanced: '#ff7a59', expert: 'var(--red)' };
+  const levelLabels = { beginner: 'EASY', intermediate: 'MED', advanced: 'HARD', expert: 'EXP' };
   const typeIcons   = { drum: '🥁', melodic: '🎸' };
 
-  const allLevels = ['beginner', 'intermediate', 'advanced'];
+  const allLevels = ['beginner', 'intermediate', 'advanced', 'expert'];
   allLevels.forEach(level => {
     const qs = kanteon._data?.transcription?.levels?.[level] || [];
     qs.forEach(q => {
@@ -12032,7 +12066,7 @@ function buildTxIndex() {
       const f = btn.dataset.filter;
       document.querySelectorAll('#tx-index-tbody tr').forEach(tr => {
         let hidden = false;
-        if (f === 'beginner' || f === 'intermediate' || f === 'advanced') {
+        if (f === 'beginner' || f === 'intermediate' || f === 'advanced' || f === 'expert') {
           hidden = tr.dataset.level !== f;
         } else if (f === 'drum' || f === 'melodic') {
           hidden = tr.dataset.type !== f;
@@ -12048,8 +12082,8 @@ function buildTxIndex() {
 // Re-builds on every call (no caching) so filter state is clean.
 
 function buildModuleIndex(moduleKey) {
-  const levelColors = { beginner: 'var(--green)', intermediate: 'var(--gold)', advanced: 'var(--red)' };
-  const levelLabels = { beginner: 'BEG', intermediate: 'INT', advanced: 'ADV' };
+  const levelColors = { beginner: 'var(--green)', intermediate: 'var(--gold)', advanced: '#ff7a59', expert: 'var(--red)' };
+  const levelLabels = { beginner: 'EASY', intermediate: 'MED', advanced: 'HARD', expert: 'EXP' };
   const thStyle = 'text-align:left;padding:12px 16px;color:var(--text3);letter-spacing:2px;font-weight:800;font-family:var(--font-display);font-size:1.6vh;white-space:nowrap;';
 
   const titles = {
@@ -12064,9 +12098,10 @@ function buildModuleIndex(moduleKey) {
       headers:  ['ID', 'LEVEL', 'TYPE', 'METER', 'DESCRIPTION'],
       filters:  [
         { label: 'ALL', filter: 'all' },
-        { label: 'BEGINNER', filter: 'beginner' },
-        { label: 'INTERMEDIATE', filter: 'intermediate' },
-        { label: 'ADVANCED', filter: 'advanced' },
+        { label: 'EASY', filter: 'beginner' },
+        { label: 'MEDIUM', filter: 'intermediate' },
+        { label: 'HARD', filter: 'advanced' },
+        { label: 'EXPERT', filter: 'expert' },
         { label: '🥁 PATTERN', filter: 'pattern' },
         { label: '🎵 16TH', filter: 'sixteenth_checklist' }
       ],
@@ -12086,9 +12121,10 @@ function buildModuleIndex(moduleKey) {
       headers:  ['ID', 'LEVEL', 'TYPE', 'LABEL'],
       filters:  [
         { label: 'ALL', filter: 'all' },
-        { label: 'BEGINNER', filter: 'beginner' },
-        { label: 'INTERMEDIATE', filter: 'intermediate' },
-        { label: 'ADVANCED', filter: 'advanced' },
+        { label: 'EASY', filter: 'beginner' },
+        { label: 'MEDIUM', filter: 'intermediate' },
+        { label: 'HARD', filter: 'advanced' },
+        { label: 'EXPERT', filter: 'expert' },
         { label: '🎵 INTERVAL', filter: 'interval' },
         { label: '🎸 CHORD', filter: 'chord' }
       ],
@@ -12122,7 +12158,7 @@ function buildModuleIndex(moduleKey) {
   tbody.innerHTML = '';
 
   const pool = kanteon._pool(moduleKey);
-  ['beginner', 'intermediate', 'advanced'].forEach(level => {
+  ['beginner', 'intermediate', 'advanced', 'expert'].forEach(level => {
     const qs = pool[level] || [];
     qs.forEach(q => {
       const tr = document.createElement('tr');
@@ -12144,7 +12180,7 @@ function buildModuleIndex(moduleKey) {
       const f = btn.dataset.filter;
       tbody.querySelectorAll('tr').forEach(tr => {
         let hidden = false;
-        if (f === 'beginner' || f === 'intermediate' || f === 'advanced') {
+        if (f === 'beginner' || f === 'intermediate' || f === 'advanced' || f === 'expert') {
           hidden = tr.dataset.level !== f;
         } else if (f !== 'all') {
           hidden = tr.dataset.type !== f;
@@ -19461,7 +19497,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-198'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-200'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -20571,6 +20607,7 @@ function updateModuleTag(moduleKey, prefix) {
   let highestLevel = 'beginner';
   if (progress.intermediate?.sessions > 0) highestLevel = 'intermediate';
   if (progress.advanced?.sessions > 0) highestLevel = 'advanced';
+  if (progress.expert?.sessions > 0) highestLevel = 'expert';
   const tag = document.getElementById(prefix + '-level-tag');
   if (tag) {
     tag.textContent = highestLevel.toUpperCase();
@@ -20670,33 +20707,39 @@ window.selectModule = function(moduleKey) {
   document.getElementById('beginner-count').textContent = counts.beginner + ' patterns';
   document.getElementById('intermediate-count').textContent = counts.intermediate + ' patterns';
   document.getElementById('advanced-count').textContent = counts.advanced + ' patterns';
+  document.getElementById('expert-count').textContent = counts.expert + ' patterns';
 
   const descs = {
     ear_training: {
       beginner:     'Unison · Octave · 5th · 4th · Major 3rd · Minor 3rd',
       intermediate: 'All intervals · Major/minor/dominant 7th chords',
-      advanced:     'Inversions · Extended chords · Jazz harmony'
+      advanced:     'Inversions · Extended chords · Jazz harmony',
+      expert:       'Dense voicings · Altered & jazz extensions'
     },
     rhythm_comprehension: {
       beginner:     'Quarter notes · Half notes · Whole notes · Basic rests',
       intermediate: '8th notes · Dotted quarters · Syncopation · Ties',
-      advanced:     '16th notes · Dotted 8ths · Complex syncopation · Odd meters'
+      advanced:     '16th notes · Dotted 8ths · Complex syncopation',
+      expert:       'Odd meters · Displaced 16ths · Polymeter · Grids'
     },
     active_listening: {
       beginner:     'Major/minor tonality · Song form · Basic dynamics',
       intermediate: 'Groove · Chord quality · Harmony in context',
-      advanced:     'Tone · Modal harmony · Advanced arrangement'
+      advanced:     'Tone · Modal harmony · Advanced arrangement',
+      expert:       'Dense mixes · Subtle harmony · Fast changes'
     },
     transcription_lab: {
       beginner:     'Quarter notes · Half notes · Dotted half notes',
       intermediate: '8th notes · Quarter notes · Dotted quarters · 8th triplets',
-      advanced:     '16th notes · Dotted 8ths · 8th triplets · 16th triplets'
+      advanced:     '16th notes · Dotted 8ths · 8th triplets · 16th triplets',
+      expert:       'Dense 16ths · Mixed triplets · Fast tempos'
     }
   };
   const d = descs[moduleKey] || {};
   document.getElementById('beginner-desc').textContent = d.beginner || '';
   document.getElementById('intermediate-desc').textContent = d.intermediate || '';
   document.getElementById('advanced-desc').textContent = d.advanced || '';
+  document.getElementById('expert-desc').textContent = d.expert || '';
 
   showScreen('level-select');
 };
@@ -20754,9 +20797,7 @@ function renderQuestion() {
   currentRevealAnswer = null;
 
   const q = sessionQuestions[sessionIdx];
-  const pct = ((sessionIdx % SESSION_LEN) / SESSION_LEN) * 100;   // rolling — indefinite practice
   document.getElementById('q-progress-label').textContent = 'QUESTION ' + (sessionIdx + 1);
-  document.getElementById('q-progress-fill').style.width = pct + '%';
   document.getElementById('q-session-xp').textContent = '+' + sessionXp + ' XP';
   document.getElementById('feedback-bar').classList.remove('show');
 
@@ -21089,14 +21130,14 @@ function klRhyGen(barBeats, denom, level, seed) {
     var beg = [[{ d: 1 }], [{ d: 1 }], [{ d: 1 }]];
     var inter = [[{ d: 1 }], [{ d: 0.5 }, { d: 0.5 }], [{ d: 0.5 }, { d: 0.5 }], [{ d: 0.5, rest: true }, { d: 0.5 }], [{ d: 1, rest: true }]];
     var adv = [[{ d: 0.5 }, { d: 0.5 }], [{ d: 0.25 }, { d: 0.25 }, { d: 0.25 }, { d: 0.25 }], [{ d: 0.75 }, { d: 0.25 }], [{ d: 0.75 }, { d: 0.25, rest: true }], [{ d: 0.5 }, { d: 0.25 }, { d: 0.25 }], [{ d: 0.5, rest: true }, { d: 0.5 }], [{ d: 1 }]];
-    var vocab = level === 'advanced' ? adv : (level === 'intermediate' ? inter : beg);
+    var vocab = (level === 'advanced' || level === 'expert') ? adv : (level === 'intermediate' ? inter : beg);
     var left = barBeats;
     while (left >= 1) {
-      if (left >= 2 && level === 'advanced' && rng() < 0.32) {  // dotted-quarter groups
+      if (left >= 2 && (level === 'advanced' || level === 'expert') && rng() < 0.32) {  // dotted-quarter groups
         clone(pick([[{ d: 1.5 }, { d: 0.5 }], [{ d: 1.5 }, { d: 0.5, rest: true }], [{ d: 2 }]])).forEach(function (e) { events.push(e); });
         left -= 2; continue;
       }
-      if (left >= 2 && level !== 'advanced' && rng() < 0.22) { events.push({ d: 2, rest: false }); left -= 2; continue; }
+      if (left >= 2 && level !== 'advanced' && level !== 'expert' && rng() < 0.22) { events.push({ d: 2, rest: false }); left -= 2; continue; }
       clone(pick(vocab)).forEach(function (e) { events.push(e); });
       left -= 1;
     }
@@ -21161,7 +21202,7 @@ function renderRhythmQ(q, body) {
   const beats = onsetBeats ? onsetBeats.length : (parseInt(q.tapCount) || 4);
   const beatInterval = 60 / bpm; // seconds per beat
   let expectedTimes = null;      // real per-note tap times once armed (notation mode)
-  const tolerances = { beginner: 0.200, intermediate: 0.160, advanced: 0.120 };
+  const tolerances = { beginner: 0.200, intermediate: 0.160, advanced: 0.120, expert: 0.110 };
   const tolerance = tolerances[currentLevel] || 0.150;
 
   const bpmRow = document.createElement('div');
@@ -21230,7 +21271,7 @@ function renderRhythmQ(q, body) {
     }
     const hits = tapResults.filter(r => r.status === 'perfect' || r.status === 'close').length;
     const score = Math.max(0, (hits - extraTaps * 0.5) / beats);
-    const correct = score >= 0.6;
+    const correct = (hits === beats);  // must hit every onset (yellow ok, no total misses)
     const perfects = tapResults.filter(r => r.status === 'perfect').length;
     const xpMod = correct ? (score) : 0;
     updateDots();
@@ -22598,7 +22639,7 @@ function renderTxBeginner(q, body) {
   // intermediate → 8th note grid (8 cols/bar), round up to full bars
   // advanced → 16th note grid (16 cols/bar), round up to full bars
   const qLevel = q.level || q.tier || 'beginner';
-  const colsPerBar = qLevel === 'advanced' ? 16 : qLevel === 'intermediate' ? 8 : 4;
+  const colsPerBar = (qLevel === 'advanced' || qLevel === 'expert') ? 16 : qLevel === 'intermediate' ? 8 : 4;
   const beatsPerCol = 4 / colsPerBar; // fraction of a beat per column
   const cols = Math.max(targetNotes.length, Math.ceil(targetNotes.length / colsPerBar) * colsPerBar);
   let placed = new Array(cols).fill(null);
