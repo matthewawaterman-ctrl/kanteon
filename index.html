@@ -19414,7 +19414,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-194'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-195'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -21128,6 +21128,7 @@ function renderRhythmQ(q, body) {
   let armed = false;
   let scoringTimeout = null;
   let rhythmDone = false;
+  let extraTaps = 0;         // taps that don't land on a fresh note (e.g. over a rest)
 
   const tapZone = document.createElement('div');
   tapZone.className = 'tap-zone';
@@ -21171,19 +21172,21 @@ function renderRhythmQ(q, body) {
   const scoreTaps = () => {
     if (rhythmDone) return;
     rhythmDone = true;
+    armed = false;        // attempt is over: space goes back to start/retry, tone off
+    klRhyTapStop();
     // Compute results for any expected beats with no tap
     while (tapResults.length < beats) {
       tapResults.push({ status: 'miss', deltaMs: null });
     }
     const hits = tapResults.filter(r => r.status === 'perfect' || r.status === 'close').length;
-    const score = hits / beats;
+    const score = Math.max(0, (hits - extraTaps) / beats);
     const correct = score >= 0.7;
     const perfects = tapResults.filter(r => r.status === 'perfect').length;
     const xpMod = correct ? (score) : 0;
     updateDots();
     showFeedback(correct, q, {
       xpMultiplier: xpMod,
-      detail: hits + '/' + beats + ' beats hit · ' + perfects + ' perfect · score ' + Math.round(score * 100) + '%'
+      detail: hits + '/' + beats + ' beats hit · ' + perfects + ' perfect' + (extraTaps ? ' · ' + extraTaps + ' extra' : '') + ' · score ' + Math.round(score * 100) + '%'
     });
     // Rhythm: the gold button is the retry, so drop the redundant top TRY AGAIN/NEXT
     // and surface NEXT beneath the gold button instead.
@@ -21206,6 +21209,7 @@ function renderRhythmQ(q, body) {
     playBtn.innerHTML = '🔊 COUNT IN...';
     armed = false;
     tapResults = [];
+    extraTaps = 0;
     rhythmDone = false;
     updateDots();
 
@@ -21276,7 +21280,7 @@ function renderRhythmQ(q, body) {
         });
       }
 
-      const finishAt = firstBeatTime + lastOnsetBeat * beatInterval + 0.6;
+      const finishAt = firstBeatTime + meterBeats * beatInterval + 0.3;  // through the whole bar
       const delayMs = Math.max(0, (finishAt - ctx.currentTime) * 1000);
       scoringTimeout = setTimeout(scoreTaps, delayMs);
 
@@ -21337,23 +21341,20 @@ function renderRhythmQ(q, body) {
     const beatIdx = safeBeat;
     if (!tapResults[beatIdx] || tapResults[beatIdx].status === 'miss') {
       tapResults[beatIdx] = { status, deltaMs: Math.round(delta * 1000), actual: now, expected };
+    } else {
+      extraTaps++;   // already-hit slot: an extra tap (e.g. playing over a trailing rest)
     }
 
     tapZone.classList.add('tapped');
     setTimeout(() => tapZone.classList.remove('tapped'), 80);
     updateDots();
-
-    // If we have all beats accounted for, score immediately
-    const filled = tapResults.filter(r => r).length;
-    if (filled >= beats) {
-      clearTimeout(scoringTimeout);
-      setTimeout(scoreTaps, 200);
-    }
+    // No early scoring: wait for the full bar (scoringTimeout) so a tap over a
+    // trailing rest still counts. The message can't appear until the bar ends.
   };
-  tapZone.addEventListener('mousedown', () => { onTap(); klRhyTapStart(); });
+  tapZone.addEventListener('mousedown', () => { onTap(); if (armed) klRhyTapStart(); });
   tapZone.addEventListener('mouseup', klRhyTapStop);
   tapZone.addEventListener('mouseleave', klRhyTapStop);
-  tapZone.addEventListener('touchstart', (e) => { e.preventDefault(); onTap(); klRhyTapStart(); }, { passive: false });
+  tapZone.addEventListener('touchstart', (e) => { e.preventDefault(); onTap(); if (armed) klRhyTapStart(); }, { passive: false });
   tapZone.addEventListener('touchend', (e) => { e.preventDefault(); klRhyTapStop(); }, { passive: false });
   tapZone.addEventListener('touchcancel', klRhyTapStop);
   // Space/Enter: tap when armed (with held tap-tone) or start the count-in when idle.
@@ -21366,7 +21367,7 @@ function renderRhythmQ(q, body) {
     e.preventDefault();
     if (e.repeat) return;            // ignore auto-repeat; one hold is one tap
     if (armed) { onTap(); klRhyTapStart(); }
-    else if (!rhythmDone && !playBtn.disabled) { playBtn.click(); }
+    else if (!playBtn.disabled && playBtn.style.display !== 'none') { playBtn.click(); }
   }
   function onRhythmKeyUp(e) {
     if (e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter') klRhyTapStop();
