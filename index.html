@@ -18977,13 +18977,22 @@ function klGrooveNotationSVG(meta, barBeats, ts) {
   const beamed = new Set();
   const SECG = 8;  // vertical gap between primary and secondary beam
   {
+    // Real beaming rule: beam WITHIN the beat only — never one beam across the bar.
+    // Simple meters beam per quarter; compound (6/8, 9/8, 12/8) per dotted-quarter.
+    const num = (ts && ts[0]) || 4, den = (ts && ts[1]) || 4;
+    const beamUnit = (den === 8 && num % 3 === 0) ? 1.5 : 1.0;
+    const unitOf = on => Math.floor((on + 1e-6) / beamUnit);
     const groups = [];
-    let run = [];
+    let run = [], runUnit = -1;
+    const flushRun = () => { if (run.length) groups.push(run.slice()); run = []; };
     for (let k = 0; k < meta.length; k++) {
-      if (!meta[k].rest && meta[k].d < 1) run.push(k);
-      else { if (run.length) groups.push(run.slice()); run.length = 0; }
+      const e = meta[k];
+      if (e.rest || e.d >= 1) { flushRun(); continue; }   // break at rests & beat-or-longer notes
+      const u = unitOf(e.onset);
+      if (run.length && u !== runUnit) flushRun();          // break at the beat boundary
+      run.push(k); runUnit = u;
     }
-    if (run.length) groups.push(run.slice());
+    flushRun();
     groups.forEach(grp => {
       if (grp.length < 2) return;
       grp.forEach(k => beamed.add(k));
@@ -19508,7 +19517,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-201'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-202'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
