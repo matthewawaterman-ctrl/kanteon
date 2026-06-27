@@ -622,6 +622,13 @@
   .play-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #b45309, 0 4px 10px rgba(0,0,0,0.25); }
   .play-btn.playing { animation: klPulse 0.34s ease-in-out infinite; }
   .play-btn:disabled { opacity: 0.7; }
+  .rhythm-next-btn { margin: 16px auto 0; max-width: 62%; font-size: 24px; padding: 20px 30px;
+    animation: rhythmNextPulse 1.8s ease-in-out infinite; }
+  .rhythm-next-btn:active { animation: none; transform: translateY(4px); box-shadow: 0 2px 0 #b45309, 0 4px 10px rgba(0,0,0,0.25); }
+  @keyframes rhythmNextPulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 6px 0 #b45309, 0 10px 20px rgba(0,0,0,0.25); }
+    50% { transform: scale(1.04); box-shadow: 0 8px 0 #b45309, 0 14px 30px rgba(245,158,11,0.45); }
+  }
   .play-btn-row { display: flex; gap: 10px; }
   .play-btn-row .play-btn { flex: 1; }
   .play-btn.secondary { background: rgba(255,255,255,0.08); border: 2px solid rgba(255,255,255,0.2);
@@ -19375,7 +19382,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-191'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-192'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -21146,13 +21153,23 @@ function renderRhythmQ(q, body) {
       xpMultiplier: xpMod,
       detail: hits + '/' + beats + ' beats hit · ' + perfects + ' perfect · score ' + Math.round(score * 100) + '%'
     });
+    // Rhythm: the gold button is the retry, so drop the redundant top TRY AGAIN/NEXT
+    // and surface NEXT beneath the gold button instead.
+    var _ft = document.getElementById('feedback-try-again'); if (_ft) _ft.style.display = 'none';
+    var _fn = document.getElementById('feedback-next');      if (_fn) _fn.style.display = 'none';
+    if (correct) { showRhythmNext(); }
+    else if (questionAttempts >= MAX_ATTEMPTS) { playBtn.style.display = 'none'; showRhythmNext(); }
   };
 
   const playBtn = document.createElement('button');
   playBtn.className = 'play-btn';
   playBtn.innerHTML = '▶ COUNT IN &amp; TAP';
   playBtn.onclick = () => {
-    if (rhythmDone) return;
+    if (playBtn.disabled) return;
+    clearTimeout(scoringTimeout);
+    hideRhythmNext();
+    playBtn.style.display = '';
+    var _fb = document.getElementById('feedback-bar'); if (_fb) _fb.classList.remove('show');
     playBtn.disabled = true;
     playBtn.innerHTML = '🔊 COUNT IN...';
     armed = false;
@@ -21172,7 +21189,7 @@ function renderRhythmQ(q, body) {
 
     const ctx = getAudio();
     const interval = 60 / bpm;
-    const countBeats = 4;
+    const countBeats = meterBeats;  // count in matches the time signature
     const startT = ctx.currentTime + 0.15;
 
     // Schedule visual beat flashes in sync with audio clicks
@@ -21234,6 +21251,16 @@ function renderRhythmQ(q, body) {
     });
   };
   body.appendChild(playBtn);
+  function hideRhythmNext() { var ex = document.getElementById('rhythm-next-btn'); if (ex) ex.remove(); }
+  function showRhythmNext() {
+    hideRhythmNext();
+    var nb = document.createElement('button');
+    nb.className = 'play-btn rhythm-next-btn';
+    nb.id = 'rhythm-next-btn';
+    nb.innerHTML = '▶ NEXT';
+    nb.onclick = function () { hideRhythmNext(); window.nextQuestion(); };
+    playBtn.insertAdjacentElement('afterend', nb);
+  }
 
   // Tap handler
   const onTap = () => {
