@@ -8389,7 +8389,7 @@ const buildState = {
 };
 
 // Tolerance for "you nailed it" — ±20 cents on either side (pure ear, no snapping).
-const BUILD_CENTS_TOLERANCE = 20;
+const BUILD_CENTS_TOLERANCE = 30;
 // The semitone offset the player is currently building (current note of the chord/scale).
 function buildCurTarget() {
   const q = buildState.currentQ;
@@ -8598,6 +8598,7 @@ window.startBuilding = function() {
 
 window.endBuildSession = function() {
   stopBuildHold();
+  if (typeof stopBuildScrub === 'function') stopBuildScrub();
   stopAllAudio();
   document.getElementById('build-feedback-bar').classList.remove('show');
   showScreen('build-config');
@@ -8688,13 +8689,14 @@ function renderBuildQuestion(q) {
   }
   prompt.innerHTML = html;
 
-  // Reset markers. Chord markers start spread out (whole-step apart) so each is grabbable;
-  // their start positions deliberately do NOT match the answer.
+  // Reset markers. Chord notes all start stacked on the root (unison) and get
+  // tuned up to their chord tones by ear.
   if (typeof stopBuildHold === 'function') stopBuildHold();
+  if (typeof stopBuildScrub === 'function') stopBuildScrub();
   buildState.markerSemis = 0;
   buildState.markerCents = 0;
   if (q.multiMarker) {
-    buildState.chordCents = q.targets.map((_, i) => (i + 1) * 200);
+    buildState.chordCents = q.targets.map(() => 0); // start every note on the root — tune each up by ear
     buildState.activeMarker = 0;
   } else {
     buildState.chordCents = [];
@@ -8757,6 +8759,7 @@ function wireBuildRulerDrag() {
     updateBuildSliderReadout();
     positionBuildMarker();
     updateBuildHoldYours();   // re-pitch the held "yours" chord in real time
+    updateBuildScrub();       // re-pitch the live drag-monitor tone (sustain off)
   };
   const pickNearest = (clientX) => {
     const q = buildState.currentQ;
@@ -8778,11 +8781,13 @@ function wireBuildRulerDrag() {
     } else {
       moveActive(e.clientX);    // single marker: jump straight to where you tapped
     }
+    // Sustain off → auto-engage a live monitor tone so you hear the pitch as you drag.
+    if (!buildHold.on) startBuildScrub();
     e.preventDefault();
   });
   ruler.addEventListener('pointermove', (e) => { if (dragging) moveActive(e.clientX); });
-  ruler.addEventListener('pointerup',   () => { dragging = false; });
-  ruler.addEventListener('pointercancel', () => { dragging = false; });
+  ruler.addEventListener('pointerup',   () => { dragging = false; stopBuildScrub(); });
+  ruler.addEventListener('pointercancel', () => { dragging = false; stopBuildScrub(); });
 }
 
 // ── Piano strip ─────────────────────────────────────────────────────────
@@ -8810,8 +8815,8 @@ function drawBuildStrip() {
   if (!ruler) return;
   ruler.innerHTML = '';
 
-  // Ruler shows semitones from -BUILD_STRIP_RANGE to +BUILD_STRIP_RANGE
-  // Each semitone gets a tick mark, with major ticks at every octave and a root tick at 0
+  // Ruler coordinate span (semitones from -range to +range). No tick marks are
+  // drawn — the bar is intentionally smooth so half-step positions aren't visible.
   const range = BUILD_STRIP_RANGE;
   const totalSpan = range * 2;
 
@@ -8819,18 +8824,6 @@ function drawBuildStrip() {
   const rail = document.createElement('div');
   rail.className = 'build-ruler-rail';
   ruler.appendChild(rail);
-
-  // Draw subtle ticks for every semitone — but NO number/letter labels.
-  // Unmarked on purpose: the player has to use their ears, not read positions.
-  for (let semi = -range; semi <= range; semi++) {
-    const pct = ((semi + range) / totalSpan) * 100;
-    const tick = document.createElement('div');
-    const isRoot = (semi === 0);
-    const isMajor = (semi !== 0 && (semi % 12 === 0));
-    tick.className = 'build-ruler-tick' + (isRoot ? ' root' : isMajor ? ' major' : '');
-    tick.style.left = pct + '%';
-    ruler.appendChild(tick);
-  }
 
   // Save bounds for marker positioning
   ruler._range = range;
@@ -9058,6 +9051,59 @@ function updateBuildHoldButtons() {
   const yb = document.getElementById('build-hear-yours-btn');
   if (tb) tb.classList.toggle('holding', buildHold.active === 'target');
   if (yb) yb.classList.toggle('holding', buildHold.active === 'yours');
+}
+
+// ── Scrub monitor ───────────────────────────────────────────────────────
+// When sustain is OFF, holding+dragging a dot plays a live tone (root anchor +
+// the note you're moving) so you can hear the pitch land. Stops on release.
+const buildScrub = { voices: [], ctx: null };
+
+function buildScrubNoteCents() {
+  const q = buildState.currentQ;
+  if (!q) return 0;
+  if (q.multiMarker) return buildState.chordCents[buildState.activeMarker] || 0;
+  return buildState.markerSemis * 100 + buildState.markerCents;
+}
+
+function startBuildScrub() {
+  stopBuildScrub();
+  const q = buildState.currentQ;
+  if (!q) return;
+  const ctx = getAudio();
+  buildScrub.ctx = ctx;
+  const rootFreq = midiFreq(q.rootMidi);
+  buildScrub.voices = [
+    makeBuildHoldVoice(ctx, rootFreq),                                          // root reference
+    makeBuildHoldVoice(ctx, rootFreq * Math.pow(2, buildScrubNoteCents() / 1200)), // the note being dragged
+  ];
+}
+
+function updateBuildScrub() {
+  if (!buildScrub.ctx || buildScrub.voices.length < 2) return;
+  const q = buildState.currentQ;
+  if (!q) return;
+  const rootFreq = midiFreq(q.rootMidi);
+  const t = buildScrub.ctx.currentTime;
+  try {
+    buildScrub.voices[1].osc.frequency.setTargetAtTime(rootFreq * Math.pow(2, buildScrubNoteCents() / 1200), t, 0.01);
+  } catch (e) {}
+}
+
+function stopBuildScrub() {
+  const ctx = buildScrub.ctx;
+  if (ctx && buildScrub.voices.length) {
+    const t = ctx.currentTime;
+    buildScrub.voices.forEach(v => {
+      try {
+        v.gain.gain.cancelScheduledValues(t);
+        v.gain.gain.setValueAtTime(v.gain.gain.value, t);
+        v.gain.gain.linearRampToValueAtTime(0, t + 0.04);
+        v.osc.stop(t + 0.08);
+      } catch (e) {}
+    });
+  }
+  buildScrub.voices = [];
+  buildScrub.ctx = null;
 }
 
 // ── Submit / grading ────────────────────────────────────────────────────
@@ -20014,7 +20060,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-209'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-210'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
