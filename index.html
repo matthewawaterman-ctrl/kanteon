@@ -2103,6 +2103,44 @@
     color: #cdc6ff; border-color: rgba(124,111,247,0.75);
     box-shadow: 0 0 12px rgba(124,111,247,0.4);
   }
+  /* A/B compare switch (target ↔ yours) + sound on/off */
+  .build-ab-row { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-top: 12px; }
+  .build-ab-switch {
+    display: grid; grid-template-columns: 1fr 1fr;
+    border: 1px solid rgba(124,111,247,0.4); border-radius: 8px; overflow: hidden;
+    background: var(--bg2);
+  }
+  .ab-seg {
+    padding: 13px 8px; border: none; background: transparent;
+    font-family: var(--font-display); font-weight: 800; font-size: 13px; letter-spacing: 2px;
+    color: var(--text3); cursor: pointer; transition: background 0.15s, color 0.15s;
+  }
+  .ab-seg + .ab-seg { border-left: 1px solid rgba(124,111,247,0.25); }
+  .ab-seg:not(.active):hover { color: var(--text2); }
+  .ab-seg.target.active {
+    background: rgba(240,192,64,0.18); color: var(--gold);
+    box-shadow: inset 0 0 14px rgba(240,192,64,0.22);
+  }
+  .ab-seg.yours.active {
+    background: rgba(124,111,247,0.24); color: #cdc6ff;
+    box-shadow: inset 0 0 14px rgba(124,111,247,0.28);
+  }
+  .build-sound-btn {
+    padding: 13px 8px; border: 1px solid rgba(124,111,247,0.4); border-radius: 8px;
+    background: var(--bg2); color: var(--text2);
+    font-family: var(--font-display); font-weight: 800; font-size: 13px; letter-spacing: 1.5px;
+    cursor: pointer; transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, color 0.15s;
+  }
+  .build-sound-btn:hover { border-color: rgba(124,111,247,0.7); }
+  .build-sound-btn.on {
+    background: rgba(74,222,128,0.18); border-color: rgba(74,222,128,0.6); color: #86efac;
+    box-shadow: 0 0 14px rgba(74,222,128,0.4);
+  }
+  .build-ab-hint {
+    margin-top: 8px; text-align: center;
+    font-family: var(--font-display); font-size: 10px; font-weight: 700;
+    color: var(--text3); letter-spacing: 1.5px; text-transform: uppercase;
+  }
   .build-ab-btn.target {
     border-color: rgba(240,192,64,0.5);
     color: var(--gold);
@@ -6167,12 +6205,13 @@
         <input type="range" class="build-slider" id="build-slider" min="-14" max="14" step="1" value="0">
       </div>
       <div class="build-ab-row">
-        <button class="build-ab-btn target" id="build-hear-target-btn" onclick="playBuildTarget()">▶ HEAR TARGET</button>
-        <button class="build-ab-btn" id="build-hear-yours-btn" onclick="playBuildYours()">▶ HEAR YOURS</button>
+        <div class="build-ab-switch" id="build-ab-switch" role="group" aria-label="A/B compare target and yours">
+          <button class="ab-seg target active" data-ab="target" onclick="setBuildAB('target')">TARGET</button>
+          <button class="ab-seg yours" data-ab="yours" onclick="setBuildAB('yours')">YOURS</button>
+        </div>
+        <button class="build-sound-btn" id="build-sound-btn" onclick="toggleBuildSound()">&#9654;&nbsp; SOUND OFF</button>
       </div>
-      <div class="build-sustain-row">
-        <button class="build-sustain-pill" id="build-sustain-pill" onclick="toggleBuildSustain()">SUSTAIN: OFF</button>
-      </div>
+      <div class="build-ab-hint">Space = A/B&nbsp;&nbsp;·&nbsp;&nbsp;Cmd+Space = sound on/off</div>
     </div>
 
     <div class="build-actions-row">
@@ -8597,7 +8636,8 @@ window.startBuilding = function() {
 };
 
 window.endBuildSession = function() {
-  stopBuildHold();
+  stopBuildDrone();
+  buildAudio.soundOn = false;
   if (typeof stopBuildScrub === 'function') stopBuildScrub();
   stopAllAudio();
   document.getElementById('build-feedback-bar').classList.remove('show');
@@ -8691,8 +8731,8 @@ function renderBuildQuestion(q) {
 
   // Reset markers. Chord notes all start stacked on the root (unison) and get
   // tuned up to their chord tones by ear.
-  if (typeof stopBuildHold === 'function') stopBuildHold();
   if (typeof stopBuildScrub === 'function') stopBuildScrub();
+  buildAudio.ab = 'target';
   buildState.markerSemis = 0;
   buildState.markerCents = 0;
   if (q.multiMarker) {
@@ -8706,12 +8746,10 @@ function renderBuildQuestion(q) {
   drawBuildStrip();
   hideBuildTargetMarker();
   wireBuildRulerDrag();
-  // Re-enable controls
-  const ht = document.getElementById('build-hear-target-btn');
-  const hy = document.getElementById('build-hear-yours-btn');
-  if (ht) ht.disabled = false;
-  if (hy) hy.disabled = false;
   document.getElementById('build-submit-btn').disabled = false;
+  // Audio: new question defaults to TARGET; keep the sound on/off preference.
+  updateBuildAudioUI();
+  if (buildAudio.soundOn) restartBuildDrone(); else stopBuildDrone();
 }
 
 function onBuildSliderInput(ev) {
@@ -8758,7 +8796,7 @@ function wireBuildRulerDrag() {
     }
     updateBuildSliderReadout();
     positionBuildMarker();
-    updateBuildHoldYours();   // re-pitch the held "yours" chord in real time
+    updateBuildDroneYours();  // re-pitch the live "yours" drone as you drag
     updateBuildScrub();       // re-pitch the live drag-monitor tone (sustain off)
   };
   const pickNearest = (clientX) => {
@@ -8782,7 +8820,7 @@ function wireBuildRulerDrag() {
       moveActive(e.clientX);    // single marker: jump straight to where you tapped
     }
     // Sustain off → auto-engage a live monitor tone so you hear the pitch as you drag.
-    if (!buildHold.on) startBuildScrub();
+    if (!buildAudio.soundOn) startBuildScrub();
     e.preventDefault();
   });
   ruler.addEventListener('pointermove', (e) => { if (dragging) moveActive(e.clientX); });
@@ -8903,88 +8941,12 @@ function hideBuildTargetMarker() {
 }
 
 // ── Audio ──────────────────────────────────────────────────────────────
-window.playBuildTarget = function() {
-  const q = buildState.currentQ;
-  if (!q) return;
-  if (buildHold.on) { toggleBuildHold('target'); return; }
-  const ctx = getAudio();
-  const t0 = ctx.currentTime + 0.05;
-  const rootFreq = midiFreq(q.rootMidi);
-  const semisList = [0].concat(q.targets); // root + every target tone (semitones)
-  if (q.harmonic) {
-    semisList.forEach(s => playTone(rootFreq * Math.pow(2, s / 12), t0, 1.6, ctx, 0.22, 'piano'));
-  } else {
-    semisList.forEach((s, i) => playTone(rootFreq * Math.pow(2, s / 12), t0 + i * 0.34, 0.42, ctx, 0.25, 'piano'));
-  }
-  const btn = document.getElementById('build-hear-target-btn');
-  if (btn) {
-    btn.classList.add('playing');
-    const ms = q.harmonic ? 1600 : (semisList.length * 340 + 200);
-    setTimeout(() => btn.classList.remove('playing'), ms);
-  }
-};
+// ── Sustained chord audio (always sustain; A/B switch + sound on/off) ─────
+// One voice per chord tone (root + each placed note). The drone plays whichever
+// side the A/B switch is on; "yours" re-pitches live as you drag.
+const buildAudio = { ab: 'target', soundOn: false, voices: [], ctx: null };
 
-window.playBuildYours = function() {
-  const q = buildState.currentQ;
-  if (!q) return;
-  if (buildHold.on) { toggleBuildHold('yours'); return; }
-  const ctx = getAudio();
-  const t0 = ctx.currentTime + 0.05;
-  const rootFreq = midiFreq(q.rootMidi);
-  let centsList;
-  if (q.multiMarker) {
-    // root + every note you've placed — the chord as it stands
-    centsList = [0].concat(buildState.chordCents);
-  } else {
-    // root + notes already locked in + the current marker
-    centsList = [0];
-    for (let i = 0; i < (q.noteIdx || 0); i++) centsList.push(q.builtCents[i]);
-    centsList.push(buildState.markerSemis * 100 + buildState.markerCents);
-  }
-  if (q.harmonic) {
-    centsList.forEach(c => playTone(rootFreq * Math.pow(2, c / 1200), t0, 1.6, ctx, 0.22, 'piano'));
-  } else {
-    centsList.forEach((c, i) => playTone(rootFreq * Math.pow(2, c / 1200), t0 + i * 0.34, 0.42, ctx, 0.25, 'piano'));
-  }
-  const btn = document.getElementById('build-hear-yours-btn');
-  if (btn) {
-    btn.classList.add('playing');
-    const ms = q.harmonic ? 1600 : (centsList.length * 340 + 200);
-    setTimeout(() => btn.classList.remove('playing'), ms);
-  }
-};
-
-// Legacy fallback if any old caller exists
-window.playBuildHear = window.playBuildYours;
-
-// ── Sustained (held) chord audio ────────────────────────────────────────
-// Persistent oscillators so a chord can drone while you A/B it, and so the
-// "yours" chord re-pitches in real time as you drag the markers.
-const buildHold = { on: false, active: null, voices: [], ctx: null };
-
-window.toggleBuildSustain = function() {
-  buildHold.on = !buildHold.on;
-  const pill = document.getElementById('build-sustain-pill');
-  if (pill) { pill.classList.toggle('on', buildHold.on); pill.textContent = 'SUSTAIN: ' + (buildHold.on ? 'ON' : 'OFF'); }
-  const hint = document.getElementById('build-drag-hint');
-  if (hint) hint.textContent = buildHold.on
-    ? 'Hold a chord, then drag — pitches tune live'
-    : 'Drag the bar to build the note — by ear';
-  if (!buildHold.on) stopBuildHold();
-};
-
-function buildHoldCentsList(which) {
-  const q = buildState.currentQ;
-  if (!q) return [0];
-  if (which === 'target') return [0].concat(q.targets.map(s => s * 100));
-  if (q.multiMarker) return [0].concat(buildState.chordCents);
-  const built = [];
-  for (let i = 0; i < (q.noteIdx || 0); i++) built.push(q.builtCents[i]);
-  built.push(buildState.markerSemis * 100 + buildState.markerCents);
-  return [0].concat(built);
-}
-
-function makeBuildHoldVoice(ctx, freq) {
+function makeBuildVoice(ctx, freq) {
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
   osc.type = 'triangle';
@@ -8997,37 +8959,33 @@ function makeBuildHoldVoice(ctx, freq) {
   return { osc, gain };
 }
 
-function startBuildHold(which) {
-  stopBuildHold();
+function buildDroneCents(which) {
+  const q = buildState.currentQ;
+  if (!q) return [0];
+  if (which === 'target') return [0].concat(q.targets.map(s => s * 100));
+  if (q.multiMarker) return [0].concat(buildState.chordCents);
+  const built = [];
+  for (let i = 0; i < (q.noteIdx || 0); i++) built.push(q.builtCents[i]);
+  built.push(buildState.markerSemis * 100 + buildState.markerCents);
+  return [0].concat(built);
+}
+
+function startBuildDrone() {
+  stopBuildDrone();
   const q = buildState.currentQ;
   if (!q) return;
   const ctx = getAudio();
-  buildHold.ctx = ctx;
+  buildAudio.ctx = ctx;
   const rootFreq = midiFreq(q.rootMidi);
-  const cents = buildHoldCentsList(which);
-  buildHold.voices = cents.map(c => makeBuildHoldVoice(ctx, rootFreq * Math.pow(2, c / 1200)));
-  buildHold.active = which;
-  updateBuildHoldButtons();
+  const cents = buildDroneCents(buildAudio.ab);
+  buildAudio.voices = cents.map(c => makeBuildVoice(ctx, rootFreq * Math.pow(2, c / 1200)));
 }
 
-function updateBuildHoldYours() {
-  if (buildHold.active !== 'yours' || !buildHold.ctx) return;
-  const q = buildState.currentQ;
-  if (!q) return;
-  const rootFreq = midiFreq(q.rootMidi);
-  const cents = buildHoldCentsList('yours');
-  const t = buildHold.ctx.currentTime;
-  buildHold.voices.forEach((v, i) => {
-    if (cents[i] == null) return;
-    try { v.osc.frequency.setTargetAtTime(rootFreq * Math.pow(2, cents[i] / 1200), t, 0.012); } catch (e) {}
-  });
-}
-
-function stopBuildHold() {
-  const ctx = buildHold.ctx;
-  if (ctx && buildHold.voices.length) {
+function stopBuildDrone() {
+  const ctx = buildAudio.ctx;
+  if (ctx && buildAudio.voices.length) {
     const t = ctx.currentTime;
-    buildHold.voices.forEach(v => {
+    buildAudio.voices.forEach(v => {
       try {
         v.gain.gain.cancelScheduledValues(t);
         v.gain.gain.setValueAtTime(v.gain.gain.value, t);
@@ -9036,26 +8994,51 @@ function stopBuildHold() {
       } catch (e) {}
     });
   }
-  buildHold.voices = [];
-  buildHold.active = null;
-  updateBuildHoldButtons();
+  buildAudio.voices = [];
 }
 
-function toggleBuildHold(which) {
-  if (buildHold.active === which) { stopBuildHold(); return; } // press the lit one again = silence
-  startBuildHold(which);
+function restartBuildDrone() { stopBuildDrone(); startBuildDrone(); }
+
+function updateBuildDroneYours() {
+  if (!buildAudio.soundOn || buildAudio.ab !== 'yours' || !buildAudio.ctx) return;
+  const q = buildState.currentQ;
+  if (!q) return;
+  const rootFreq = midiFreq(q.rootMidi);
+  const cents = buildDroneCents('yours');
+  const t = buildAudio.ctx.currentTime;
+  buildAudio.voices.forEach((v, i) => {
+    if (cents[i] == null) return;
+    try { v.osc.frequency.setTargetAtTime(rootFreq * Math.pow(2, cents[i] / 1200), t, 0.012); } catch (e) {}
+  });
 }
 
-function updateBuildHoldButtons() {
-  const tb = document.getElementById('build-hear-target-btn');
-  const yb = document.getElementById('build-hear-yours-btn');
-  if (tb) tb.classList.toggle('holding', buildHold.active === 'target');
-  if (yb) yb.classList.toggle('holding', buildHold.active === 'yours');
+window.setBuildAB = function(which) {
+  if (which !== 'target' && which !== 'yours') return;
+  buildAudio.ab = which;
+  updateBuildAudioUI();
+  if (buildAudio.soundOn) restartBuildDrone();
+};
+window.toggleBuildAB = function() {
+  window.setBuildAB(buildAudio.ab === 'target' ? 'yours' : 'target');
+};
+window.toggleBuildSound = function() {
+  buildAudio.soundOn = !buildAudio.soundOn;
+  if (buildAudio.soundOn) startBuildDrone(); else stopBuildDrone();
+  updateBuildAudioUI();
+};
+
+function updateBuildAudioUI() {
+  const sw = document.getElementById('build-ab-switch');
+  if (sw) sw.querySelectorAll('.ab-seg').forEach(seg =>
+    seg.classList.toggle('active', seg.dataset.ab === buildAudio.ab));
+  const sb = document.getElementById('build-sound-btn');
+  if (sb) {
+    sb.classList.toggle('on', buildAudio.soundOn);
+    sb.innerHTML = buildAudio.soundOn ? '&#9632;&nbsp; SOUND ON' : '&#9654;&nbsp; SOUND OFF';
+  }
 }
 
-// ── Scrub monitor ───────────────────────────────────────────────────────
-// When sustain is OFF, holding+dragging a dot plays a live tone (root anchor +
-// the note you're moving) so you can hear the pitch land. Stops on release.
+// ── Drag monitor (when the drone is OFF, dragging a dot plays a live tone) ──
 const buildScrub = { voices: [], ctx: null };
 
 function buildScrubNoteCents() {
@@ -9073,8 +9056,8 @@ function startBuildScrub() {
   buildScrub.ctx = ctx;
   const rootFreq = midiFreq(q.rootMidi);
   buildScrub.voices = [
-    makeBuildHoldVoice(ctx, rootFreq),                                          // root reference
-    makeBuildHoldVoice(ctx, rootFreq * Math.pow(2, buildScrubNoteCents() / 1200)), // the note being dragged
+    makeBuildVoice(ctx, rootFreq),
+    makeBuildVoice(ctx, rootFreq * Math.pow(2, buildScrubNoteCents() / 1200)),
   ];
 }
 
@@ -9084,9 +9067,7 @@ function updateBuildScrub() {
   if (!q) return;
   const rootFreq = midiFreq(q.rootMidi);
   const t = buildScrub.ctx.currentTime;
-  try {
-    buildScrub.voices[1].osc.frequency.setTargetAtTime(rootFreq * Math.pow(2, buildScrubNoteCents() / 1200), t, 0.01);
-  } catch (e) {}
+  try { buildScrub.voices[1].osc.frequency.setTargetAtTime(rootFreq * Math.pow(2, buildScrubNoteCents() / 1200), t, 0.01); } catch (e) {}
 }
 
 function stopBuildScrub() {
@@ -9107,6 +9088,18 @@ function stopBuildScrub() {
 }
 
 // ── Submit / grading ────────────────────────────────────────────────────
+// Build-mode keys: Space flips the A/B switch, Cmd/Ctrl+Space toggles sound.
+document.addEventListener('keydown', (e) => {
+  if (e.code !== 'Space') return;
+  const bs = document.getElementById('build-session');
+  if (!bs || !bs.classList.contains('active')) return;
+  const tag = (e.target && e.target.tagName) || '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
+  e.preventDefault();
+  if (e.metaKey || e.ctrlKey) window.toggleBuildSound();
+  else window.toggleBuildAB();
+});
+
 window.submitBuildAnswer = function() {
   const q = buildState.currentQ;
   if (!q || buildState.answered) return;
@@ -20060,7 +20053,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-210'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-211'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
