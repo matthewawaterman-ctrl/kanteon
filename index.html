@@ -4489,6 +4489,24 @@
     font-family: var(--font-display); font-size: 22px; font-weight: 800;
     letter-spacing: 1px; color: var(--text2); text-transform: uppercase;
   }
+  /* Daily-streak return hook on the mode-select landing */
+  .kl-streak-badge {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 8px 18px; border-radius: 999px; margin-top: -6px;
+    background: rgba(240,192,64,0.10); border: 1px solid rgba(240,192,64,0.45);
+    box-shadow: 0 4px 16px -8px var(--gold);
+  }
+  .kl-streak-flame { font-size: 24px; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); }
+  .kl-streak-num {
+    font-family: var(--font-display); font-weight: 900; font-size: 28px;
+    line-height: 1; color: var(--gold); letter-spacing: 1px;
+  }
+  .kl-streak-sub {
+    font-family: var(--font-body); font-size: 14px; color: var(--text2);
+    line-height: 1.2; text-align: left;
+  }
+  .kl-streak-done { background: rgba(240,192,64,0.06); border-color: rgba(240,192,64,0.3); }
+  .kl-streak-done .kl-streak-sub { color: var(--text3); }
   .kl-modes {
     display: flex; flex-wrap: wrap; justify-content: center;
     align-items: stretch; gap: 18px; width: 100%;
@@ -12554,13 +12572,16 @@ async function saveXp(xpEarned, correct, total, moduleKey, level) {
   const newXp = (userData.totalXp || 0) + xpEarned;
   const newLevel = Math.floor(newXp / XP_PER_LEVEL) + 1;
   const progressKey = 'moduleProgress.' + moduleKey + '.' + level;
+  const prevDate = userData.lastSessionDate;      // capture BEFORE overwrite — updateStreak needs the old date
+  const prevStreak = userData.streak || 0;        // to detect whether THIS session extends the streak
   userData.totalXp = newXp;
   userData.level = newLevel;
   userData.sessions = (userData.sessions || 0) + 1;
   userData.lastSessionDate = today;
   userData.totalCorrect = (userData.totalCorrect || 0) + correct;
   userData.totalQuestions = (userData.totalQuestions || 0) + total;
-  updateStreak();
+  updateStreak(prevDate);                         // compare against the captured old date, not the just-set `today`
+  window._streakExtendedThisSession = (userData.streak || 0) > prevStreak; // read by finishSession for the celebrate copy
   if (!userData.moduleProgress) userData.moduleProgress = {};
   if (!userData.moduleProgress[moduleKey]) userData.moduleProgress[moduleKey] = {};
   if (!userData.moduleProgress[moduleKey][level]) userData.moduleProgress[moduleKey][level] = { sessions: 0, correct: 0, xp: 0 };
@@ -12638,12 +12659,17 @@ function animateXpBar(oldXp, newXp, durationMs) {
   requestAnimationFrame(tick);
 }
 
-function updateStreak() {
+function updateStreak(prevDate) {
   const today = new Date().toDateString();
-  const last = userData.lastSessionDate;
-  if (last === today) return;
+  // Use the date captured BEFORE saveXp overwrote lastSessionDate. Fallback keeps
+  // any other caller working (there are none today, but be defensive).
+  const last = (prevDate !== undefined) ? prevDate : userData.lastSessionDate;
+  if (last === today) return; // already counted today — no change
   const yesterday = new Date(Date.now() - 86400000).toDateString();
-  if (last === yesterday) userData.streak = (userData.streak || 0) + 1;
+  const dayBefore = new Date(Date.now() - 172800000).toDateString();
+  // ONE-DAY GRACE (locked): a single missed day holds the streak — returning after
+  // yesterday OR the day before yesterday continues it. Two+ missed days resets to 1.
+  if (last === yesterday || last === dayBefore) userData.streak = (userData.streak || 0) + 1;
   else userData.streak = 1;
 }
 
@@ -16816,6 +16842,24 @@ window.klEnterStory = function() {
 window.klArcadeBack = function() {
   if (klState.kid) klShowModeSelect(); else klEnter();
 };
+// Daily-streak badge for the mode-select landing. Saved kid profiles only —
+// guests never persist a streak, so they get nothing. Reads the lesson-record
+// streak (userData.streak), which already saves to Firestore.
+function klStreakBadgeHTML() {
+  if (!klState.kid || klState.guest) return '';
+  const streak = userData.streak || 0;
+  const today = new Date().toDateString();
+  const playedToday = userData.lastSessionDate === today;
+  let sub;
+  if (streak <= 0) sub = 'Play today to start a streak';
+  else if (playedToday) sub = streak + '-day streak';
+  else sub = 'Play today to keep your ' + streak + '-day streak';
+  return '<div class="kl-streak-badge' + (playedToday ? ' kl-streak-done' : '') + '">' +
+           '<span class="kl-streak-flame">\uD83D\uDD25</span>' +
+           (streak > 0 ? '<span class="kl-streak-num">' + streak + '</span>' : '') +
+           '<span class="kl-streak-sub">' + sub + '</span>' +
+         '</div>';
+}
 window.klShowModeSelect = function() {
   showScreen('kidlab');
   document.getElementById('kidlab').classList.remove('kl-playing');
@@ -16825,6 +16869,7 @@ window.klShowModeSelect = function() {
     '<div class="kl-landing kl-modeselect">' +
       klChromeLogoHTML('kl-scene-logo', false, 'sceneTeal', 7) +
       '<div class="kl-mode-hello">Hey ' + (kid.name || 'Player') + ' — pick a mode</div>' +
+      klStreakBadgeHTML() +
       '<div class="kl-modes">' +
         '<button class="kl-mode kl-mode-story" onclick="klEnterStory()">' +
           '<div class="kl-mode-icon">🎸</div>' +
@@ -20213,7 +20258,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-214'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-215'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -24233,6 +24278,7 @@ window.nextQuestion = async function() {
 };
 
 async function finishSession() {
+  window._streakExtendedThisSession = false; // reset before saveXp; it sets true only on a real extension
   const preXp = window._preSessionXp || 0; // captured at session start
   await saveXp(sessionXp, sessionCorrect, sessionQuestions.length, currentModule, currentLevel);
   window._postSessionXp = userData.totalXp || 0;
@@ -24242,7 +24288,10 @@ async function finishSession() {
   const title = accuracy === 100 ? 'PERFECT' : accuracy >= 80 ? 'NAILED IT' : accuracy >= 60 ? 'GOOD WORK' : 'KEEP GRINDING';
   document.getElementById('complete-icon').textContent = icons[currentModule] || '🎸';
   document.getElementById('complete-title').textContent = title;
-  document.getElementById('complete-sub').textContent = 'Streak: ' + (userData.streak || 0) + ' days';
+  document.getElementById('complete-sub').textContent =
+    window._streakExtendedThisSession
+      ? '🔥 Streak extended → ' + (userData.streak || 0) + ' days'
+      : 'Streak: ' + (userData.streak || 0) + ' days';
   document.getElementById('complete-xp').textContent = '+' + sessionXp;
   document.getElementById('complete-accuracy').textContent = accuracy + '%';
   document.getElementById('complete-correct').textContent = sessionCorrect + '/' + sessionQuestions.length;
