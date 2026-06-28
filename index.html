@@ -2017,6 +2017,13 @@
     box-shadow: 0 0 16px rgba(124,111,247,0.95), inset 0 1px 0 rgba(255,255,255,0.4);
   }
   .build-cmarker.active::after { content: 'YOU'; color: #9b8fff; }
+  /* Muted notes — dimmed, desaturated, no glow (double-tap to toggle) */
+  .build-cmarker.muted, .build-root-marker.muted {
+    opacity: 0.26 !important;
+    filter: grayscale(0.85);
+    box-shadow: none !important;
+  }
+  .build-cmarker.muted::after, .build-root-marker.muted::after { opacity: 0.5; }
   /* Slider */
   .build-slider-row {
     display: flex; align-items: center; gap: 12px;
@@ -8421,6 +8428,8 @@ const buildState = {
   markerSemis: 0,
   markerCents: 0,              // total cents above/below the root (single-marker modes)
   chordCents: [],             // one cents value per slidable note (chord mode — all at once)
+  chordMuted: [],             // per chord note: muted from the drone (double-tap to toggle)
+  rootMuted: false,           // the fixed root circle muted
   activeMarker: 0,            // which slidable chord marker is being dragged
   attempts: 0,
   answered: false,
@@ -8803,11 +8812,14 @@ function renderBuildQuestion(q) {
   buildAudio.ab = 'target';
   buildState.markerSemis = 0;
   buildState.markerCents = 0;
+  buildState.rootMuted = false;
   if (q.multiMarker) {
     buildState.chordCents = q.targets.map(() => 0); // start every note on the root — tune each up by ear
+    buildState.chordMuted = q.targets.map(() => false);
     buildState.activeMarker = 0;
   } else {
     buildState.chordCents = [];
+    buildState.chordMuted = [];
     buildState.activeMarker = 0;
   }
   updateBuildSliderReadout();
@@ -8815,6 +8827,10 @@ function renderBuildQuestion(q) {
   hideBuildTargetMarker();
   wireBuildRulerDrag();
   document.getElementById('build-submit-btn').disabled = false;
+  const hintEl = document.getElementById('build-drag-hint');
+  if (hintEl) hintEl.textContent = q.multiMarker
+    ? 'Drag to tune · double-tap a note to mute it'
+    : 'Drag the bar to build the note — by ear';
   // Audio: new question defaults to TARGET; keep the sound on/off preference.
   updateBuildAudioUI();
   if (buildAudio.soundOn) restartBuildDrone(); else stopBuildDrone();
@@ -8876,9 +8892,12 @@ function wireBuildRulerDrag() {
     buildState.chordCents.forEach((c, i) => { const d = Math.abs(c - cents); if (d < bestD) { bestD = d; best = i; } });
     buildState.activeMarker = best;
   };
+  let downX = 0, movedFar = false;
+  let lastTapTime = 0, lastTapX = -999;
   ruler.addEventListener('pointerdown', (e) => {
     if (buildState.answered) return;
     dragging = true;
+    downX = e.clientX; movedFar = false;
     try { ruler.setPointerCapture(e.pointerId); } catch (err) {}
     const q = buildState.currentQ;
     if (q && q.multiMarker) {
@@ -8891,9 +8910,62 @@ function wireBuildRulerDrag() {
     if (!buildAudio.soundOn) startBuildScrub();
     e.preventDefault();
   });
-  ruler.addEventListener('pointermove', (e) => { if (dragging) moveActive(e.clientX); });
-  ruler.addEventListener('pointerup',   () => { dragging = false; stopBuildScrub(); });
+  ruler.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    if (Math.abs(e.clientX - downX) > 6) movedFar = true;
+    moveActive(e.clientX);
+  });
+  ruler.addEventListener('pointerup', (e) => {
+    dragging = false;
+    stopBuildScrub();
+    const q = buildState.currentQ;
+    // Double-tap a circle (chord mode, no drag) to mute/unmute that note.
+    if (q && q.multiMarker && !movedFar && !buildState.answered) {
+      const now = performance.now();
+      if (now - lastTapTime < 320 && Math.abs(e.clientX - lastTapX) < 28) {
+        toggleBuildCircleMute(e.clientX);
+        lastTapTime = 0; lastTapX = -999;   // consume, so a 3rd tap starts fresh
+      } else {
+        lastTapTime = now; lastTapX = e.clientX;
+      }
+    } else {
+      lastTapTime = 0;
+    }
+  });
   ruler.addEventListener('pointercancel', () => { dragging = false; stopBuildScrub(); });
+}
+
+// Double-tap on a circle toggles its mute. Finds the nearest circle to the tap
+// (the fixed root, or any placed chord note), flips its mute, and re-voices the drone.
+function toggleBuildCircleMute(clientX) {
+  const q = buildState.currentQ;
+  if (!q || !q.multiMarker) return;
+  const ruler = document.getElementById('build-ruler');
+  if (!ruler || !ruler._range) return;
+  const rect = ruler.getBoundingClientRect();
+  if (!rect.width) return;
+  let f = (clientX - rect.left) / rect.width;
+  f = Math.max(0, Math.min(1, f));
+  const range = ruler._range;
+  const cents = (-range + f * 2 * range) * 100;
+  // candidates: root (idx -1) at 0 cents, plus each chord note
+  let best = -1, bestD = Math.abs(cents - 0); // start with root
+  buildState.chordCents.forEach((c, i) => { const d = Math.abs(c - cents); if (d < bestD) { bestD = d; best = i; } });
+  if (best === -1) buildState.rootMuted = !buildState.rootMuted;
+  else            buildState.chordMuted[best] = !buildState.chordMuted[best];
+  applyBuildMuteClasses();
+  if (buildAudio.soundOn) restartBuildDrone(); // re-voice with the new mute set
+}
+
+function applyBuildMuteClasses() {
+  const ruler = document.getElementById('build-ruler');
+  if (!ruler) return;
+  const rootM = ruler.querySelector('.build-root-marker');
+  if (rootM) rootM.classList.toggle('muted', !!buildState.rootMuted);
+  ruler.querySelectorAll('.build-cmarker').forEach(el => {
+    const i = +el.dataset.idx;
+    el.classList.toggle('muted', !!buildState.chordMuted[i]);
+  });
 }
 
 // ── Piano strip ─────────────────────────────────────────────────────────
@@ -8953,7 +9025,9 @@ function drawBuildStrip() {
     // One slidable marker per non-root chord tone — build them all at once.
     buildState.chordCents.forEach((c, i) => {
       const m = document.createElement('div');
-      m.className = 'build-marker build-cmarker' + (i === buildState.activeMarker ? ' active' : '');
+      m.className = 'build-marker build-cmarker'
+        + (i === buildState.activeMarker ? ' active' : '')
+        + (buildState.chordMuted[i] ? ' muted' : '');
       m.dataset.idx = i;
       ruler.appendChild(m);
     });
@@ -8963,6 +9037,10 @@ function drawBuildStrip() {
     marker.id = 'build-marker';
     ruler.appendChild(marker);
   }
+
+  // reflect root mute state
+  const rootMk = ruler.querySelector('.build-root-marker');
+  if (rootMk) rootMk.classList.toggle('muted', !!buildState.rootMuted);
 
   positionBuildMarker();
 }
@@ -9036,8 +9114,16 @@ function makeBuildVoice(ctx, freq) {
 function buildDroneCents(which) {
   const q = buildState.currentQ;
   if (!q) return [0];
+  // In chord mode, a muted root or muted notes are dropped from whatever is playing.
+  if (q.multiMarker) {
+    const rootPart = buildState.rootMuted ? [] : [0];
+    if (which === 'target') {
+      return rootPart.concat(q.targets.map(s => s * 100));
+    }
+    const notes = buildState.chordCents.filter((c, i) => !buildState.chordMuted[i]);
+    return rootPart.concat(notes);
+  }
   if (which === 'target') return [0].concat(q.targets.map(s => s * 100));
-  if (q.multiMarker) return [0].concat(buildState.chordCents);
   const built = [];
   for (let i = 0; i < (q.noteIdx || 0); i++) built.push(q.builtCents[i]);
   built.push(buildState.markerSemis * 100 + buildState.markerCents);
@@ -20127,7 +20213,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-213'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-214'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
