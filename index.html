@@ -2696,6 +2696,12 @@
   .complete-sub {
     font-family: var(--font-body); font-size: 14px; color: var(--text2); margin-top: 8px;
   }
+  .complete-speed {
+    font-family: var(--font-display); font-weight: 900; font-size: 18px; letter-spacing: 1px;
+    color: var(--gold); margin-top: 10px;
+    background: rgba(240,192,64,0.12); border: 1px solid rgba(240,192,64,0.45);
+    border-radius: 999px; padding: 6px 16px; display: inline-block;
+  }
   .complete-stats { display: flex; gap: 8px; margin: 28px 0; width: 100%; }
   .complete-stat {
     flex: 1; background: var(--bg2); border: 1px solid var(--border);
@@ -5602,6 +5608,7 @@
       <div class="level-card-desc" id="beginner-desc"></div>
       <div class="level-card-meta">
         <span class="meta-pill" id="beginner-count"></span>
+        <span class="meta-pill meta-bpm" id="beginner-bpm" style="display:none;"></span>
       </div>
     </div>
     <div class="level-card" onclick="startSession('intermediate')">
@@ -5609,6 +5616,7 @@
       <div class="level-card-desc" id="intermediate-desc"></div>
       <div class="level-card-meta">
         <span class="meta-pill" id="intermediate-count"></span>
+        <span class="meta-pill meta-bpm" id="intermediate-bpm" style="display:none;"></span>
       </div>
     </div>
     <div class="level-card" onclick="startSession('advanced')">
@@ -5616,6 +5624,7 @@
       <div class="level-card-desc" id="advanced-desc"></div>
       <div class="level-card-meta">
         <span class="meta-pill" id="advanced-count"></span>
+        <span class="meta-pill meta-bpm" id="advanced-bpm" style="display:none;"></span>
       </div>
     </div>
     <div class="level-card" onclick="startSession('expert')">
@@ -5623,6 +5632,7 @@
       <div class="level-card-desc" id="expert-desc"></div>
       <div class="level-card-meta">
         <span class="meta-pill" id="expert-count"></span>
+        <span class="meta-pill meta-bpm" id="expert-bpm" style="display:none;"></span>
       </div>
     </div>
   </div>
@@ -6941,6 +6951,7 @@
     <div class="complete-icon" id="complete-icon">🎸</div>
     <div class="complete-title" id="complete-title">SESSION DONE</div>
     <div class="complete-sub" id="complete-sub">Keep the streak alive</div>
+    <div class="complete-speed" id="complete-speed" style="display:none;"></div>
     <div class="complete-stats">
       <div class="complete-stat">
         <span class="complete-stat-val gold" id="complete-xp">+0</span>
@@ -12565,6 +12576,19 @@ async function loadUserData(userId) {
 }
 // === FIRESTORE SILENT-FAIL — END ===
 
+// === BPM SPEED-LADDER (rhythm) — START ===
+// The rhythm module's playback tempo is an EARNED ceiling, not a free slider.
+// Starts at the base and climbs +2 per clean (>=80%) clear, per level.
+const RHYTHM_BASE_BPM = 80;
+const RHYTHM_BPM_STEP = 2;
+const RHYTHM_BUMP_ACCURACY = 0.80; // "NAILED IT"
+function getRhythmCeiling(level) {
+  const rec = userData.moduleProgress && userData.moduleProgress.rhythm_comprehension
+    && userData.moduleProgress.rhythm_comprehension[level];
+  return (rec && rec.bpmCeiling) ? rec.bpmCeiling : RHYTHM_BASE_BPM;
+}
+// === BPM SPEED-LADDER (rhythm) — END ===
+
 async function saveXp(xpEarned, correct, total, moduleKey, level) {
   if (!uid) return;
   const ref = doc(db, 'users', uid);
@@ -12588,6 +12612,19 @@ async function saveXp(xpEarned, correct, total, moduleKey, level) {
   userData.moduleProgress[moduleKey][level].sessions += 1;
   userData.moduleProgress[moduleKey][level].correct = (userData.moduleProgress[moduleKey][level].correct || 0) + correct;
   userData.moduleProgress[moduleKey][level].xp = (userData.moduleProgress[moduleKey][level].xp || 0) + xpEarned;
+
+  // === BPM SPEED-LADDER bump (rhythm only) — rides the existing clear-event write below ===
+  window._rhythmSpeedUp = null;
+  if (moduleKey === 'rhythm_comprehension') {
+    const rec = userData.moduleProgress[moduleKey][level];
+    if (rec.bpmCeiling == null) rec.bpmCeiling = RHYTHM_BASE_BPM;
+    const acc = total ? (correct / total) : 0;
+    if (acc >= RHYTHM_BUMP_ACCURACY) {
+      rec.bpmCeiling += RHYTHM_BPM_STEP;
+      rec.bpmBest = Math.max(rec.bpmBest || 0, rec.bpmCeiling);
+      window._rhythmSpeedUp = rec.bpmCeiling; // surfaced on session-complete
+    }
+  }
 
   // === FIRESTORE SILENT-FAIL — START ===
   klSaveLocalUser(); // always mirror locally — XP/progress survives offline
@@ -20258,7 +20295,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-215'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-216'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -21506,6 +21543,18 @@ window.selectModule = function(moduleKey) {
   document.getElementById('advanced-desc').textContent = d.advanced || '';
   document.getElementById('expert-desc').textContent = d.expert || '';
 
+  // BPM speed-ladder pills — rhythm only. Shows the earned ceiling (the number to beat) before play.
+  ['beginner','intermediate','advanced','expert'].forEach(lvl => {
+    const pill = document.getElementById(lvl + '-bpm');
+    if (!pill) return;
+    if (moduleKey === 'rhythm_comprehension') {
+      pill.textContent = '⚡ ' + getRhythmCeiling(lvl) + ' BPM';
+      pill.style.display = '';
+    } else {
+      pill.style.display = 'none';
+    }
+  });
+
   showScreen('level-select');
 };
 
@@ -21962,7 +22011,7 @@ function renderRhythmQ(q, body) {
   }
   body.appendChild(pattern);
 
-  const bpm = 80;
+  const bpm = getRhythmCeiling(currentLevel); // earned speed-ladder ceiling (was hardcoded 80)
   const onsetBeats = notation ? notation.onsets : null;
   const onsetEventIdx = notation ? notation.onsetEventIdx : null;
   const midiToFreq = m => 440 * Math.pow(2, (m - 69) / 12);
@@ -24279,6 +24328,7 @@ window.nextQuestion = async function() {
 
 async function finishSession() {
   window._streakExtendedThisSession = false; // reset before saveXp; it sets true only on a real extension
+  window._rhythmSpeedUp = null; // reset before saveXp; it sets a value only on a real speed bump
   const preXp = window._preSessionXp || 0; // captured at session start
   await saveXp(sessionXp, sessionCorrect, sessionQuestions.length, currentModule, currentLevel);
   window._postSessionXp = userData.totalXp || 0;
@@ -24295,6 +24345,15 @@ async function finishSession() {
   document.getElementById('complete-xp').textContent = '+' + sessionXp;
   document.getElementById('complete-accuracy').textContent = accuracy + '%';
   document.getElementById('complete-correct').textContent = sessionCorrect + '/' + sessionQuestions.length;
+  const speedEl = document.getElementById('complete-speed');
+  if (speedEl) {
+    if (window._rhythmSpeedUp) {
+      speedEl.textContent = '⚡ New speed: ' + window._rhythmSpeedUp + ' BPM';
+      speedEl.style.display = 'inline-block';
+    } else {
+      speedEl.style.display = 'none';
+    }
+  }
   refreshHome();
   showScreen('session-complete');
 }
