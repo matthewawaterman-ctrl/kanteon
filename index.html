@@ -2001,7 +2001,7 @@
     z-index: 5; pointer-events: none;
   }
   .build-root-marker::after {
-    content: 'ROOT'; position: absolute; top: -16px; left: 50%;
+    content: attr(data-label); position: absolute; top: -16px; left: 50%;
     transform: translateX(-50%);
     font-family: var(--font-display); font-size: 11px; font-weight: 900;
     color: var(--gold); letter-spacing: 1.5px;
@@ -8658,49 +8658,117 @@ window.nextBuildQuestion = function() {
   renderBuildQuestion(q);
 };
 
+// ════════════════════════════════════════════════════════════════════════
+// SHAPE ENGINE
+// A small, UI-agnostic generator for musical "shapes" (formulas). Given a shape
+// (interval / chord / scale) it picks a root, chooses a voicing, and realizes a
+// concrete instance: absolute pitches, targets relative to an anchor note, and
+// note names. Build mode is the first consumer; a future generated-rhythm or
+// generated-melody mode can reuse the same pick -> root -> realize pipeline.
+//
+// EXTENDING (e.g. rhythm): add `rhythms: [{id,label,onsets:[...]}]` to the
+// catalogs and a `if (kind === 'rhythms')` case in voice() returning
+// { kind, id, label, onsets, meta }. pick / generate / id-filtering all work
+// unchanged — only the realize step is shape-specific.
+// ════════════════════════════════════════════════════════════════════════
+const ShapeEngine = {
+  // Catalogs (the formulas). Pitch shapes are semitone sets.
+  intervals: EAR_INTERVALS,   // { id, label, semis, mnemonic }
+  chords:    EAR_CHORDS,      // { id, label, ints:[...], mnemonic }
+  scales:    BUILD_SCALES,    // { id, label, degs:[...], mnemonic }
+
+  catalog(kind) { return this[kind] || []; },
+  find(kind, id) { return this.catalog(kind).find(s => s.id === id) || null; },
+  noteName(midi) { return midiToNoteName(midi).replace(/-?\d+$/, ''); },
+
+  // Pick a random shape from a kind, optionally restricted to an id Set/array.
+  pick(kind, allowedIds) {
+    let pool = this.catalog(kind);
+    if (allowedIds) {
+      const has = allowedIds.has ? (id => allowedIds.has(id)) : (id => allowedIds.indexOf(id) !== -1);
+      pool = pool.filter(s => has(s.id));
+    }
+    return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
+  },
+
+  // Pick a root MIDI: a fixed note name, or random within [lo,hi].
+  pickRoot(opts = {}) {
+    if (opts.fixed) return noteToMidi((opts.note || 'C') + (opts.octave || 4));
+    const lo = (opts.lo != null) ? opts.lo : 48;
+    const hi = (opts.hi != null) ? opts.hi : 60;
+    return lo + Math.floor(Math.random() * (hi - lo + 1));
+  },
+
+  // Realize a voiced instance of a shape. Returns:
+  // { kind, id, label, mnemonic, anchorMidi, anchorName, rootName,
+  //   targets:[semitones from anchor], pitches:[midi], direction?, fixedIdx?, meta }
+  voice(kind, shape, opts = {}) {
+    if (!shape) return null;
+    const rootMidi = (opts.rootMidi != null) ? opts.rootMidi : this.pickRoot(opts.root || {});
+
+    if (kind === 'intervals') {
+      let dir = opts.direction || 'above';
+      if (dir === 'both') dir = Math.random() < 0.5 ? 'above' : 'below';
+      const t = dir === 'above' ? shape.semis : -shape.semis;
+      return {
+        kind, id: shape.id, label: shape.label, mnemonic: shape.mnemonic || '',
+        anchorMidi: rootMidi, anchorName: this.noteName(rootMidi), rootName: this.noteName(rootMidi),
+        direction: dir, targets: [t], pitches: [rootMidi, rootMidi + t], meta: {},
+      };
+    }
+    if (kind === 'chords') {
+      const ints = shape.ints;
+      const fixedIdx = (opts.fixedIdx != null) ? opts.fixedIdx : Math.floor(Math.random() * ints.length);
+      const fixedInterval = ints[fixedIdx];
+      const anchorMidi = rootMidi + fixedInterval;                 // the GIVEN note (any chord tone)
+      const targets = ints.filter((_, i) => i !== fixedIdx).map(iv => iv - fixedInterval);
+      return {
+        kind, id: shape.id, label: shape.label, mnemonic: shape.mnemonic || '',
+        anchorMidi, anchorName: this.noteName(anchorMidi), rootName: this.noteName(rootMidi),
+        fixedIdx, direction: 'above', targets, pitches: ints.map(iv => rootMidi + iv), meta: {},
+      };
+    }
+    if (kind === 'scales') {
+      const degs = shape.degs.slice();
+      return {
+        kind, id: shape.id, label: shape.label, mnemonic: shape.mnemonic || '',
+        anchorMidi: rootMidi, anchorName: this.noteName(rootMidi), rootName: this.noteName(rootMidi),
+        direction: 'above', targets: degs, pitches: [rootMidi].concat(degs.map(d => rootMidi + d)), meta: {},
+      };
+    }
+    return null;
+  },
+
+  // Convenience: pick a shape, then voice it.
+  generate(kind, allowedIds, opts = {}) {
+    return this.voice(kind, this.pick(kind, allowedIds), opts);
+  },
+};
+
+// Build mode is a thin adapter over ShapeEngine: realize a shape, then attach
+// the build-session bookkeeping (markers, attempts, scoring fields).
 function generateBuildQuestion() {
   const pool = getActiveBuildPool();
+  if (!pool.length) return null;
   const pick = pool[Math.floor(Math.random() * pool.length)];
+  const inst = ShapeEngine.voice(pick.kind, ShapeEngine.find(pick.kind, pick.id), {
+    rootMidi: buildState.fixedRoot ? noteToMidi(buildState.rootNote + '4') : undefined,
+    direction: buildState.direction,
+  });
+  if (!inst) return null;
 
-  // Root note selection
-  let rootMidi;
-  if (buildState.fixedRoot) {
-    rootMidi = noteToMidi(buildState.rootNote + '4');
-  } else {
-    rootMidi = 48 + Math.floor(Math.random() * 13); // C3-C4 (keep middle range so strip has room both directions)
+  const q = {
+    kind: inst.kind, id: inst.id, label: inst.label, mnemonic: inst.mnemonic,
+    rootMidi: inst.anchorMidi, direction: inst.direction,
+    targets: inst.targets, noteIdx: 0, builtCents: [], missed: false,
+    harmonic: inst.kind !== 'scales',     // chords/intervals sound together; scales are melodic
+  };
+  if (inst.kind === 'chords') {
+    q.multiMarker = true;                 // given note fixed + every other tone slidable at once
+    q.chordRootName = inst.rootName;      // the chord's root (for naming)
+    q.fixedName = inst.anchorName;        // the given note (any chord tone)
   }
-
-  // Direction (intervals only — chords/scales build upward)
-  let dir = buildState.direction;
-  if (dir === 'both') dir = Math.random() < 0.5 ? 'above' : 'below';
-
-  if (pick.kind === 'intervals') {
-    const def = EAR_INTERVALS.find(i => i.id === pick.id);
-    const t = dir === 'above' ? def.semis : -def.semis;
-    return {
-      kind: 'intervals', id: def.id, label: def.label, mnemonic: def.mnemonic,
-      rootMidi, direction: dir,
-      targets: [t], noteIdx: 0, builtCents: [], harmonic: true, missed: false,
-    };
-  }
-  if (pick.kind === 'chords') {
-    const def = EAR_CHORDS.find(c => c.id === pick.id);
-    return {
-      kind: 'chords', id: def.id, label: def.label, mnemonic: def.mnemonic || '',
-      rootMidi, direction: 'above',
-      targets: def.ints.slice(1), noteIdx: 0, builtCents: [], harmonic: true, missed: false,
-      multiMarker: true,        // root fixed + every other tone slidable, all at once
-    };
-  }
-  if (pick.kind === 'scales') {
-    const def = BUILD_SCALES.find(s => s.id === pick.id);
-    return {
-      kind: 'scales', id: def.id, label: def.label, mnemonic: def.mnemonic || '',
-      rootMidi, direction: 'above',
-      targets: def.degs.slice(), noteIdx: 0, builtCents: [], harmonic: false, missed: false,
-    };
-  }
-  return null;
+  return q;
 }
 
 function renderBuildQuestion(q) {
@@ -8713,11 +8781,11 @@ function renderBuildQuestion(q) {
     const dirWord = q.direction === 'above' ? 'above' : 'below';
     html = 'Build a <span class="v">' + q.label + '</span> ' + dirWord + ' <span class="v">' + rootName + '</span>';
   } else if (q.multiMarker) {
-    // Chord — root is fixed, build every other tone at once.
+    // Chord — one given note (any chord tone) is fixed; build the rest around it.
     const n = q.targets.length;
-    html = 'Build a <span class="v">' + q.label + ' chord</span> from <span class="v">' + rootName + '</span>'
-         + '<div class="build-subprompt">Root is fixed — drag the <span class="vm">' + n + '</span> other note'
-         + (n === 1 ? '' : 's') + ' into place</div>';
+    html = 'Build a <span class="v">' + q.chordRootName + ' ' + q.label + ' chord</span>'
+         + '<div class="build-subprompt"><span class="vm">' + q.fixedName + '</span> is given — place the other '
+         + '<span class="vm">' + n + '</span> note' + (n === 1 ? '' : 's') + '</div>';
   } else {
     // Scale — one degree at a time, climbing.
     const total = q.targets.length;
@@ -8867,10 +8935,12 @@ function drawBuildStrip() {
   ruler._range = range;
   ruler._totalSpan = totalSpan;
 
-  // Fixed ROOT marker at 0 — always shown; it's the chord/interval reference and a real chord tone.
+  // Fixed/given-note marker at center — the anchor pitch (chord root, or any
+  // chord tone for chord puzzles). Labelled with the actual note name.
   const rootM = document.createElement('div');
   rootM.className = 'build-root-marker';
   rootM.style.left = '50%';
+  rootM.dataset.label = midiToNoteName(q.rootMidi).replace(/-?\d+$/, '');
   ruler.appendChild(rootM);
 
   // Target ghost marker (single-marker modes; hidden until reveal)
@@ -8948,13 +9018,17 @@ const buildAudio = { ab: 'target', soundOn: false, voices: [], ctx: null };
 
 function makeBuildVoice(ctx, freq) {
   const osc = ctx.createOscillator();
+  const lp = ctx.createBiquadFilter();
   const gain = ctx.createGain();
-  osc.type = 'triangle';
+  osc.type = 'sine';                 // pure sine — soothing, easy on the ear for long stretches
   osc.frequency.value = freq;
-  osc.connect(gain); gain.connect(ctx.destination);
+  lp.type = 'lowpass';               // gently rounds the very top so high notes aren't piercing
+  lp.frequency.value = 2200;
+  lp.Q.value = 0.5;
+  osc.connect(lp); lp.connect(gain); gain.connect(ctx.destination);
   const t = ctx.currentTime;
   gain.gain.setValueAtTime(0, t);
-  gain.gain.linearRampToValueAtTime(0.11, t + 0.04); // soft attack, headroom for ~5 voices
+  gain.gain.linearRampToValueAtTime(0.12, t + 0.07); // gentle swell, no click
   osc.start();
   return { osc, gain };
 }
@@ -20053,7 +20127,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-211'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-213'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
