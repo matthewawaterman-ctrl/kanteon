@@ -5121,6 +5121,21 @@
     box-shadow: 0 3px 14px rgba(0,0,0,0.45);
   }
   #kl-update-banner:active { filter: brightness(0.95); }
+  /* Deploy Watch — manual stopwatch that reports exactly when a new build goes live.
+     Same always-on visibility as the update banner; top-center pill so they never collide. */
+  #kl-deploy-watch {
+    position: fixed; top: 8px; left: 50%; transform: translateX(-50%); z-index: 99998;
+    background: linear-gradient(160deg, #2a2a3e, #1c1c2b); color: #ffe27a;
+    border: 1px solid rgba(240,192,64,0.5); border-radius: 999px;
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 14px;
+    letter-spacing: 0.5px; padding: 8px 16px; cursor: pointer; text-align: center;
+    box-shadow: 0 3px 14px rgba(0,0,0,0.45); user-select: none; white-space: nowrap;
+  }
+  #kl-deploy-watch.kl-dw-found {
+    background: linear-gradient(160deg, #ffe27a, #f59e0b); color: #5a3a00; border-color: transparent;
+  }
+  #kl-deploy-watch.kl-dw-watching { border-color: rgba(240,192,64,0.85); }
+  #kl-deploy-watch:active { filter: brightness(0.95); }
   /* ── END DEV JUMPER ── */
   /* ── DRUM PUZZLE ── */
   .kl-drumtitle {
@@ -20295,7 +20310,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = 'b31-216'; // bump this each ship so the DEV menu shows whether a new build actually loaded
+const KL_BUILD_TAG = 'b31-217'; // bump this each ship so the DEV menu shows whether a new build actually loaded
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -20358,6 +20373,10 @@ klApplyStageScale();
 // update banner. This makes "did my deploy land?" self-evident on every device.
 function klShowUpdateBanner(liveTag) {
   if (document.getElementById('kl-update-banner')) return;
+  // Don't double up with the Deploy Watch — if it's watching or already showing the
+  // new build, it owns the "tap to load" action.
+  const dw = document.getElementById('kl-deploy-watch');
+  if (dw && ((typeof klDeployWatchActive === 'function' && klDeployWatchActive()) || dw.classList.contains('kl-dw-found'))) return;
   const b = document.createElement('button');
   b.id = 'kl-update-banner';
   b.textContent = '🔄 New build ' + liveTag + ' is live — tap to update (you\u2019re on ' + KL_BUILD_TAG + ')';
@@ -20378,11 +20397,98 @@ function klShowUpdateBanner(liveTag) {
       })
       .catch(function() {});
   }
-  if (document.readyState === 'complete') setTimeout(run, 1500);
-  else window.addEventListener('load', function() { setTimeout(run, 1500); });
-  setInterval(run, 60000); // re-check every minute so an open tab catches a new deploy
+  // A short startup burst catches a deploy you ran right before refreshing within
+  // ~20s instead of up to 60s; then settle to the steady 60s cadence (unchanged cost).
+  let _ucBurst = 0;
+  function _ucSchedule() {
+    run();
+    _ucBurst++;
+    if (_ucBurst < 3) setTimeout(_ucSchedule, 20000); // 3 checks over the first ~40s
+    else setInterval(run, 60000);                     // then steady 60s
+  }
+  if (document.readyState === 'complete') setTimeout(_ucSchedule, 1500);
+  else window.addEventListener('load', function() { setTimeout(_ucSchedule, 1500); });
 })();
-let klDrumPlayheadRAF = null; // rAF handle for the audio-clock-driven drum playhead
+
+// === DEPLOY WATCH — START ===
+// Manual stopwatch for "how long until my deploy is live." Tap to start: it polls the
+// live file fast, shows a running elapsed timer, and the instant a different build tag
+// appears it reports the exact time it took. Auto-stops on detection or after a cap so a
+// failed/abandoned deploy can't poll forever. Cost is bounded: async fetch off the main
+// thread + a cheap indexOf; the 1s elapsed ticker does NO network. Only runs while watching.
+let _dwTimer = null;            // 1s display ticker (no network)
+let _dwPoll = null;            // fetch poll interval
+let _dwStart = 0;             // ms timestamp when the watch started
+let _dwActive = false;
+const _DW_POLL_MS = 5000;        // network cadence while watching
+const _DW_CAP_MS = 4 * 60000;     // auto-stop after 4 min with no new build
+function _dwFmt(ms) { const s = Math.max(0, Math.round(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+function klDeployWatchActive() { return _dwActive; }
+function _dwEl() { return document.getElementById('kl-deploy-watch'); }
+function _dwSetIdle() { _dwActive = false; const el = _dwEl(); if (!el) return; el.className = ''; el.textContent = '\uD83D\uDC41 Watch deploy'; }
+function _dwTick() { const el = _dwEl(); if (!el || !_dwActive) return; el.textContent = '\u23F3 Watching for new build\u2026 ' + _dwFmt(Date.now() - _dwStart); }
+function _dwStop() {
+  if (_dwTimer) { clearInterval(_dwTimer); _dwTimer = null; }
+  if (_dwPoll) { clearInterval(_dwPoll); _dwPoll = null; }
+  _dwActive = false;
+}
+function _dwFound(liveTag) {
+  const took = _dwFmt(Date.now() - _dwStart);
+  _dwStop();
+  const el = _dwEl(); if (!el) return;
+  el.className = 'kl-dw-found';
+  el.textContent = '\u2705 ' + liveTag + ' live \u2014 took ' + took + ' \u00B7 tap to load';
+  const pb = document.getElementById('kl-update-banner'); if (pb) pb.remove(); // we own the load action now
+}
+function _dwTimeout() {
+  const el = _dwEl(); const took = _dwFmt(Date.now() - _dwStart);
+  _dwStop();
+  if (!el) return;
+  el.className = ''; el.textContent = '\u2014 no new build yet (' + took + ') \u00B7 tap to watch again';
+}
+function _dwPollOnce() {
+  fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' })
+    .then(function(r) { return r.text(); })
+    .then(function(txt) {
+      if (!_dwActive) return;
+      const key = "KL_BUILD_TAG = '";
+      const i = txt.indexOf(key); if (i < 0) return;
+      const rest = txt.slice(i + key.length);
+      const tag = rest.slice(0, rest.indexOf("'"));
+      if (tag && tag !== KL_BUILD_TAG) _dwFound(tag);
+      else if (Date.now() - _dwStart >= _DW_CAP_MS) _dwTimeout();
+    })
+    .catch(function() { if (_dwActive && Date.now() - _dwStart >= _DW_CAP_MS) _dwTimeout(); });
+}
+function klDeployWatchStart() {
+  if (_dwActive) return;
+  _dwActive = true; _dwStart = Date.now();
+  const el = _dwEl(); if (el) el.className = 'kl-dw-watching';
+  _dwTick();
+  _dwTimer = setInterval(_dwTick, 1000);   // display only — no network
+  _dwPollOnce();                            // immediate first check
+  _dwPoll = setInterval(_dwPollOnce, _DW_POLL_MS);
+}
+function _dwClick() {
+  const el = _dwEl(); if (!el) return;
+  if (el.classList.contains('kl-dw-found')) { location.replace(location.pathname + '?v=' + Date.now()); return; } // tap = load
+  if (_dwActive) { _dwStop(); _dwSetIdle(); return; }   // tap while watching = stop
+  klDeployWatchStart();                                  // tap while idle = start
+}
+(function klMountDeployWatch() {
+  function mount() {
+    if (document.getElementById('kl-deploy-watch')) return;
+    const el = document.createElement('button');
+    el.id = 'kl-deploy-watch';
+    el.textContent = '\uD83D\uDC41 Watch deploy';
+    el.addEventListener('click', _dwClick);
+    document.body.appendChild(el);
+  }
+  if (document.readyState === 'complete' || document.readyState === 'interactive') mount();
+  else window.addEventListener('DOMContentLoaded', mount);
+})();
+// === DEPLOY WATCH — END ===
+
 let klMelodyPlayheadRAF = null; // rAF handle for the audio-clock-driven melody playhead
 // Free-running "jamming" sway on the band figures while a sequence plays. This is
 // clock-INDEPENDENT on purpose: a continuous GPU-composited transform on the figure
