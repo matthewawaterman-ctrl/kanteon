@@ -19723,17 +19723,19 @@ function klGrooveGrade() {
   }
 }
 // Build REAL rhythmic notation (time signature, noteheads / stems / beams / rests).
-const KL_TREBLE_CLEF_D = 'M52 96 C 40 96 36 86 44 80 C 56 72 70 78 70 90 C 70 104 54 112 42 104 C 28 95 30 70 48 58 C 64 47 62 33 55 30 C 49 27 44 33 44 42 L 44 100 C 44 110 38 112 33 108';
+const KL_TREBLE_CLEF_D = 'M124.6,4.6c-9.2,0-16.4,12.2-16.4,28.5c0,6.4,0.7,12.9,1.9,19.3c-21.6,21.2-43.5,43.9-43.5,75.6c0,27.6,19.6,49.3,46.9,52.9c1.6,8.6,3.1,16.9,4.2,24.4c1,6.6,1.7,12.4,1.7,16.8c0,16.6-10.8,27.4-26.3,27.4c-2.3,0-4.6-0.2-6.8-0.6c8.4-3.2,14.4-11.3,14.4-20.9c0-12.3-10-22.3-22.3-22.3c-12.7,0-23,10.3-23,23c0,17.6,15.5,30.7,35.7,30.7c24.1,0,41.6-17.3,41.6-43c0-5.2-0.6-11.4-1.6-18.2c-1.1-7.6-2.6-15.9-4.2-24.5c2.5,0.3,5.1,0.5,7.7,0.5c25.4,0,44.9-18.7,44.9-43.1c0-20.6-14.7-36.7-34.4-39.9c-1.4-7.6-2.6-14.6-3.4-20.4c12.9-13.6,21.8-28.4,21.8-46.4C153.5,17.5,141.3,4.6,124.6,4.6z M128.7,28.8c0.6,3.6,0.9,7.3,0.9,10.9c0,11.2-4.9,21-12.6,29.4c-0.9-5.4-1.4-10.7-1.4-15.6C115.6,40.5,121,28.8,128.7,28.8z M119.4,162.8c-15.7-3.2-26.7-15.6-26.7-31.8c0-19.8,13.8-36.4,29.8-52.8c1.1,6.6,2.4,13.6,3.8,20.8c-13.6,4.6-23.4,16.4-23.4,30.6c0,11.4,6.8,21,16.4,25.5c-0.4-2-0.7-4-0.7-6c0-7.6,4.4-14.2,10.8-17.4l3.8,20.6C131.5,176.6,125.9,164.1,119.4,162.8z M133.4,143.6l-4.6-24.7c0.9-0.2,1.8-0.3,2.7-0.3c10.6,0,19.2,8.6,19.2,19.2C150.7,148.1,142.9,156.7,133.4,143.6z';
+// Filled treble clef, positioned by its spiral-eye (native ~122,131) landing on the G4 line.
 function klTrebleClefStr(cx, g4Y, lineGap, color) {
-  const s = lineGap / 14;
-  return '<g transform="translate(' + (cx - 50 * s) + ',' + (g4Y - 76 * s) + ') scale(' + s + ')">' +
-    '<path d="' + KL_TREBLE_CLEF_D + '" fill="none" stroke="' + color + '" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></g>';
+  const s = lineGap / 45;            // ~7 staff-spaces tall
+  const tx = cx - 122 * s, ty = g4Y - 131 * s;
+  return '<g transform="translate(' + tx + ',' + ty + ') scale(' + s + ')">' +
+    '<path d="' + KL_TREBLE_CLEF_D + '" fill="' + color + '"/></g>';
 }
 function klGrooveNotationSVG(meta, barBeats, ts) {
   barBeats = barBeats || 4; ts = ts || [4, 4];
   const pitched = meta.some(e => e.pitch != null && !e.rest);
-  const tsW = 30, beatW = 84, H = 126;
-  const clefW = pitched ? 44 : 0;
+  const tsW = 28, beatW = 84, H = 126;
+  const clefW = pitched ? 50 : 0;
   const legacyHeadY = 82;
   const leftPad = 26 + clefW + tsW;
   const W = leftPad + barBeats * beatW + 30;
@@ -19796,17 +19798,22 @@ function klGrooveNotationSVG(meta, barBeats, ts) {
     if (e.rest) {
       const cy = restY;
       if (e.d >= 2) {
+        // half / whole rest: filled block hanging on the middle line
         g += '<rect x="' + (x - 10) + '" y="' + (cy - 16) + '" width="20" height="7" fill="currentColor"/>' +
              '<line x1="' + (x - 14) + '" y1="' + (cy - 9) + '" x2="' + (x + 14) + '" y2="' + (cy - 9) + '" stroke="currentColor" stroke-width="2"/>';
       } else if (e.d === 1) {
-        g += '<path d="M' + (x - 5) + ',' + (cy - 26) + ' L' + (x + 5) + ',' + (cy - 16) +
-             ' L' + (x - 4) + ',' + (cy - 7) + ' L' + (x + 6) + ',' + (cy + 4) +
-             '" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round"/>' +
-             '<path d="M' + (x + 6) + ',' + (cy + 4) + ' q-9,-4 -2,-12" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/>';
+        // quarter rest: filled zigzag with a hooked tail, centered on the staff
+        g += '<g transform="translate(' + x + ',' + cy + ') scale(1.55)" fill="currentColor">' +
+             '<path d="M-4,-12 L4,-4 C1,-1.5 -1.5,0.5 1.5,3.5 C4.5,6.5 5,9 2.5,12 ' +
+             'C3.5,8.5 1,7 -1.5,4.5 C-4,2 -3,-1 0,-3.5 L-5,-8 C-3.5,-9.5 -4.5,-10.5 -4,-12 Z"/></g>';
       } else {
-        g += '<line x1="' + (x + 6) + '" y1="' + (cy - 22) + '" x2="' + (x - 5) + '" y2="' + (cy + 2) + '" stroke="currentColor" stroke-width="3"/>' +
-             '<circle cx="' + (x + 4) + '" cy="' + (cy - 20) + '" r="4" fill="currentColor"/>';
-        if (e.d <= 0.25 + 1e-6) g += '<circle cx="' + (x + 1) + '" cy="' + (cy - 9) + '" r="4" fill="currentColor"/>';
+        // eighth / sixteenth rest: slanted bar with one (or two) filled flag(s)
+        const dbl = e.d <= 0.25 + 1e-6;
+        g += '<g transform="translate(' + x + ',' + cy + ') scale(1.4)" fill="currentColor">' +
+             '<circle cx="2.5" cy="-6" r="3.2"/>' +
+             '<path d="M5,-7.4 C5.8,-3 2.8,-1.6 -1.6,-2.2 L-4,8 L-1.4,8 L4.4,-7 Z"/>' +
+             (dbl ? '<circle cx="0" cy="0.5" r="3.2"/><path d="M2.4,-0.8 C3.2,3.6 0.2,5 -4.2,4.4 L-5,7 L-2.4,7 L1.8,-0.4 Z"/>' : '') +
+             '</g>';
       }
     } else {
       const cy = noteY(e);
@@ -19828,7 +19835,7 @@ function klGrooveNotationSVG(meta, barBeats, ts) {
   let staff = '', clef = '', ticks = '';
   if (pitched) {
     staffLineY.forEach(y => { staff += '<line x1="' + (leftPad - 6) + '" y1="' + y + '" x2="' + (W - 12) + '" y2="' + y + '" stroke="rgba(255,255,255,0.18)" stroke-width="1.4"/>'; });
-    clef = klTrebleClefStr(24, staffLineY[1], lineGap, '#cdbb8a');  // staffLineY[1] = G4 line
+    clef = klTrebleClefStr(34, staffLineY[1], lineGap, '#cdbb8a');  // eye on G4 line (staffLineY[1])
     for (let b = 0; b <= barBeats; b += barBeats) {
       const tx = leftPad + b * beatW;
       ticks += '<line x1="' + tx + '" y1="' + staffLineY[4] + '" x2="' + tx + '" y2="' + staffLineY[0] + '" stroke="rgba(255,255,255,0.30)" stroke-width="2.2"/>';
@@ -19839,10 +19846,13 @@ function klGrooveNotationSVG(meta, barBeats, ts) {
       ticks += '<line x1="' + (leftPad + b * beatW) + '" y1="' + (legacyHeadY - 4) + '" x2="' + (leftPad + b * beatW) + '" y2="' + (legacyHeadY + 4) + '" stroke="rgba(255,255,255,0.22)" stroke-width="' + (b % barBeats === 0 ? 2.5 : 1) + '"/>';
     }
   }
-  const tsX = pitched ? (leftPad - tsW / 2 - 8) : (20 + tsW / 2);
+  const tsX = pitched ? (leftPad - tsW / 2 - 4) : (20 + tsW / 2);
   const tsCy = pitched ? midY : legacyHeadY;
-  const tsSVG = '<text x="' + tsX + '" y="' + (tsCy - 1) + '" class="kl-groove-ts" text-anchor="middle">' + ts[0] + '</text>' +
-                '<text x="' + tsX + '" y="' + (tsCy + 22) + '" class="kl-groove-ts" text-anchor="middle">' + ts[1] + '</text>';
+  const tsFS = pitched ? ' style="font-size:27px"' : '';
+  const tsTop = pitched ? (tsCy - 3) : (tsCy - 1);
+  const tsBot = pitched ? (tsCy + 19) : (tsCy + 22);
+  const tsSVG = '<text x="' + tsX + '" y="' + tsTop + '" class="kl-groove-ts"' + tsFS + ' text-anchor="middle">' + ts[0] + '</text>' +
+                '<text x="' + tsX + '" y="' + tsBot + '" class="kl-groove-ts"' + tsFS + ' text-anchor="middle">' + ts[1] + '</text>';
   return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="kl-groove-svg" xmlns="http://www.w3.org/2000/svg">' +
     staff + clef + tsSVG + ticks + beams + notes + '</svg>';
 }
@@ -20324,7 +20334,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.06.28d'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.06.28e'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
