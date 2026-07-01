@@ -3558,43 +3558,6 @@
   }
   .mt-board-close:hover { background: rgba(255,255,255,0.16); }
 
-  .mt-difficulty-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
-  .mt-diff-btn {
-    display: flex; align-items: center; gap: 18px;
-    background: var(--bg2); border: 1px solid var(--border);
-    color: var(--text); padding: 20px 24px;
-    cursor: pointer; border-radius: 6px;
-    transition: background 0.1s, border-color 0.1s, transform 0.05s;
-    text-align: left;
-  }
-  .mt-diff-btn:hover {
-    background: var(--bg3); border-color: var(--border2);
-    transform: translateX(2px);
-  }
-  .mt-diff-btn.selected {
-    background: linear-gradient(90deg, rgba(240,192,64,0.12) 0%, rgba(124,111,247,0.08) 100%);
-    border-color: var(--gold);
-  }
-  .mt-diff-num {
-    font-family: var(--font-display); font-size: 44px; font-weight: 900;
-    color: var(--text3); min-width: 44px;
-    transition: color 0.1s;
-  }
-  .mt-diff-btn.selected .mt-diff-num { color: var(--gold); }
-  .mt-diff-info { flex: 1; display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
-  .mt-diff-name {
-    font-family: var(--font-display); font-size: var(--fs-card-title); font-weight: 900;
-    letter-spacing: 1.5px; line-height: 1;
-  }
-  .mt-diff-meta {
-    font-family: var(--font-mono); font-size: var(--fs-card-sub); color: var(--text2);
-    letter-spacing: 0.5px;
-  }
-  .mt-diff-mult {
-    font-family: var(--font-display); font-size: 27px; font-weight: 900;
-    color: var(--gold);
-  }
-
   .mt-hi-scores {
     background: var(--bg2); border: 1px solid var(--border);
     border-radius: 6px; padding: 14px 16px;
@@ -20601,7 +20564,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.06.30g'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.01a'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -23298,6 +23261,7 @@ function buildTransport(container, config) {
     if (isPlaying) { stopBtn.classList.add('stopping'); setTimeout(() => stopBtn.classList.remove('stopping'), 250); doStopAll(); }
     else doStartPlayback();
   }
+  if (window._activeSpaceHandler) document.removeEventListener('keydown', window._activeSpaceHandler);
   window._activeSpaceHandler = onSpaceKey;
   document.addEventListener('keydown', onSpaceKey);
 
@@ -26678,7 +26642,6 @@ const mtState = {
   correctCount: 0,
   baseTimer: 10,
   currentTimer: 10,
-  difficultyMult: 1.0,
   currentRound: null,
   timerRAF: null,
   timerStartTime: 0,
@@ -27126,6 +27089,7 @@ function startMtTimer() {
   const dur = mtState.currentTimer * 1000;
   mtState.timerStartTime = performance.now();
   mtState.timerDeadline = mtState.timerStartTime + dur;
+  mtState.timerRunning = true;
   const fill = document.getElementById('mt-timer-fill');
   fill.style.width = '100%';
   fill.classList.remove('urgent');
@@ -27144,6 +27108,7 @@ function startMtTimer() {
 }
 
 function stopMtTimer() {
+  mtState.timerRunning = false;
   cancelAnimationFrame(mtState.timerRAF);
   mtState.timerRAF = null;
 }
@@ -27151,8 +27116,12 @@ function stopMtTimer() {
 function handleMtAnswer(pickedId, btn) {
   if (mtState.isAnswered) return;
   mtState.isAnswered = true;
-  const remaining = mtState.timerDeadline - performance.now();
-  mtState.lastSpeedFrac = Math.max(0, Math.min(1, remaining / (mtState.currentTimer * 1000)));  // 1 = instant, 0 = buzzer
+  if (mtState.timerRunning) {
+    const remaining = mtState.timerDeadline - performance.now();
+    mtState.lastSpeedFrac = Math.max(0, Math.min(1, remaining / (mtState.currentTimer * 1000)));  // 1 = instant, 0 = buzzer
+  } else {
+    mtState.lastSpeedFrac = 1;  // answered during LISTEN, before the timer started — fastest possible
+  }
   stopMtTimer();
   document.getElementById('mt-hear-btn').style.visibility = 'hidden';
   const r = mtState.currentRound;
