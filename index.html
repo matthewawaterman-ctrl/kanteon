@@ -8337,6 +8337,68 @@ function playChordAt(ctx, t, rootMidi, ints, dur, gain) {
   ints.forEach(s => playTone(midiFreq(rootMidi + s), t, dur, ctx, gain, 'piano'));
 }
 
+// ── Canonical ear-training VOICE layer ────────────────────────────────────
+// SINGLE SOURCE OF TRUTH for how every ear question sounds. Consumed by BOTH
+// Lesson mode (playCurrentEarQuestion) and Arcade (buildMtRound) so a change to
+// the voicing lands in both surfaces at once. Normalized q shape:
+//   intervals    : { rootMidi, semis, direction:'harmonic'|'ascending'|'descending' }
+//   chords       : { rootMidi, voicing:[semis…] }
+//   scales       : { rootMidi, semis:[semis…], direction }
+//   progressions : { keyRootMidi, chordRoot, ints:[semis…] }   (+ speed arg)
+//   scaleDegrees : { keyRootMidi, notePitch }
+// Returns the total duration in ms.
+function earVoice(ctx, t0, q, speed) {
+  let totalMs = 2000;
+  if (q.kind === 'intervals') {
+    if (q.direction === 'harmonic') {
+      playTone(midiFreq(q.rootMidi),           t0, 1.8, ctx, 0.22, 'piano');
+      playTone(midiFreq(q.rootMidi + q.semis), t0, 1.8, ctx, 0.22, 'piano');
+      totalMs = 2000;
+    } else {
+      const dir = q.direction === 'descending' ? -1 : 1;
+      playTone(midiFreq(q.rootMidi),                   t0,       0.9, ctx, 0.25, 'piano');
+      playTone(midiFreq(q.rootMidi + (q.semis * dir)), t0 + 1.0, 0.9, ctx, 0.25, 'piano');
+      totalMs = 2200;
+    }
+  }
+  else if (q.kind === 'chords') {
+    q.voicing.forEach(s => playTone(midiFreq(q.rootMidi + s), t0, 1.8, ctx, 0.18, 'piano'));
+    totalMs = 2000;
+  }
+  else if (q.kind === 'scales') {
+    const stepDur = 0.4;
+    const noteSemis = q.direction === 'descending' ? q.semis.slice().reverse() : q.semis;
+    noteSemis.forEach((s, i) => {
+      playTone(midiFreq(q.rootMidi + s), t0 + i * stepDur, stepDur * 0.95, ctx, 0.22, 'piano');
+    });
+    totalMs = (noteSemis.length * stepDur * 1000) + 400;
+  }
+  else if (q.kind === 'progressions') {
+    const speeds = { slow: 1.2, medium: 0.85, fast: 0.55 };
+    const beat = speeds[speed] || 0.85;
+    const cadence = [0, 5, 7, 0];             // I IV V I
+    const cadenceQuality = [[0,4,7], [0,4,7], [0,4,7], [0,4,7]];
+    cadence.forEach((deg, i) => {
+      playChordAt(ctx, t0 + i * beat, q.keyRootMidi + deg, cadenceQuality[i], beat * 0.95, 0.16);
+    });
+    const targetStart = t0 + cadence.length * beat + 0.3;
+    playChordAt(ctx, targetStart, q.chordRoot, q.ints, beat * 1.5, 0.20);
+    totalMs = ((cadence.length * beat) + 0.3 + (beat * 1.5)) * 1000 + 200;
+  }
+  else if (q.kind === 'scaleDegrees') {
+    const beat = 0.7;
+    const cadence = [0, 5, 7, 0];
+    const cadenceQuality = [[0,4,7], [0,4,7], [0,4,7], [0,4,7]];
+    cadence.forEach((deg, i) => {
+      playChordAt(ctx, t0 + i * beat, q.keyRootMidi + deg, cadenceQuality[i], beat * 0.95, 0.14);
+    });
+    const targetStart = t0 + cadence.length * beat + 0.4;
+    playTone(midiFreq(q.notePitch), targetStart, 1.4, ctx, 0.28, 'piano');
+    totalMs = ((cadence.length * beat) + 0.4 + 1.4) * 1000 + 200;
+  }
+  return totalMs;
+}
+
 window.playCurrentEarQuestion = function() {
   const q = earState.currentQ;
   if (!q) return;
@@ -8347,62 +8409,7 @@ window.playCurrentEarQuestion = function() {
 
   const ctx = getAudio();
   const t0 = ctx.currentTime + 0.1;
-  let totalMs = 2000;
-
-  if (q.kind === 'intervals') {
-    if (q.direction === 'harmonic') {
-      playTone(midiFreq(q.rootMidi),              t0, 1.8, ctx, 0.22, 'piano');
-      playTone(midiFreq(q.rootMidi + q.semis),    t0, 1.8, ctx, 0.22, 'piano');
-      totalMs = 2000;
-    } else {
-      const dir = q.direction === 'descending' ? -1 : 1;
-      playTone(midiFreq(q.rootMidi),                       t0,        0.9, ctx, 0.25, 'piano');
-      playTone(midiFreq(q.rootMidi + (q.semis * dir)),     t0 + 1.0,  0.9, ctx, 0.25, 'piano');
-      totalMs = 2200;
-    }
-  }
-  else if (q.kind === 'chords') {
-    q.voicing.forEach(s => playTone(midiFreq(q.rootMidi + s), t0, 1.8, ctx, 0.18, 'piano'));
-    totalMs = 2000;
-  }
-  else if (q.kind === 'scales') {
-    // Sequential scale playback
-    const stepDur = 0.4; // seconds per note
-    const noteSemis = q.direction === 'descending'
-      ? q.semis.slice().reverse()
-      : q.semis;
-    noteSemis.forEach((s, i) => {
-      playTone(midiFreq(q.rootMidi + s), t0 + i * stepDur, stepDur * 0.95, ctx, 0.22, 'piano');
-    });
-    totalMs = (noteSemis.length * stepDur * 1000) + 400;
-  }
-  else if (q.kind === 'progressions') {
-    // I-IV-V-I cadence to establish key, then target chord
-    const speeds = { slow: 1.2, medium: 0.85, fast: 0.55 };
-    const beat = speeds[earState.progressionSpeed] || 0.85;
-    const cadence = [0, 5, 7, 0]; // I IV V I (semitone offsets from key root)
-    const cadenceQuality = [[0,4,7], [0,4,7], [0,4,7], [0,4,7]]; // all major triads in major key
-    cadence.forEach((deg, i) => {
-      playChordAt(ctx, t0 + i * beat, q.keyRootMidi + deg, cadenceQuality[i], beat * 0.95, 0.16);
-    });
-    // Gap, then target chord
-    const targetStart = t0 + cadence.length * beat + 0.3;
-    playChordAt(ctx, targetStart, q.chordRoot, q.ints, beat * 1.5, 0.20);
-    totalMs = ((cadence.length * beat) + 0.3 + (beat * 1.5)) * 1000 + 200;
-  }
-  else if (q.kind === 'scaleDegrees') {
-    // I-IV-V-I cadence + single target note
-    const beat = 0.7;
-    const cadence = [0, 5, 7, 0];
-    const cadenceQuality = [[0,4,7], [0,4,7], [0,4,7], [0,4,7]];
-    cadence.forEach((deg, i) => {
-      playChordAt(ctx, t0 + i * beat, q.keyRootMidi + deg, cadenceQuality[i], beat * 0.95, 0.14);
-    });
-    // Gap, then the target note
-    const targetStart = t0 + cadence.length * beat + 0.4;
-    playTone(midiFreq(q.notePitch), targetStart, 1.4, ctx, 0.28, 'piano');
-    totalMs = ((cadence.length * beat) + 0.4 + 1.4) * 1000 + 200;
-  }
+  const totalMs = earVoice(ctx, t0, q, earState.progressionSpeed);
 
   setTimeout(() => {
     hearBtn.classList.remove('playing');
@@ -20596,7 +20603,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.06.30b'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.06.30c'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -26916,33 +26923,27 @@ function buildMtRound(pick) {
     let rm = rootMidi;
     if (dir === 'ascending' && rm + def.semis > 84) rm = 84 - def.semis;
     if (dir === 'descending' && rm - def.semis < 36) rm = 36 + def.semis;
+    const vq = { kind: 'intervals', rootMidi: rm, semis: def.semis, direction: dir };
     return {
       module: 'EAR TRAINING', moduleClass: 'mod-ear',
       typeLabel: dir === 'ascending' ? 'INTERVAL (ASC)' : 'INTERVAL (DESC)',
       prompt: 'Identify the interval',
       correctId: def.id,
       answers: pickAnswerSet(EAR_INTERVALS, def, 4),
-      audio: (ctx, t0) => {
-        const d = dir === 'descending' ? -1 : 1;
-        playTone(midiFreq(rm), t0, 0.9, ctx, 0.25, 'piano');
-        playTone(midiFreq(rm + (def.semis * d)), t0 + 1.0, 0.9, ctx, 0.25, 'piano');
-        return 2200;
-      },
+      audio: (ctx, t0) => earVoice(ctx, t0, vq),
     };
   }
   if (pick.kind === 'ear-chord') {
     const def = EAR_CHORDS.find(c => c.id === pick.id);
     const rootMidi = 48 + Math.floor(Math.random() * 20);
+    const vq = { kind: 'chords', rootMidi: rootMidi, voicing: def.ints };
     return {
       module: 'EAR TRAINING', moduleClass: 'mod-ear',
       typeLabel: 'CHORD QUALITY',
       prompt: 'Identify the chord',
       correctId: def.id,
       answers: pickAnswerSet(EAR_CHORDS, def, 4),
-      audio: (ctx, t0) => {
-        def.ints.forEach(s => playTone(midiFreq(rootMidi + s), t0, 1.8, ctx, 0.18, 'piano'));
-        return 2000;
-      },
+      audio: (ctx, t0) => earVoice(ctx, t0, vq),
     };
   }
   if (pick.kind === 'ear-scale') {
@@ -26950,61 +26951,40 @@ function buildMtRound(pick) {
     let rm = 48 + Math.floor(Math.random() * 20);
     const span = def.semis[def.semis.length - 1];
     if (rm + span > 84) rm = 84 - span;
+    const vq = { kind: 'scales', rootMidi: rm, semis: def.semis, direction: 'ascending' };
     return {
       module: 'EAR TRAINING', moduleClass: 'mod-ear',
       typeLabel: 'SCALE',
       prompt: 'Identify the scale',
       correctId: def.id,
       answers: pickAnswerSet(EAR_SCALES, def, 4),
-      audio: (ctx, t0) => {
-        const stepDur = 0.35;
-        def.semis.forEach((s, i) => {
-          playTone(midiFreq(rm + s), t0 + i * stepDur, stepDur * 0.95, ctx, 0.22, 'piano');
-        });
-        return def.semis.length * stepDur * 1000 + 300;
-      },
+      audio: (ctx, t0) => earVoice(ctx, t0, vq),
     };
   }
   if (pick.kind === 'ear-progression') {
     const def = EAR_PROGRESSION_CHORDS.find(c => c.id === pick.id);
     const keyRoot = 48 + Math.floor(Math.random() * 12);
+    const vq = { kind: 'progressions', keyRootMidi: keyRoot, chordRoot: keyRoot + def.degree, ints: def.ints };
     return {
       module: 'EAR TRAINING', moduleClass: 'mod-ear',
       typeLabel: 'CHORD (ROMAN)',
       prompt: 'Identify the chord in this key',
       correctId: def.id,
       answers: pickAnswerSet(EAR_PROGRESSION_CHORDS, def, 4),
-      audio: (ctx, t0) => {
-        const beat = 0.6;
-        const cad = [0, 5, 7, 0];
-        cad.forEach((deg, i) => {
-          [0,4,7].forEach(s => playTone(midiFreq(keyRoot + deg + s), t0 + i * beat, beat * 0.95, ctx, 0.14, 'piano'));
-        });
-        const targetT = t0 + cad.length * beat + 0.3;
-        def.ints.forEach(s => playTone(midiFreq(keyRoot + def.degree + s), targetT, beat * 1.5, ctx, 0.20, 'piano'));
-        return (cad.length * beat + 0.3 + beat * 1.5) * 1000 + 200;
-      },
+      audio: (ctx, t0) => earVoice(ctx, t0, vq, 'medium'),
     };
   }
   if (pick.kind === 'ear-scaleDegree') {
     const def = EAR_SCALE_DEGREES.find(d => d.id === pick.id);
     const keyRoot = 48 + Math.floor(Math.random() * 12);
+    const vq = { kind: 'scaleDegrees', keyRootMidi: keyRoot, notePitch: keyRoot + def.semis };
     return {
       module: 'EAR TRAINING', moduleClass: 'mod-ear',
       typeLabel: 'SCALE DEGREE',
       prompt: 'Identify the scale degree',
       correctId: def.id,
       answers: pickAnswerSet(EAR_SCALE_DEGREES, def, 4),
-      audio: (ctx, t0) => {
-        const beat = 0.5;
-        const cad = [0, 5, 7, 0];
-        cad.forEach((deg, i) => {
-          [0,4,7].forEach(s => playTone(midiFreq(keyRoot + deg + s), t0 + i * beat, beat * 0.95, ctx, 0.12, 'piano'));
-        });
-        const targetT = t0 + cad.length * beat + 0.3;
-        playTone(midiFreq(keyRoot + def.semis), targetT, 1.4, ctx, 0.28, 'piano');
-        return (cad.length * beat + 0.3 + 1.4) * 1000 + 200;
-      },
+      audio: (ctx, t0) => earVoice(ctx, t0, vq),
     };
   }
   // AL variants
