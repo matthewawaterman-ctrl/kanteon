@@ -20603,7 +20603,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.06.30c'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.06.30d'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -27347,10 +27347,23 @@ function renderMtRhythmRound(r) {
   const beats = parseInt(q.tapCount, 10) || 4;
   const beatInterval = 60 / bpm;
 
+  // Phase-2A: render the SAME Bravura staff Lesson mode uses (shared klRhythmNotation),
+  // keeping Arcade's own count-in / tap-zone / scoring below unchanged.
+  const rVisual = q.visual || q.patternDescription || '';
+  const rMeta = (q.meter || '4/4') + ' · ' + (q.patternDescription || '');
+  const rTsParts = (q.meter || '4/4').split('/');
+  const rMeterBeats = parseInt(rTsParts[0]) || 4;
+  const rTs = [rMeterBeats, parseInt(rTsParts[1]) || 4];
+  const rSeed = klRhySeed((q.patternDescription || '') + '|' + (q.meter || '') + '|' + (rVisual || ''));
+  const rNotation = klRhythmNotation(rVisual, rMeterBeats, rTs, 'beginner', rSeed);
+  const rPatternHtml = rNotation
+    ? '<div class="rhythm-notation" style="color:#e9e6dc;">' + rNotation.svg + '</div>' +
+      '<div class="rhythm-meta" style="text-align:center;">' + rMeta + '</div>'
+    : '<div style="text-align:center;font-family:var(--font-mono);font-size:12px;color:var(--text3);margin-bottom:8px;">' +
+        rVisual + ' · ' + (q.patternDescription || '') + '</div>';
+
   host.innerHTML =
-    '<div style="text-align:center;font-family:var(--font-mono);font-size:12px;color:var(--text3);margin-bottom:8px;">' +
-      (q.visual || '') + ' · ' + (q.patternDescription || '') +
-    '</div>' +
+    rPatternHtml +
     '<div class="tap-zone armed" id="mt-rhythm-zone" style="cursor:pointer;">' +
       '<div class="tap-zone-label" id="mt-rhythm-label">TAP HERE</div>' +
       '<div class="tap-zone-beat" id="mt-rhythm-beat"></div>' +
