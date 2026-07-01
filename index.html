@@ -20603,7 +20603,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.06.30d'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.06.30e'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -27387,6 +27387,7 @@ function renderMtRhythmRound(r) {
   }
 
   const ctx = getAudio();
+  klRhyTapPrime();   // pre-warm the tap oscillator so the first tap is latency-free (matches Lesson)
   const interval = 60 / bpm;
   const countBeats = 4;
   const startT = ctx.currentTime + 0.15;
@@ -27429,6 +27430,7 @@ function renderMtRhythmRound(r) {
     const abs = Math.abs(delta);
     const status = abs <= 80 ? 'perfect' : abs <= 200 ? 'close' : 'miss';
     tapResults.push({ status, deltaMs: delta });
+    klRhyTapStart(330); setTimeout(() => klRhyTapStop(), 110);  // audible tap — matches Lesson
     const dot = indicators.children[idx];
     if (dot) dot.className = 'tap-dot ' + status;
     zone.classList.add('tapped');
@@ -27454,6 +27456,8 @@ function renderMtRhythmRound(r) {
     zone.classList.remove('counting');
     zone.classList.add('armed');
     if (subEl) subEl.textContent = 'TAP THE PATTERN';
+    // steady metronome click through the perform bar so the player can keep time (matches Lesson)
+    for (let _b = 0; _b < beats; _b++) playClick(firstTapBeatTime + _b * beatInterval, ctx, _b === 0);
   });
 
   const finishAt = firstTapBeatTime + (beats - 1) * beatInterval + 0.6;
