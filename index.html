@@ -20568,7 +20568,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.01b'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.01c'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -26649,6 +26649,8 @@ const mtState = {
   isAnswered: false,
   recentKinds: [],
   rhythmActive: false,
+  history: [],      // dev-skip: past rounds we can step back to
+  histPos: -1,      // dev-skip: index into history (-1 = live/newest)
 };
 
 // ── Persistence ─────────────────────────────────────────────────────────
@@ -26786,10 +26788,53 @@ window.startMixtape = function() {
   mtState.lastSpeedFrac = 0.5;         // neutral until first timed answer
   mtState.difficulty = 'arcade';       // single leaderboard bucket (no difficulty tiers)
   mtState.recentKinds = [];
+  mtState.history = [];
+  mtState.histPos = -1;
   renderMtHud();
   showScreen('mixtape-session');
   nextMtRound();
+  installMtDevSkip();
 };
+
+// DEV-ONLY: Cmd/Ctrl+Shift+←/→ steps between arcade questions (back through
+// history, or forward to a fresh one). Lets a dev revisit a glitchy round.
+let _mtDevSkipInstalled = false;
+function installMtDevSkip() {
+  if (_mtDevSkipInstalled) return;
+  _mtDevSkipInstalled = true;
+  document.addEventListener('keydown', (e) => {
+    if (!(e.metaKey || e.ctrlKey) || !e.shiftKey) return;
+    if (e.code !== 'ArrowLeft' && e.code !== 'ArrowRight') return;
+    const live = document.getElementById('mixtape-session');
+    if (!live || !live.classList.contains('active')) return;
+    if (!klIsDevAvailable()) return;
+    e.preventDefault();
+    stopMtTimer();
+    if (e.code === 'ArrowLeft') {
+      // step back through prior rounds
+      const cur = (mtState.histPos === -1) ? mtState.history.length - 1 : mtState.histPos;
+      const target = cur - 1;
+      if (target < 0) { mtFlash('START OF HISTORY', 'levelup'); return; }
+      mtState.histPos = target;
+      mtState.currentRound = mtState.history[target];
+      mtState.isAnswered = false;
+      mtFlash('◀ Q' + (target + 1) + '/' + mtState.history.length, 'levelup');
+      renderMtRound(mtState.currentRound);
+    } else {
+      // forward: to the next stored round, or generate a brand-new one at the end
+      if (mtState.histPos === -1 || mtState.histPos >= mtState.history.length - 1) {
+        mtState.histPos = -1;
+        nextMtRound();
+      } else {
+        mtState.histPos++;
+        mtState.currentRound = mtState.history[mtState.histPos];
+        mtState.isAnswered = false;
+        mtFlash('▶ Q' + (mtState.histPos + 1) + '/' + mtState.history.length, 'levelup');
+        renderMtRound(mtState.currentRound);
+      }
+    }
+  });
+}
 
 function renderMtHud() {
   const lives = document.getElementById('mt-lives');
@@ -26815,22 +26860,38 @@ function mtStreakMult() {
 }
 
 function pickWeighted(pool) {
-  // Group pool items by kind so kinds are balanced regardless of how many items per kind
+  // Group by kind, then by FAMILY, so families get balanced share regardless of
+  // how many kinds each family has. Without this, Active Listening (5 kinds)
+  // drowns out Build and Rhythm (1 kind each) ~5:1. Families are weighted to
+  // keep the interactive modes (rhythm/build) prominent.
+  const famOf = k =>
+    k.startsWith('al-')   ? 'al'    :
+    k.startsWith('ear-')  ? 'ear'   :
+    k === 'build-interval' ? 'build' :
+    k === 'rhythm'         ? 'rhythm' :
+    k === 'transcription'  ? 'transcription' : 'other';
+  const FAM_WEIGHT = { rhythm: 3, build: 3, transcription: 3, ear: 3, al: 2, other: 1 };
+
   const byKind = {};
-  pool.forEach(p => {
-    if (!byKind[p.kind]) byKind[p.kind] = [];
-    byKind[p.kind].push(p);
-  });
+  pool.forEach(p => { (byKind[p.kind] = byKind[p.kind] || []).push(p); });
   const allKinds = Object.keys(byKind);
   if (allKinds.length === 0) return pool[Math.floor(Math.random() * pool.length)];
 
-  // Avoid the last 2 kinds played if possible
+  // Avoid the last 2 kinds if we can
   const recent = mtState.recentKinds.slice(-2);
   let candidateKinds = allKinds.filter(k => !recent.includes(k));
   if (candidateKinds.length === 0) candidateKinds = allKinds;
 
-  // Pick a kind uniformly, then a random item within that kind
-  const chosenKind = candidateKinds[Math.floor(Math.random() * candidateKinds.length)];
+  // Build a family-weighted lottery over the candidate kinds
+  const famKinds = {};
+  candidateKinds.forEach(k => { const f = famOf(k); (famKinds[f] = famKinds[f] || []).push(k); });
+  const fams = Object.keys(famKinds);
+  let total = 0; const rolls = fams.map(f => { const w = FAM_WEIGHT[f] || 1; total += w; return { f, w }; });
+  let r = Math.random() * total, chosenFam = rolls[rolls.length - 1].f;
+  for (const roll of rolls) { r -= roll.w; if (r <= 0) { chosenFam = roll.f; break; } }
+
+  const kindsInFam = famKinds[chosenFam];
+  const chosenKind = kindsInFam[Math.floor(Math.random() * kindsInFam.length)];
   const itemsInKind = byKind[chosenKind];
   return itemsInKind[Math.floor(Math.random() * itemsInKind.length)];
 }
@@ -26863,6 +26924,10 @@ window.nextMtRound = function() {
   }
   mtState.currentRound = round;
   mtState.isAnswered = false;
+  // dev-skip history: append this fresh round, drop any "future" if we'd stepped back
+  if (mtState.histPos !== -1) { mtState.history = mtState.history.slice(0, mtState.histPos + 1); mtState.histPos = -1; }
+  mtState.history.push(round);
+  if (mtState.history.length > 40) mtState.history.shift();
   renderMtRound(mtState.currentRound);
 };
 
