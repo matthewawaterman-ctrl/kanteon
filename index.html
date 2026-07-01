@@ -7357,6 +7357,10 @@ function stopAllAudio() {
     try { audioCtx.close(); } catch(e) {}
     audioCtx = null;
   }
+  // Immediately recreate + warm the context so it spins up NOW (during the
+  // transition) instead of at the next count-in — kills the audio-vs-visual
+  // lag on the first click of each new question.
+  try { getAudio(); } catch(e) {}
 }
 
 function playTone(freq, startTime, duration, ctx, gain = 0.3, timbre = 'guitar', dest) {
@@ -19961,7 +19965,7 @@ function klGrooveNotationSVG(meta, barBeats, ts) {
   const clefW = pitched ? 34 : 0;
   const legacyHeadY = 82;
   const leftPad = pitched ? (16 + clefW + tsW) : (26 + tsW);
-  const W = leftPad + barBeats * beatW + 14;
+  const W = leftPad + barBeats * beatW + 36;
   const xOf = bp => leftPad + (bp + 0.5) * beatW; // centre each onset in its beat cell (margins on both ends)
   // staff geometry (pitched mode): 5 lines E4 G4 B4 D5 F5, bottom-up
   const lineGap = 11, E4Y = 78;
@@ -20048,7 +20052,7 @@ function klGrooveNotationSVG(meta, barBeats, ts) {
 
   let staff = '', clef = '', ticks = '';
   if (pitched) {
-    const staffL = 8, staffR = leftPad + barBeats * beatW; // run full width, clef/TS sit on top; end at final barline
+    const staffL = 8, staffR = leftPad + barBeats * beatW + 22; // extend past the last beat cell so the final note never crowds the barline
     staffLineY.forEach(y => { staff += '<line x1="' + staffL + '" y1="' + y + '" x2="' + staffR + '" y2="' + y + '" stroke="rgba(255,255,255,0.18)" stroke-width="1.4"/>'; });
     clef = klTrebleClefStr(16, staffLineY[1], lineGap, '#cdbb8a');  // gClef origin sits on the G4 line
     // final barline only (no barline at the system start)
@@ -20564,7 +20568,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.01a'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.01b'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -21968,7 +21972,6 @@ function renderQuestion() {
   }
   // Aggressively kill all audio from previous question
   stopAllAudio();
-  if (audioCtx) { try { audioCtx.close(); } catch(e) {} audioCtx = null; }
   questionAttempts = 0;
   currentRevealAnswer = null;
 
@@ -24678,7 +24681,6 @@ window.nextQuestion = async function() {
   klRhyTapStop();
   // Stop ALL audio aggressively before advancing
   stopAllAudio();
-  if (audioCtx) { try { audioCtx.close(); } catch(e) {} audioCtx = null; }
   hideXpToast();
   document.getElementById('feedback-bar').classList.remove('show');
   document.getElementById('feedback-next').textContent = 'NEXT →';
@@ -24691,7 +24693,6 @@ window.nextQuestion = async function() {
       window._indexPreviewMode = false;
       window._indexPreviewScreen = null;
       stopAllAudio();
-      if (audioCtx) { try { audioCtx.close(); } catch(e) {} audioCtx = null; }
       showScreen(returnScreen);
       return;
     }
@@ -24744,7 +24745,6 @@ window.endSession = function() {
     window._indexPreviewScreen = null;
     if (window._activeTransportStop) { try { window._activeTransportStop(); } catch(e) {} }
     stopAllAudio();
-    if (audioCtx) { try { audioCtx.close(); } catch(e) {} audioCtx = null; }
     showScreen(returnScreen);
     return;
   }
@@ -26565,9 +26565,9 @@ function mtBuildPool(maxLevel) {
     5: ['staccato', 'legato', 'sustained', 'muted'],
   };
   const tmpSets = {
-    3: ['slow', 'medium', 'fast'],
-    4: ['slow', 'medium', 'fast', 'straight', 'swung'],
-    5: ['slow', 'medium', 'fast', 'straight', 'swung', 'time44', 'time34', 'time68'],
+    3: ['adagio', 'moderato', 'allegro'],
+    4: ['adagio', 'moderato', 'allegro', 'straight', 'swung'],
+    5: ['largo', 'adagio', 'andante', 'moderato', 'allegro', 'presto', 'straight', 'swung', 'time44', 'time34', 'time68'],
   };
   const texSets = {
     3: ['mono', 'solo', 'ensemble'],
@@ -26851,7 +26851,17 @@ window.nextMtRound = function() {
   const pick = pickWeighted(mtState.pool);
   mtState.recentKinds.push(pick.kind);
   if (mtState.recentKinds.length > 5) mtState.recentKinds.shift();
-  mtState.currentRound = buildMtRound(pick);
+  // Defensive: if a pool item is broken (e.g. stale id after a catalog rename),
+  // prune it and redraw instead of freezing the game mid-run.
+  let attempt = pick, round = null, guard = 0;
+  for (;;) {
+    try { round = buildMtRound(attempt); } catch (e) { round = null; }
+    if (round || guard++ >= 8) break;
+    mtState.pool = mtState.pool.filter(p => !(p.kind === attempt.kind && p.id === attempt.id));
+    if (!mtState.pool.length) mtState.pool = mtBuildPool(1);
+    attempt = pickWeighted(mtState.pool);
+  }
+  mtState.currentRound = round;
   mtState.isAnswered = false;
   renderMtRound(mtState.currentRound);
 };
@@ -27323,6 +27333,9 @@ function renderMtRhythmRound(r) {
   const rTs = [rMeterBeats, parseInt(rTsParts[1]) || 4];
   const rSeed = klRhySeed((q.patternDescription || '') + '|' + (q.meter || '') + '|' + (rVisual || ''));
   const rNotation = klRhythmNotation(rVisual, rMeterBeats, rTs, 'beginner', rSeed);
+  const mtMelodyFreqs = (rNotation && rNotation.pitches && rNotation.pitches.length)
+    ? rNotation.pitches.map(m => 440 * Math.pow(2, (m - 69) / 12))
+    : null;
   const rPatternHtml = rNotation
     ? '<div class="rhythm-notation" style="color:#e9e6dc;">' + rNotation.svg + '</div>' +
       '<div class="rhythm-meta" style="text-align:center;">' + rMeta + '</div>'
@@ -27397,7 +27410,8 @@ function renderMtRhythmRound(r) {
     const abs = Math.abs(delta);
     const status = abs <= 80 ? 'perfect' : abs <= 200 ? 'close' : 'miss';
     tapResults.push({ status, deltaMs: delta });
-    klRhyTapStart(330); setTimeout(() => klRhyTapStop(), 110);  // audible tap — matches Lesson
+    klRhyTapStart(mtMelodyFreqs ? mtMelodyFreqs[idx % mtMelodyFreqs.length] : 330);
+    setTimeout(() => klRhyTapStop(), 110);  // audible melodic tap — matches Lesson
     const dot = indicators.children[idx];
     if (dot) dot.className = 'tap-dot ' + status;
     zone.classList.add('tapped');
