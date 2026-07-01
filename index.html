@@ -6901,9 +6901,8 @@
       <button class="mt-board-open" onclick="mtOpenBoard()">🏆 View all-time leaderboard</button>
     </div>
 
-    <div>
-      <div class="ear-section-title" style="margin-bottom: 10px;">Choose your starting difficulty</div>
-      <div class="mt-difficulty-grid" id="mt-difficulty-grid"></div>
+    <div class="mt-hero-blurb" style="text-align:center;color:var(--text3);font-size:13px;margin:2px 0 4px;">
+      Starts easy, ramps up as you go. Answer fast for more points — and to reach the hard stuff sooner.
     </div>
 
     <div class="mt-personal-best">
@@ -6994,7 +6993,7 @@
     </div>
     <div class="mt-go-buttons">
       <button class="mt-start-go" onclick="startMixtape()" style="padding:14px;font-size:16px;">▶ PLAY AGAIN</button>
-      <button class="ear-quick-btn" onclick="showScreen('home')" style="padding:14px;font-size:13px;">BACK TO HOME</button>
+      <button class="ear-quick-btn" onclick="klArcadeBack()" style="padding:14px;font-size:13px;">BACK TO HOME</button>
     </div>
   </div>
 </div>
@@ -20602,7 +20601,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.06.30f'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.06.30g'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -26778,32 +26777,14 @@ async function mtSubmitBoard(name, score, difficulty) {
 
 // ── Difficulty select screen ─────────────────────────────────────────────
 window.openMixtape = function() {
-  startMixtape();   // no difficulty picker — one continuous ramp
+  buildMtStartScreen();
+  showScreen('mixtape-start');   // landing shows high score + leaderboard; START begins the run
 };
 
 function buildMtStartScreen() {
-  const grid = document.getElementById('mt-difficulty-grid');
-  if (!grid) return;
-  grid.innerHTML = '';
-  MT_DIFFICULTIES.forEach(d => {
-    const btn = document.createElement('button');
-    btn.className = 'mt-diff-btn' + (mtState.difficulty === d.lvl ? ' selected' : '');
-    btn.dataset.lvl = d.lvl;
-    btn.innerHTML =
-      '<div class="mt-diff-num">' + d.lvl + '</div>' +
-      '<div class="mt-diff-info">' +
-        '<div class="mt-diff-name">' + d.name + '</div>' +
-        '<div class="mt-diff-meta">' + d.desc + '</div>' +
-      '</div>' +
-      '<div class="mt-diff-mult">' + d.mult.toFixed(1) + '×</div>';
-    btn.onclick = () => {
-      mtState.difficulty = d.lvl;
-      buildMtStartScreen();
-    };
-    grid.appendChild(btn);
-  });
+  // No difficulty grid anymore — one continuous ramp. Just refresh the scores.
   const scores = mtLoadHiScores();
-  const best = Math.max(0, ...Object.values(scores));
+  const best = Math.max(0, ...Object.values(scores));   // max across all keys → old bests still count
   const pbEl = document.getElementById('mt-personal-best');
   if (pbEl) pbEl.textContent = best;
   refreshMixtapeHiScore();
@@ -27589,7 +27570,7 @@ window.quitMixtape = function() {
       document.removeEventListener('keydown', window._activeSpaceHandler);
       window._activeSpaceHandler = null;
     }
-    showScreen('home');
+    openMixtape();   // back to the arcade landing (was 'home' = Lesson Mode — the nav bug)
     return;
   }
   const scores = mtLoadHiScores();
