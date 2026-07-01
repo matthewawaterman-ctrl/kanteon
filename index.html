@@ -793,7 +793,7 @@
     font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 14px;
     color: var(--text2); letter-spacing: 1px; text-transform: uppercase;
   }
-  .tap-indicators { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
+  .tap-indicators { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; margin: 10px 0 2px; }
   .tap-dot {
     width: 11px; height: 11px; background: rgba(255,255,255,0.12); border-radius: 50%;
     border: 1px solid var(--border2);
@@ -7352,7 +7352,7 @@ function klRhyTapPrime() {
     klRhyTapOsc.frequency.value = 330;
     klRhyTapGain.gain.setValueAtTime(0, ctx.currentTime);
     klRhyTapOsc.connect(klRhyTapGain); klRhyTapGain.connect(ctx.destination);
-    klRhyTapOsc.start();
+    klRhyTapOsc.start(ctx.currentTime + 0.03);   // start pinned-at-0, slightly ahead → no prime click on "start"
   } catch (e) { klRhyTapOsc = null; klRhyTapGain = null; }
 }
 function klRhyTapStart(freq) {
@@ -7365,6 +7365,7 @@ function klRhyTapStart(freq) {
     klRhyTapGain.gain.cancelScheduledValues(now);
     klRhyTapGain.gain.setValueAtTime(klRhyTapGain.gain.value, now);
     klRhyTapGain.gain.linearRampToValueAtTime(0.18, now + 0.0015);  // ~1.5ms attack: tight, pop-free
+    klRhyTapGain.gain.linearRampToValueAtTime(0.09, now + 0.16);    // decay to a gentler sustain — a held note is no louder than a tap
   } catch (e) {}
 }
 function klRhyTapStop() {
@@ -20595,7 +20596,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.06.29e'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.06.30a'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -22396,10 +22397,12 @@ function renderRhythmQ(q, body) {
   if (notation) {
     pattern.innerHTML =
       '<div class="rhythm-notation">' + notation.svg + '</div>' +
+      '<div class="tap-indicators" id="tap-indicators"></div>' +
       '<div class="rhythm-meta">' + meta + '</div>';
   } else {
     pattern.innerHTML =
       '<div class="rhythm-visual">' + visual + '</div>' +
+      '<div class="tap-indicators" id="tap-indicators"></div>' +
       '<div class="rhythm-meta">' + meta + '</div>';
   }
   body.appendChild(pattern);
@@ -22437,8 +22440,7 @@ function renderRhythmQ(q, body) {
   tapZone.innerHTML =
     '<div class="tap-zone-label" id="tap-label">TAP HERE</div>' +
     '<div class="tap-zone-beat" id="tap-beat"></div>' +
-    '<div class="tap-zone-sub" id="tap-sub">PRESS BUTTON OR SPACEBAR TO START</div>' +
-    '<div class="tap-indicators" id="tap-indicators"></div>';
+    '<div class="tap-zone-sub" id="tap-sub">PRESS BUTTON OR SPACEBAR TO START</div>';
   body.appendChild(tapZone);
   // === CHAT D: RHYTHM KEYBOARD + CALIBRATE — START ===
   // Keyboard input hint (appears below tap zone)
@@ -22497,6 +22499,7 @@ function renderRhythmQ(q, body) {
     // Move the verdict OFF the top bar and INTO the tap zone (the count-in space).
     var _fbar = document.getElementById('feedback-bar'); if (_fbar) _fbar.classList.remove('show');
     var _oot = !correct && questionAttempts >= MAX_ATTEMPTS;
+    var _ihEl = document.querySelector('.rhythm-input-hint'); if (_ihEl) _ihEl.style.display = 'none';
     // Per-clear speed-ladder: climb on a solve, dip -2 only when out of tries.
     var _spd = null;
     if (correct) _spd = { bpm: klRhythmBump(currentLevel, 1), dir: 1 };
@@ -22517,9 +22520,8 @@ function renderRhythmQ(q, body) {
     var _det = hits + '/' + beats + ' hit · ' + perfects + ' perfect' + (extraTaps ? ' · ' + extraTaps + ' extra' : '') + ' · ' + Math.round(score * 100) + '%';
     if (_oot) _det = 'HERE IS THE ANSWER · ' + _det;
     else if (!correct) _det += ' · ' + _tl + ' TR' + (_tl === 1 ? 'Y' : 'IES') + ' LEFT';
-    if (_spd) _det += ' · ' + (_spd.dir > 0 ? '\u26A1 ' : '\u2193 ') + _spd.bpm + ' BPM';
     if (_sb) _sb.textContent = _det;
-    if (correct) { showRhythmNext(); }
+    if (correct) { playBtn.style.display = 'none'; showRhythmNext(); }
     else if (questionAttempts >= MAX_ATTEMPTS) { playBtn.style.display = 'none'; showRhythmNext(); }
   };
 
