@@ -6994,7 +6994,6 @@
     </div>
     <div class="mt-go-buttons">
       <button class="mt-start-go" onclick="startMixtape()" style="padding:14px;font-size:16px;">▶ PLAY AGAIN</button>
-      <button class="ear-quick-btn" onclick="showScreen('mixtape-start')" style="padding:14px;font-size:13px;">CHANGE DIFFICULTY</button>
       <button class="ear-quick-btn" onclick="showScreen('home')" style="padding:14px;font-size:13px;">BACK TO HOME</button>
     </div>
   </div>
@@ -20603,7 +20602,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.06.30e'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.06.30f'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -26554,6 +26553,19 @@ const MT_DIFFICULTIES = [
   { lvl: 5, name: 'LEGEND',  desc: 'Full pool · 7s start',         timer: 7,  mult: 2.2, startPool: 5 },
 ];
 
+// ── Arcade run tuning ──────────────────────────────────────────────────────
+// One continuous run: starts easy + lenient, ramps to harder + tighter.
+// SPEED drives BOTH score and pace (fast answers = more points AND faster ramp).
+const MT_TUNE = {
+  START_TIMER: 12,    // s — lenient answer window at the start
+  MIN_TIMER:    5,    // s — floor the window tightens toward
+  TIMER_STEP: 1.4,    // s shaved off the window per level reached
+  MAX_LEVEL:    5,    // pool ceiling (matches mtBuildPool levels 1–5)
+  LEVEL_MOMENTUM: 4,  // momentum needed to advance one level
+  BASE_PTS:    10,    // per-level base; points = level × BASE_PTS × speed × streak
+  SPEED_BONUS: 1.0,   // max EXTRA multiplier at an instant answer → score 1×…2× on speed
+};
+
 // ── Arcade pool by difficulty (1-5) ─────────────────────────────────────────
 function mtBuildPool(maxLevel) {
   const pool = [];
@@ -26766,8 +26778,7 @@ async function mtSubmitBoard(name, score, difficulty) {
 
 // ── Difficulty select screen ─────────────────────────────────────────────
 window.openMixtape = function() {
-  buildMtStartScreen();
-  showScreen('mixtape-start');
+  startMixtape();   // no difficulty picker — one continuous ramp
 };
 
 function buildMtStartScreen() {
@@ -26815,14 +26826,10 @@ window.mtCloseBoard = function () {
 // ── Session control ──────────────────────────────────────────────────────
 window.startMixtape = function() {
   getAudio();
-  const cfg = MT_DIFFICULTIES.find(d => d.lvl === mtState.difficulty);
-  mtState.currentPoolLevel = cfg.startPool;
-  mtState.pool = mtBuildPool(cfg.startPool);
-
-  // Diagnostic: how many of each kind?
-  const kindCounts = {};
-  mtState.pool.forEach(p => { kindCounts[p.kind] = (kindCounts[p.kind] || 0) + 1; });
-  console.log('[Mixtape] Pool built. Items by kind:', kindCounts, '| kanteon.loaded =', kanteon?.loaded);
+  mtState.level = 1;
+  mtState.momentum = 0;
+  mtState.currentPoolLevel = 1;
+  mtState.pool = mtBuildPool(1);
 
   mtState.lives = 3;
   mtState.streak = 0;
@@ -26830,9 +26837,10 @@ window.startMixtape = function() {
   mtState.score = 0;
   mtState.rounds = 0;
   mtState.correctCount = 0;
-  mtState.baseTimer = cfg.timer;
-  mtState.currentTimer = cfg.timer;
-  mtState.difficultyMult = cfg.mult;
+  mtState.baseTimer = MT_TUNE.START_TIMER;
+  mtState.currentTimer = MT_TUNE.START_TIMER;
+  mtState.lastSpeedFrac = 0.5;         // neutral until first timed answer
+  mtState.difficulty = 'arcade';       // single leaderboard bucket (no difficulty tiers)
   mtState.recentKinds = [];
   renderMtHud();
   showScreen('mixtape-session');
@@ -26884,15 +26892,17 @@ function pickWeighted(pool) {
 }
 
 window.nextMtRound = function() {
-  const correct = mtState.correctCount;
-  const cfg = MT_DIFFICULTIES.find(d => d.lvl === mtState.difficulty);
-  const newPoolLevel = Math.min(5, cfg.startPool + Math.floor(correct / 5));
-  if (newPoolLevel > mtState.currentPoolLevel) {
-    mtState.currentPoolLevel = newPoolLevel;
-    mtState.pool = mtBuildPool(newPoolLevel);
-    mtFlash('LEVEL UP', 'levelup');
+  // Level is driven by MOMENTUM (fast answers accumulate it faster → reach hard puzzles sooner).
+  const newLevel = Math.min(MT_TUNE.MAX_LEVEL, 1 + Math.floor(mtState.momentum / MT_TUNE.LEVEL_MOMENTUM));
+  if (newLevel > mtState.level) {
+    mtState.level = newLevel;
+    mtState.currentPoolLevel = newLevel;
+    mtState.pool = mtBuildPool(newLevel);
+    mtFlash('LEVEL ' + newLevel, 'levelup');
   }
-  mtState.currentTimer = Math.max(4, mtState.baseTimer - Math.floor(correct / 10) * 0.5);
+  // Answer window is lenient early, tightens as the level climbs.
+  mtState.currentTimer = Math.max(MT_TUNE.MIN_TIMER, MT_TUNE.START_TIMER - (mtState.level - 1) * MT_TUNE.TIMER_STEP);
+  mtState.lastSpeedFrac = 0.5;  // neutral default for non-MCQ rounds (rhythm/build); MCQ overwrites at answer
 
   const pick = pickWeighted(mtState.pool);
   mtState.recentKinds.push(pick.kind);
@@ -27160,6 +27170,8 @@ function stopMtTimer() {
 function handleMtAnswer(pickedId, btn) {
   if (mtState.isAnswered) return;
   mtState.isAnswered = true;
+  const remaining = mtState.timerDeadline - performance.now();
+  mtState.lastSpeedFrac = Math.max(0, Math.min(1, remaining / (mtState.currentTimer * 1000)));  // 1 = instant, 0 = buzzer
   stopMtTimer();
   document.getElementById('mt-hear-btn').style.visibility = 'hidden';
   const r = mtState.currentRound;
@@ -27195,8 +27207,13 @@ function mtCorrect() {
   mtState.correctCount++;
   mtState.streak++;
   if (mtState.streak > mtState.bestStreak) mtState.bestStreak = mtState.streak;
-  const mult = mtStreakMult();
-  const pts = Math.round(10 * mult * mtState.difficultyMult);
+  // Fast answers accelerate the ramp (1.0 slow … 2.0 instant added to momentum).
+  mtState.momentum += 1 + mtState.lastSpeedFrac;
+  // Points: harder level = more base; faster = up to 2×; streak combo on top.
+  const streakMult = mtStreakMult();
+  const speedMult = 1 + MT_TUNE.SPEED_BONUS * mtState.lastSpeedFrac;
+  const basePts = MT_TUNE.BASE_PTS * mtState.level;
+  const pts = Math.round(basePts * speedMult * streakMult);
   mtState.score += pts;
   renderMtHud();
   mtFlash('+' + pts, 'correct');
@@ -27500,8 +27517,7 @@ function endMixtape() {
   document.getElementById('mt-go-streak').textContent = mtState.bestStreak;
   const acc = mtState.rounds > 0 ? Math.round((mtState.correctCount / mtState.rounds) * 100) : 0;
   document.getElementById('mt-go-accuracy').textContent = acc + '%';
-  const cfg = MT_DIFFICULTIES.find(d => d.lvl === mtState.difficulty);
-  document.getElementById('mt-go-difficulty').textContent = cfg.name;
+  document.getElementById('mt-go-difficulty').textContent = 'LEVEL ' + mtState.level;
   document.getElementById('mt-go-newbest').style.display = isNewBest ? 'block' : 'none';
 
   // Community leaderboard: if this run cracks the all-time top 10, let them sign it.
