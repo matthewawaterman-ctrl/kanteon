@@ -20608,7 +20608,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.01g'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.01h'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -26663,6 +26663,19 @@ function mtBuildPool(maxLevel) {
   const buildSet = buildIntervalSets[Math.min(maxLevel, 5)] || buildIntervalSets[1];
   buildSet.forEach(id => pool.push({ kind: 'build-interval', id, lvl: maxLevel }));
 
+  // Build Mode — construct CHORDS by ear (multi-marker). Introduced at level 2+
+  // so the first level stays interval-only. Harder chords unlock with level.
+  const buildChordSets = {
+    2: ['major', 'minor'],
+    3: ['major', 'minor', 'sus4', 'sus2'],
+    4: ['major', 'minor', 'sus4', 'sus2', 'dim', 'aug'],
+    5: ['major', 'minor', 'sus4', 'sus2', 'dim', 'aug', 'maj7', 'min7', 'dom7'],
+  };
+  if (maxLevel >= 2) {
+    const cset = buildChordSets[Math.min(maxLevel, 5)] || buildChordSets[2];
+    cset.forEach(id => { if (EAR_CHORDS.find(c => c.id === id)) pool.push({ kind: 'build-chord', id, lvl: maxLevel }); });
+  }
+
   // Rhythm — beginner patterns from existing JSON
   if (typeof kanteon !== 'undefined' && kanteon.loaded) {
     try {
@@ -26873,10 +26886,28 @@ function installMtDevSkip() {
   _mtDevSkipInstalled = true;
   document.addEventListener('keydown', (e) => {
     if (!(e.metaKey || e.ctrlKey) || !e.shiftKey) return;
-    if (e.code !== 'ArrowLeft' && e.code !== 'ArrowRight') return;
     const live = document.getElementById('mixtape-session');
     if (!live || !live.classList.contains('active')) return;
     if (!klIsDevAvailable()) return;
+    // ↑/↓ = jump the DIFFICULTY LEVEL for real (bumps momentum so it sticks, rebuilds
+    // the pool, and the very next question is drawn at the new level — unlike ←/→
+    // which only steps through questions without changing score or level).
+    if (e.code === 'ArrowUp' || e.code === 'ArrowDown') {
+      e.preventDefault();
+      stopMtTimer();
+      const dir = e.code === 'ArrowUp' ? 1 : -1;
+      const newLevel = Math.max(1, Math.min(MT_TUNE.MAX_LEVEL, mtState.level + dir));
+      mtState.level = newLevel;
+      mtState.currentPoolLevel = newLevel;
+      // Park momentum at the new level's threshold so nextMtRound doesn't recompute it away.
+      mtState.momentum = (newLevel - 1) * MT_TUNE.LEVEL_MOMENTUM;
+      mtState.pool = mtBuildPool(newLevel);
+      mtState.histPos = -1;                 // leave history-review mode
+      mtFlash('LEVEL ' + newLevel, 'levelup');
+      nextMtRound();                        // draw a fresh question at the new level (counts normally)
+      return;
+    }
+    if (e.code !== 'ArrowLeft' && e.code !== 'ArrowRight') return;
     e.preventDefault();
     stopMtTimer();
     if (e.code === 'ArrowLeft') {
@@ -26937,6 +26968,7 @@ function pickWeighted(pool) {
     k.startsWith('al-')   ? 'al'    :
     k.startsWith('ear-')  ? 'ear'   :
     k === 'build-interval' ? 'build' :
+    k === 'build-chord'    ? 'build' :
     k === 'rhythm'         ? 'rhythm' :
     k === 'transcription'  ? 'transcription' : 'other';
   const FAM_WEIGHT = { rhythm: 3, build: 3, transcription: 3, ear: 3, al: 2, other: 1 };
@@ -27156,6 +27188,21 @@ function buildMtRound(pick) {
     };
   }
 
+  if (pick.kind === 'build-chord') {
+    const def = EAR_CHORDS.find(c => c.id === pick.id);
+    const rootMidi = 48 + Math.floor(Math.random() * 12); // C3 to B3
+    // The root (0) is the given/fixed note; the player tunes the OTHER tones by ear.
+    const otherSemis = def.ints.filter(s => s !== 0);
+    const rootName = midiToNoteName(rootMidi).replace(/-?\d+$/, '');
+    return {
+      module: 'BUILD', moduleClass: 'mod-build',
+      typeLabel: 'BUILD THE CHORD',
+      prompt: 'Build a ' + rootName + ' ' + def.label + ' chord',
+      isBuildChord: true,
+      buildChordQ: { def, rootMidi, rootName, targets: otherSemis },
+    };
+  }
+
   if (pick.kind === 'rhythm') {
     return {
       module: 'RHYTHM', moduleClass: 'mod-rhy',
@@ -27188,6 +27235,9 @@ function renderMtRound(r) {
   }
   if (r.isBuild) {
     return renderMtBuildRound(r);
+  }
+  if (r.isBuildChord) {
+    return renderMtChordRound(r);
   }
 
   const grid = document.getElementById('mt-answer-grid');
@@ -27444,6 +27494,137 @@ function renderMtBuildRound(r) {
   });
 
   // Tight arcade timer — starts after a beat so the player can orient.
+  setTimeout(() => { if (!mtState.isAnswered) startMtTimer(); }, 200);
+}
+
+// Build a CHORD by ear: the root is fixed; one draggable marker per remaining
+// chord tone, all starting stacked on the root and tuned outward. Graded as a
+// set at ±30¢ (order-independent). Mirrors Lesson's multi-marker chord build,
+// self-contained with arcade scoring so Lesson logic is untouched.
+function renderMtChordRound(r) {
+  document.getElementById('mt-answer-grid').style.display = 'none';
+  const host = document.getElementById('mt-rhythm-host');
+  host.style.display = 'block';
+  host.innerHTML = '';
+  document.getElementById('mt-status').textContent = '';
+  document.getElementById('mt-hear-btn').style.visibility = 'hidden';
+
+  const q = r.buildChordQ;            // { def, rootMidi, rootName, targets:[semis...] }
+  const range = 15;
+  const TOL = 30;                     // ±30¢
+  const nTargets = q.targets.length;
+
+  let markersHtml = '<div class="build-root-marker" id="mt-chord-root" style="left:50%;"></div>';
+  for (let i = 0; i < nTargets; i++) {
+    markersHtml += '<div class="build-marker" id="mt-chord-mk-' + i + '" data-i="' + i + '"></div>';
+  }
+  // ghost targets (revealed on submit)
+  for (let i = 0; i < nTargets; i++) {
+    markersHtml += '<div class="build-target-marker" id="mt-chord-tg-' + i + '"></div>';
+  }
+
+  host.innerHTML =
+    '<div class="build-strip-wrap" style="padding:16px 14px 14px;">' +
+      '<div class="build-ruler" id="mt-chord-ruler">' +
+        '<div class="build-ruler-rail"></div>' + markersHtml +
+      '</div>' +
+      '<div class="build-drag-hint" style="text-align:center;margin:8px 0 4px;">Tune each note of the chord by ear — drag the dots</div>' +
+      '<div class="build-ab-row" style="display:flex;gap:10px;margin-top:10px;">' +
+        '<button class="build-hear-btn" id="mt-chord-hear-target" type="button" style="flex:1;">\u25B6 HEAR TARGET</button>' +
+        '<button class="build-hear-btn" id="mt-chord-hear-yours" type="button" style="flex:1;">\u25B6 HEAR YOURS</button>' +
+      '</div>' +
+      '<button class="build-submit-btn" id="mt-chord-submit" type="button" style="width:100%;margin-top:10px;">SUBMIT</button>' +
+    '</div>';
+
+  const ruler = document.getElementById('mt-chord-ruler');
+  const rootMk = document.getElementById('mt-chord-root');
+  rootMk.dataset.label = q.rootName;
+
+  const cents = q.targets.map(() => 0);   // each marker's cents-from-root; start on root
+  const centsToPct = c => { let s = c / 100; s = Math.max(-range, Math.min(range, s)); return (s + range) / (range * 2) * 100; };
+  function placeAll() { for (let i = 0; i < nTargets; i++) document.getElementById('mt-chord-mk-' + i).style.left = centsToPct(cents[i]) + '%'; }
+  placeAll();
+
+  function xToCents(clientX) {
+    const rect = ruler.getBoundingClientRect();
+    let f = (clientX - rect.left) / rect.width; f = Math.max(0, Math.min(1, f));
+    return (-range + f * 2 * range) * 100;
+  }
+  function chordFreqs(useCents) {
+    const fs = [midiFreq(q.rootMidi)];
+    for (let i = 0; i < nTargets; i++) fs.push(midiFreq(q.rootMidi) * Math.pow(2, (useCents[i] / 100) / 12));
+    return fs;
+  }
+  function playChord(useCents, dur, gain) {
+    const ctx = getAudio(); const t = ctx.currentTime + 0.05;
+    chordFreqs(useCents).forEach(f => playTone(f, t, dur, ctx, gain, 'piano'));
+  }
+
+  // clean any leftover window drag listeners from a prior build/chord round
+  if (window._mtBuildMove) { window.removeEventListener('pointermove', window._mtBuildMove); window.removeEventListener('touchmove', window._mtBuildMove); }
+  if (window._mtBuildUp)   { window.removeEventListener('pointerup', window._mtBuildUp);   window.removeEventListener('touchend', window._mtBuildUp); }
+  let activeMk = -1;
+  function nearestMarker(c) {
+    let best = 0, bd = Infinity;
+    for (let i = 0; i < nTargets; i++) { const d = Math.abs(cents[i] - c); if (d < bd) { bd = d; best = i; } }
+    return best;
+  }
+  function onDown(e) {
+    if (mtState.isAnswered) return;
+    const x = e.touches ? e.touches[0].clientX : e.clientX;
+    const c = xToCents(x);
+    activeMk = nearestMarker(c);
+    cents[activeMk] = c; placeAll();
+    playChord(cents, 0.5, 0.16);
+    e.preventDefault();
+  }
+  function onMove(e) {
+    if (activeMk < 0 || mtState.isAnswered) return;
+    const x = e.touches ? e.touches[0].clientX : e.clientX;
+    cents[activeMk] = xToCents(x); placeAll();
+  }
+  function onUp() { activeMk = -1; }
+  window._mtBuildMove = onMove;
+  window._mtBuildUp = onUp;
+  ruler.addEventListener('pointerdown', onDown);
+  window.addEventListener('pointermove', onMove);
+  window.addEventListener('pointerup', onUp);
+  ruler.addEventListener('touchstart', onDown, { passive: false });
+  window.addEventListener('touchmove', onMove, { passive: false });
+  window.addEventListener('touchend', onUp);
+
+  document.getElementById('mt-chord-hear-target').addEventListener('click', () => {
+    playChord(q.targets.map(s => s * 100), 1.4, 0.2);
+  });
+  document.getElementById('mt-chord-hear-yours').addEventListener('click', () => {
+    playChord(cents, 1.4, 0.2);
+  });
+
+  document.getElementById('mt-chord-submit').addEventListener('click', () => {
+    if (mtState.isAnswered) return;
+    mtState.isAnswered = true;
+    stopMtTimer();
+    activeMk = -1;
+    // Grade as a set: each target semitone must be matched by SOME marker within TOL.
+    const targetCents = q.targets.map(s => s * 100);
+    const used = cents.map(() => false);
+    let allHit = true;
+    targetCents.forEach(tc => {
+      let hit = -1;
+      for (let i = 0; i < nTargets; i++) { if (!used[i] && Math.abs(cents[i] - tc) <= TOL) { hit = i; break; } }
+      if (hit >= 0) used[hit] = true; else allHit = false;
+    });
+    // reveal ghosts + color markers
+    for (let i = 0; i < nTargets; i++) {
+      const g = document.getElementById('mt-chord-tg-' + i);
+      g.style.left = centsToPct(targetCents[i]) + '%'; g.classList.add('show');
+      const mk = document.getElementById('mt-chord-mk-' + i);
+      mk.classList.add(used[i] ? 'correct' : 'wrong');
+    }
+    if (allHit) mtCorrect(); else mtWrong();
+    document.getElementById('mt-chord-submit').disabled = true;
+  });
+
   setTimeout(() => { if (!mtState.isAnswered) startMtTimer(); }, 200);
 }
 
