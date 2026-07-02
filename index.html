@@ -20608,7 +20608,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.01f'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.01g'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -26683,7 +26683,7 @@ function mtBuildPool(maxLevel) {
 // inside Lesson Mode) and calls mtWrong()/endMixtape() — dumping the player to
 // the arcade score screen mid-Lesson, plus stray count-in tones ("rogue chord").
 let _mtTimers = [];
-function mtTimeout(fn, ms) {
+function mtSchedule(fn, ms) {
   const id = setTimeout(() => {
     _mtTimers = _mtTimers.filter(t => t !== id);
     fn();
@@ -27515,12 +27515,12 @@ function renderMtRhythmRound(r) {
   for (let i = 0; i < countBeats; i++) {
     const beatNum = i + 1;
     const wallDelay = Math.max(0, (startT + i * interval - ctx.currentTime) * 1000);
-    mtTimeout(() => {
+    mtSchedule(() => {
       if (!mtState.rhythmActive) return;
       beatEl.textContent = beatNum;
       beatEl.classList.add('pulse');
       zone.classList.add('tapped');
-      mtTimeout(() => {
+      mtSchedule(() => {
         beatEl.classList.remove('pulse');
         zone.classList.remove('tapped');
       }, 120);
@@ -27529,11 +27529,11 @@ function renderMtRhythmRound(r) {
 
   const firstTapBeatTime = startT + countBeats * interval;
   const goDelay = Math.max(0, (firstTapBeatTime - ctx.currentTime - 0.05) * 1000);
-  mtTimeout(() => {
+  mtSchedule(() => {
     if (!mtState.rhythmActive) return;
     beatEl.textContent = 'GO!';
     beatEl.classList.add('go');
-    mtTimeout(() => {
+    mtSchedule(() => {
       beatEl.classList.remove('go');
       beatEl.textContent = '';
     }, 200);
@@ -27555,7 +27555,7 @@ function renderMtRhythmRound(r) {
     // used a flat 110ms, so half/whole notes sounded clipped). d is in beats.
     const durBeats = mtOnsetDurs ? (mtOnsetDurs[idx] || 1) : 1;
     const holdMs = Math.max(110, durBeats * beatInterval * 1000 * 0.9);
-    mtTimeout(() => klRhyTapStop(), holdMs);  // melodic tap, held to note length — matches Lesson
+    mtSchedule(() => klRhyTapStop(), holdMs);  // melodic tap, held to note length — matches Lesson
     const dot = indicators.children[idx];
     if (dot) dot.className = 'tap-dot ' + status;
     zone.classList.add('tapped');
@@ -27587,7 +27587,7 @@ function renderMtRhythmRound(r) {
 
   const finishAt = firstTapBeatTime + (beats - 1) * beatInterval + 0.6;
   const scoreDelay = Math.max(0, (finishAt - ctx.currentTime) * 1000);
-  mtTimeout(() => {
+  mtSchedule(() => {
     // Guard: only score if we're still actually in an arcade rhythm round on the
     // arcade screen. Prevents a stale scorer from firing inside Lesson Mode.
     const live = document.getElementById('mixtape-session');
