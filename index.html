@@ -8521,6 +8521,33 @@ const buildState = {
 
 // Tolerance for "you nailed it" — ±20 cents on either side (pure ear, no snapping).
 const BUILD_CENTS_TOLERANCE = 30;
+
+// ── SHARED BUILD GRADERS (single source of truth for Lesson + Arcade) ────────
+// UI-agnostic: take cents values, return correctness. Both modes call these so a
+// tolerance change happens in ONE place. Pass a tol to override the default.
+//
+// Single-note (interval/scale-degree): is the placed pitch within tol of target?
+function gradeBuildCents(placedCents, targetCents, tol) {
+  const T = (typeof tol === 'number') ? tol : BUILD_CENTS_TOLERANCE;
+  return Math.abs(placedCents - targetCents) <= T;
+}
+// Multi-note (chord/scale set): greedily match each placed note to the nearest
+// unused target within tol. Returns { off, allHit, perMarker:[{idx, ok}] }.
+function gradeBuildSet(placedCentsArr, targetCentsArr, tol) {
+  const T = (typeof tol === 'number') ? tol : BUILD_CENTS_TOLERANCE;
+  const used = new Array(targetCentsArr.length).fill(false);
+  const perMarker = [];
+  let off = 0;
+  placedCentsArr.forEach((c, idx) => {
+    let best = -1, bestD = Infinity;
+    targetCentsArr.forEach((tc, ti) => { if (!used[ti]) { const d = Math.abs(c - tc); if (d < bestD) { bestD = d; best = ti; } } });
+    const ok = best >= 0 && bestD <= T;
+    if (ok) used[best] = true; else off++;
+    perMarker.push({ idx, ok });
+  });
+  return { off, allHit: off === 0 && placedCentsArr.length >= targetCentsArr.length, perMarker, used };
+}
+// ─────────────────────────────────────────────────────────────────────────────
 // The semitone offset the player is currently building (current note of the chord/scale).
 function buildCurTarget() {
   const q = buildState.currentQ;
@@ -9360,7 +9387,7 @@ window.submitBuildAnswer = function() {
   const userCents   = buildState.markerSemis * 100 + buildState.markerCents;
   const targetCents = buildCurTarget() * 100;
   const errCents    = userCents - targetCents;
-  const isCorrect   = Math.abs(errCents) <= BUILD_CENTS_TOLERANCE; // pure ear, +/-20 cents
+  const isCorrect   = gradeBuildCents(userCents, targetCents); // shared grader (pure ear)
 
   const marker = document.getElementById('build-marker');
 
@@ -9392,19 +9419,11 @@ window.submitBuildAnswer = function() {
   refreshBuildScore();
 };
 
-// Greedily match each placed note to the nearest unused target tone (±20¢).
+// Greedily match each placed note to the nearest unused target tone (±tol).
+// Delegates to the shared grader so Lesson + Arcade stay in lockstep.
 function gradeChord(q) {
   const tgt = q.targets.map(s => s * 100);
-  const used = new Array(tgt.length).fill(false);
-  const perMarker = [];
-  let off = 0;
-  buildState.chordCents.forEach((c, idx) => {
-    let best = -1, bestD = Infinity;
-    tgt.forEach((tc, ti) => { if (!used[ti]) { const d = Math.abs(c - tc); if (d < bestD) { bestD = d; best = ti; } } });
-    const ok = best >= 0 && bestD <= BUILD_CENTS_TOLERANCE;
-    if (ok) used[best] = true; else off++;
-    perMarker.push({ idx, ok });
-  });
+  const { off, perMarker } = gradeBuildSet(buildState.chordCents, tgt);
   return { off, perMarker };
 }
 
@@ -20608,7 +20627,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.01h'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.01i'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -26676,6 +26695,18 @@ function mtBuildPool(maxLevel) {
     cset.forEach(id => { if (EAR_CHORDS.find(c => c.id === id)) pool.push({ kind: 'build-chord', id, lvl: maxLevel }); });
   }
 
+  // Build Mode — construct SCALES by ear (multi-marker, like chords but more
+  // notes). Level 3+; pentatonics first (fewer notes), full 7-note modes later.
+  const buildScaleSets = {
+    3: ['major_pent', 'minor_pent'],
+    4: ['major_pent', 'minor_pent', 'major', 'natural_minor'],
+    5: ['major_pent', 'minor_pent', 'major', 'natural_minor', 'dorian', 'mixolydian'],
+  };
+  if (maxLevel >= 3) {
+    const sset = buildScaleSets[Math.min(maxLevel, 5)] || buildScaleSets[3];
+    sset.forEach(id => { if (EAR_SCALES.find(s => s.id === id)) pool.push({ kind: 'build-scale', id, lvl: maxLevel }); });
+  }
+
   // Rhythm — beginner patterns from existing JSON
   if (typeof kanteon !== 'undefined' && kanteon.loaded) {
     try {
@@ -26969,6 +27000,7 @@ function pickWeighted(pool) {
     k.startsWith('ear-')  ? 'ear'   :
     k === 'build-interval' ? 'build' :
     k === 'build-chord'    ? 'build' :
+    k === 'build-scale'    ? 'build' :
     k === 'rhythm'         ? 'rhythm' :
     k === 'transcription'  ? 'transcription' : 'other';
   const FAM_WEIGHT = { rhythm: 3, build: 3, transcription: 3, ear: 3, al: 2, other: 1 };
@@ -27199,7 +27231,22 @@ function buildMtRound(pick) {
       typeLabel: 'BUILD THE CHORD',
       prompt: 'Build a ' + rootName + ' ' + def.label + ' chord',
       isBuildChord: true,
-      buildChordQ: { def, rootMidi, rootName, targets: otherSemis },
+      buildChordQ: { def, rootMidi, rootName, targets: otherSemis, label: def.label, kindWord: 'chord' },
+    };
+  }
+
+  if (pick.kind === 'build-scale') {
+    const def = EAR_SCALES.find(s => s.id === pick.id);
+    const rootMidi = 48 + Math.floor(Math.random() * 8); // keep top of scale in range
+    // Root (0) and octave (12) are the given anchors; tune the inner degrees by ear.
+    const inner = def.semis.filter(s => s !== 0 && s !== 12);
+    const rootName = midiToNoteName(rootMidi).replace(/-?\d+$/, '');
+    return {
+      module: 'BUILD', moduleClass: 'mod-build',
+      typeLabel: 'BUILD THE SCALE',
+      prompt: 'Build a ' + rootName + ' ' + def.label + ' scale',
+      isBuildChord: true,   // same multi-marker renderer
+      buildChordQ: { def, rootMidi, rootName, targets: inner, label: def.label, kindWord: 'scale' },
     };
   }
 
@@ -27397,7 +27444,6 @@ function renderMtBuildRound(r) {
 
   const q = r.buildQ;                 // { def, rootMidi, direction, targetSemis }
   const range = 15;                  // matches Lesson BUILD_STRIP_RANGE
-  const TOL = 30;                    // ±30¢ pure-ear, matches Lesson BUILD_CENTS_TOLERANCE
   const rootName = midiToNoteName(q.rootMidi).replace(/-?\d+$/, '');
 
   // Modern ruler (same classes/visuals as Lesson) — drag anywhere to build by ear, no slider, no numbers.
@@ -27483,7 +27529,7 @@ function renderMtBuildRound(r) {
     stopMtTimer();
     dragging = false;
     const targetCents = q.targetSemis * 100;
-    const isCorrect = Math.abs(userCents - targetCents) <= TOL;   // pure ear, ±30¢
+    const isCorrect = gradeBuildCents(userCents, targetCents);   // shared grader
     // reveal the target ghost at its true position
     const ghost = document.getElementById('mt-build-target');
     ghost.style.left = centsToPct(targetCents) + '%';
@@ -27509,12 +27555,14 @@ function renderMtChordRound(r) {
   document.getElementById('mt-status').textContent = '';
   document.getElementById('mt-hear-btn').style.visibility = 'hidden';
 
-  const q = r.buildChordQ;            // { def, rootMidi, rootName, targets:[semis...] }
+  const q = r.buildChordQ;            // { def, rootMidi, rootName, targets:[semis...], kindWord }
   const range = 15;
-  const TOL = 30;                     // ±30¢
   const nTargets = q.targets.length;
+  const isScale = q.kindWord === 'scale';
 
   let markersHtml = '<div class="build-root-marker" id="mt-chord-root" style="left:50%;"></div>';
+  // For a scale, the octave (+12) is a second fixed anchor so the player has a top reference.
+  if (isScale) markersHtml += '<div class="build-root-marker" id="mt-chord-oct"></div>';
   for (let i = 0; i < nTargets; i++) {
     markersHtml += '<div class="build-marker" id="mt-chord-mk-' + i + '" data-i="' + i + '"></div>';
   }
@@ -27523,12 +27571,15 @@ function renderMtChordRound(r) {
     markersHtml += '<div class="build-target-marker" id="mt-chord-tg-' + i + '"></div>';
   }
 
+  const hint = isScale
+    ? 'Tune each note of the scale by ear — drag the dots (root &amp; octave are given)'
+    : 'Tune each note of the chord by ear — drag the dots';
   host.innerHTML =
     '<div class="build-strip-wrap" style="padding:16px 14px 14px;">' +
       '<div class="build-ruler" id="mt-chord-ruler">' +
         '<div class="build-ruler-rail"></div>' + markersHtml +
       '</div>' +
-      '<div class="build-drag-hint" style="text-align:center;margin:8px 0 4px;">Tune each note of the chord by ear — drag the dots</div>' +
+      '<div class="build-drag-hint" style="text-align:center;margin:8px 0 4px;">' + hint + '</div>' +
       '<div class="build-ab-row" style="display:flex;gap:10px;margin-top:10px;">' +
         '<button class="build-hear-btn" id="mt-chord-hear-target" type="button" style="flex:1;">\u25B6 HEAR TARGET</button>' +
         '<button class="build-hear-btn" id="mt-chord-hear-yours" type="button" style="flex:1;">\u25B6 HEAR YOURS</button>' +
@@ -27539,6 +27590,9 @@ function renderMtChordRound(r) {
   const ruler = document.getElementById('mt-chord-ruler');
   const rootMk = document.getElementById('mt-chord-root');
   rootMk.dataset.label = q.rootName;
+
+  const centsToPct0 = c => { let s = c / 100; s = Math.max(-range, Math.min(range, s)); return (s + range) / (range * 2) * 100; };
+  if (isScale) { const oct = document.getElementById('mt-chord-oct'); oct.dataset.label = q.rootName; oct.style.left = centsToPct0(1200) + '%'; }
 
   const cents = q.targets.map(() => 0);   // each marker's cents-from-root; start on root
   const centsToPct = c => { let s = c / 100; s = Math.max(-range, Math.min(range, s)); return (s + range) / (range * 2) * 100; };
@@ -27553,11 +27607,20 @@ function renderMtChordRound(r) {
   function chordFreqs(useCents) {
     const fs = [midiFreq(q.rootMidi)];
     for (let i = 0; i < nTargets; i++) fs.push(midiFreq(q.rootMidi) * Math.pow(2, (useCents[i] / 100) / 12));
+    if (isScale) fs.push(midiFreq(q.rootMidi) * 2); // include the octave anchor
     return fs;
   }
   function playChord(useCents, dur, gain) {
     const ctx = getAudio(); const t = ctx.currentTime + 0.05;
-    chordFreqs(useCents).forEach(f => playTone(f, t, dur, ctx, gain, 'piano'));
+    const fs = chordFreqs(useCents);
+    if (isScale) {
+      // ascending sequence, sorted by pitch so it always reads as a scale run
+      const sorted = fs.slice().sort((a, b) => a - b);
+      const step = 0.28;
+      sorted.forEach((f, i) => playTone(f, t + i * step, step * 0.95, ctx, gain, 'piano'));
+    } else {
+      fs.forEach(f => playTone(f, t, dur, ctx, gain, 'piano'));
+    }
   }
 
   // clean any leftover window drag listeners from a prior build/chord round
@@ -27605,21 +27668,17 @@ function renderMtChordRound(r) {
     mtState.isAnswered = true;
     stopMtTimer();
     activeMk = -1;
-    // Grade as a set: each target semitone must be matched by SOME marker within TOL.
+    // Grade as a set via the shared grader (order-independent, ±tol).
     const targetCents = q.targets.map(s => s * 100);
-    const used = cents.map(() => false);
-    let allHit = true;
-    targetCents.forEach(tc => {
-      let hit = -1;
-      for (let i = 0; i < nTargets; i++) { if (!used[i] && Math.abs(cents[i] - tc) <= TOL) { hit = i; break; } }
-      if (hit >= 0) used[hit] = true; else allHit = false;
-    });
-    // reveal ghosts + color markers
+    const { allHit, perMarker } = gradeBuildSet(cents, targetCents);
+    const okByMarker = {};
+    perMarker.forEach(pm => { okByMarker[pm.idx] = pm.ok; });
+    // reveal ghosts + color markers (marker i is a placed note → use its own result)
     for (let i = 0; i < nTargets; i++) {
       const g = document.getElementById('mt-chord-tg-' + i);
       g.style.left = centsToPct(targetCents[i]) + '%'; g.classList.add('show');
       const mk = document.getElementById('mt-chord-mk-' + i);
-      mk.classList.add(used[i] ? 'correct' : 'wrong');
+      mk.classList.add(okByMarker[i] ? 'correct' : 'wrong');
     }
     if (allHit) mtCorrect(); else mtWrong();
     document.getElementById('mt-chord-submit').disabled = true;
