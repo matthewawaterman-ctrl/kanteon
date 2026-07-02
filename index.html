@@ -1945,33 +1945,6 @@
     user-select: none;
     -webkit-user-select: none;
   }
-  .build-ruler-tick {
-    position: absolute;
-    top: 18px; bottom: 32px;
-    width: 1px;
-    background: rgba(255,255,255,0.12);
-    transform: translateX(-50%);
-  }
-  .build-ruler-tick.major {
-    background: rgba(124,111,247,0.5);
-    width: 2px;
-  }
-  .build-ruler-tick.root {
-    background: var(--gold);
-    width: 2px;
-    box-shadow: 0 0 8px rgba(240,192,64,0.7);
-  }
-  .build-ruler-label {
-    position: absolute;
-    bottom: 8px;
-    transform: translateX(-50%);
-    font-family: var(--font-mono); font-size: 12px;
-    color: var(--text3); letter-spacing: 0.5px;
-    pointer-events: none;
-    white-space: nowrap;
-  }
-  .build-ruler-label.major { color: var(--text2); font-weight: 700; }
-  .build-ruler-label.root  { color: var(--gold); font-weight: 800; font-size: 11px; }
   /* Centerline indicating the rail the marker travels along */
   .build-ruler-rail {
     position: absolute;
@@ -2116,36 +2089,6 @@
     display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
     margin-top: 12px;
   }
-  .build-ab-btn {
-    padding: 12px 14px;
-    background: var(--bg2);
-    border: 1px solid rgba(124,111,247,0.4);
-    color: var(--text);
-    font-family: var(--font-display); font-weight: 800;
-    font-size: 13px; letter-spacing: 2px;
-    border-radius: 6px; cursor: pointer;
-    transition: background 0.15s, transform 0.06s;
-  }
-  .build-ab-btn:hover:not(:disabled) {
-    background: rgba(124,111,247,0.15);
-    border-color: rgba(124,111,247,0.7);
-  }
-  .build-ab-btn:active:not(:disabled) { transform: scale(0.98); }
-  .build-ab-btn.playing {
-    background: rgba(124,111,247,0.25);
-    border-color: var(--text);
-  }
-  /* Held (sustained) state — stays lit while the drone is playing */
-  .build-ab-btn.holding {
-    background: rgba(124,111,247,0.3);
-    border-color: var(--text);
-    box-shadow: 0 0 16px rgba(124,111,247,0.55), inset 0 0 12px rgba(124,111,247,0.25);
-  }
-  .build-ab-btn.target.holding {
-    background: rgba(240,192,64,0.22);
-    border-color: var(--gold);
-    box-shadow: 0 0 16px rgba(240,192,64,0.5), inset 0 0 12px rgba(240,192,64,0.2);
-  }
   .build-sustain-row { display: flex; justify-content: center; margin-top: 10px; }
   .build-sustain-pill {
     font-family: var(--font-display); font-size: 11px; font-weight: 800;
@@ -2197,14 +2140,6 @@
     margin-top: 8px; text-align: center;
     font-family: var(--font-display); font-size: 10px; font-weight: 700;
     color: var(--text3); letter-spacing: 1.5px; text-transform: uppercase;
-  }
-  .build-ab-btn.target {
-    border-color: rgba(240,192,64,0.5);
-    color: var(--gold);
-  }
-  .build-ab-btn.target:hover:not(:disabled) {
-    background: rgba(240,192,64,0.12);
-    border-color: var(--gold);
   }
   /* Action buttons row */
   .build-actions-row {
@@ -8546,6 +8481,20 @@ function gradeBuildSet(placedCentsArr, targetCentsArr, tol) {
     perMarker.push({ idx, ok });
   });
   return { off, allHit: off === 0 && placedCentsArr.length >= targetCentsArr.length, perMarker, used };
+}
+// Transcription: compare a placed note-sequence against the target, position by
+// position. Notes are MIDI numbers (or null for empty). Returns
+// { matches, total, allHit, perCol:[bool] }. Shared so Lesson + Arcade agree.
+function gradeTranscription(placedMidi, targetMidi) {
+  const total = targetMidi.length;
+  const perCol = [];
+  let matches = 0;
+  for (let i = 0; i < total; i++) {
+    const ok = placedMidi[i] === targetMidi[i];
+    perCol.push(ok);
+    if (ok) matches++;
+  }
+  return { matches, total, allHit: matches === total, perCol };
 }
 // ─────────────────────────────────────────────────────────────────────────────
 // The semitone offset the player is currently building (current note of the chord/scale).
@@ -20627,7 +20576,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.01i'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.01l'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -24279,11 +24228,11 @@ function renderTxBeginner(q, body) {
   };
 
   submit.onclick = () => {
-    const matches = placed.filter((n, i) => n === targetNotes[i]).length;
-    const isCorrect = matches === targetNotes.length;
+    const { matches, total, allHit } = gradeTranscription(placed, targetNotes);  // shared grader
+    const isCorrect = allHit;
     showFeedback(isCorrect, q, {
       xpMultiplier: 1,
-      detail: isCorrect ? matches + '/' + targetNotes.length + ' correct' : matches + '/' + targetNotes.length + ' correct — try again'
+      detail: isCorrect ? matches + '/' + total + ' correct' : matches + '/' + total + ' correct — try again'
     });
   };
   body.appendChild(submit);
@@ -26108,6 +26057,9 @@ function drawLedgers(svg, x, midY, pos, lineGap, headWidth) {
 }
 
 // ── Treble / Bass Clef renderer ────────────────────────────────────────────
+// renderClefSVG's treble branch previously referenced an undefined
+// KL_TREBLE_CLEF_D constant — a latent bug that threw whenever a treble staff
+// rendered. It now uses the existing SMuFL gClef path (see below).
 function renderClefSVG(clef, item, small) {
   const W = small ? 160 : 320;
   const H = small ? 100 : 200;
@@ -26121,9 +26073,16 @@ function renderClefSVG(clef, item, small) {
 
   // Clef as a drawn shape (reliable positioning on the staff)
   if (clef === 'treble') {
-    const sc = lineGap / 14, cx = x0 + lineGap * 0.9, g4Y = midY + lineGap; // G4 = pos -2
-    const gg = svgEl('g', { transform: 'translate(' + (cx - 50 * sc) + ',' + (g4Y - 76 * sc) + ') scale(' + sc + ')' }, svg);
-    svgEl('path', { d: KL_TREBLE_CLEF_D, fill: 'none', stroke: 'var(--text)', 'stroke-width': 3.2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, gg);
+    // Use the SAME SMuFL gClef the rhythm/groove notation uses (proven, no font
+    // dependency). SMuFL is y-up so we flip with scale(s, -s); origin sits on G4.
+    const g4Y = midY + lineGap;             // G4 = staff pos -2 (second line from bottom)
+    const s = lineGap / 250;                // SMuFL: 1 staff space = 250 font units
+    const cx = x0 + lineGap * 1.1;
+    svgEl('path', {
+      d: KL_SMUFL.gClef,
+      transform: 'translate(' + cx + ' ' + g4Y + ') scale(' + s + ' ' + (-s) + ')',
+      fill: 'var(--text)',
+    }, svg);
   } else {
     const fY = midY - lineGap, bx = x0 + lineGap * 0.9;   // F3 line = pos +2
     svgEl('circle', { cx: bx, cy: fY - lineGap * 0.1, r: lineGap * 0.42, fill: 'var(--text)' }, svg);
@@ -26707,6 +26666,26 @@ function mtBuildPool(maxLevel) {
     sset.forEach(id => { if (EAR_SCALES.find(s => s.id === id)) pool.push({ kind: 'build-scale', id, lvl: maxLevel }); });
   }
 
+  // Transcription — generated melodic dictation. Available from level 1 (short,
+  // few pitches) and scales up. Several instances per level so it recurs.
+  {
+    const txPerLevel = Math.min(4, 1 + Math.floor(maxLevel / 2));
+    for (let i = 0; i < txPerLevel; i++) pool.push({ kind: 'transcription', id: 'tx' + i, lvl: maxLevel });
+  }
+
+  // Notation reading — visual staff → note name MCQ. Treble from L1; bass adds at L3.
+  {
+    pool.push({ kind: 'notation', id: 'not-tr', mode: 'treble', lvl: maxLevel });
+    pool.push({ kind: 'notation', id: 'not-tr2', mode: 'treble', lvl: maxLevel });
+    if (maxLevel >= 3) pool.push({ kind: 'notation', id: 'not-bs', mode: 'bass', lvl: maxLevel });
+  }
+
+  // Theory — modes & keys MCQ. Introduced at L2 (needs some grounding first).
+  if (maxLevel >= 2) {
+    pool.push({ kind: 'theory', id: 'th0', lvl: maxLevel });
+    pool.push({ kind: 'theory', id: 'th1', lvl: maxLevel });
+  }
+
   // Rhythm — beginner patterns from existing JSON
   if (typeof kanteon !== 'undefined' && kanteon.loaded) {
     try {
@@ -27002,8 +26981,10 @@ function pickWeighted(pool) {
     k === 'build-chord'    ? 'build' :
     k === 'build-scale'    ? 'build' :
     k === 'rhythm'         ? 'rhythm' :
-    k === 'transcription'  ? 'transcription' : 'other';
-  const FAM_WEIGHT = { rhythm: 3, build: 3, transcription: 3, ear: 3, al: 2, other: 1 };
+    k === 'transcription'  ? 'transcription' :
+    k === 'notation'       ? 'notation' :
+    k === 'theory'         ? 'theory' : 'other';
+  const FAM_WEIGHT = { rhythm: 3, build: 3, transcription: 3, ear: 3, al: 2, notation: 2, theory: 2, other: 1 };
 
   const byKind = {};
   pool.forEach(p => { (byKind[p.kind] = byKind[p.kind] || []).push(p); });
@@ -27250,6 +27231,83 @@ function buildMtRound(pick) {
     };
   }
 
+  if (pick.kind === 'theory') {
+    // Self-contained modal-theory MCQ (no dependency on Lesson's config state).
+    // Two flavors: name-the-mode-on-a-degree, and name-the-parent-major.
+    const keys = THEORY_KEY_NAMES;
+    const rootKey = keys[Math.floor(Math.random() * keys.length)];
+    const flavor = Math.random() < 0.5 ? 'degree' : 'parent';
+    if (flavor === 'degree') {
+      const degIdx = 1 + Math.floor(Math.random() * 6);      // 2nd..7th degree (skip Ionian=1)
+      const correct = THEORY_MODES[degIdx];
+      const noteName = theoryNoteAt(rootKey, THEORY_MODES[0].intervals[degIdx]);
+      const others = shuffleArray(THEORY_MODES.filter(m => m.id !== correct.id)).slice(0, 3);
+      const answers = shuffleArray([correct, ...others]).map(m => ({ id: m.id, label: m.label }));
+      return {
+        module: 'THEORY', moduleClass: 'mod-theory',
+        typeLabel: 'MODES & KEYS',
+        prompt: 'In ' + rootKey + ' major, what mode starts on ' + noteName + '?',
+        answers, correctId: correct.id,
+      };
+    } else {
+      // Given "<note> <mode>", name the parent major key.
+      const degIdx = 1 + Math.floor(Math.random() * 6);
+      const mode = THEORY_MODES[degIdx];
+      const modeRoot = theoryNoteAt(rootKey, THEORY_MODES[0].intervals[degIdx]);
+      const others = shuffleArray(keys.filter(k => k !== rootKey)).slice(0, 3);
+      const answers = shuffleArray([rootKey, ...others]).map(k => ({ id: k, label: k + ' major' }));
+      return {
+        module: 'THEORY', moduleClass: 'mod-theory',
+        typeLabel: 'MODES & KEYS',
+        prompt: 'What is the parent major scale of ' + modeRoot + ' ' + mode.label + '?',
+        answers, correctId: rootKey,
+      };
+    }
+  }
+
+  if (pick.kind === 'notation') {
+    // Show a notation symbol on the staff; MCQ of names. Reuses Lesson's SVG renderer.
+    const mode = pick.mode || 'treble';
+    const catalog = NOTATION_META[mode].catalog;
+    const correct = catalog[Math.floor(Math.random() * catalog.length)];
+    // self-contained distractor pick (no dependency on Lesson selection state)
+    const others = shuffleArray(catalog.filter(i => i.id !== correct.id)).slice(0, 3);
+    const answers = shuffleArray([correct, ...others]).map(i => ({ id: i.id, label: i.label }));
+    return {
+      module: 'NOTATION', moduleClass: 'mod-notation',
+      typeLabel: 'READ THE STAFF',
+      prompt: 'What note is this?',
+      visual: renderNotationSVG(mode, correct),
+      answers,
+      correctId: correct.id,
+      // no audio — visual MCQ
+    };
+  }
+
+  if (pick.kind === 'transcription') {
+    // Generate a short diatonic melody. Level controls length + pitch-set size.
+    const lvl = pick.lvl || 1;
+    const len = Math.min(7, 3 + Math.floor(lvl / 1.5));     // 3..7 notes
+    const spanIdx = Math.min(KL_SCALE.length - 1, 4 + lvl); // how far up the scale the pool reaches
+    // Pool of candidate scale tones (as MIDI), low→high.
+    const poolMidi = KL_SCALE.slice(0, spanIdx + 1);
+    // Build a melody that mostly steps (musical, singable), with occasional leaps.
+    const seq = [];
+    let idx = Math.floor(poolMidi.length / 2);
+    for (let i = 0; i < len; i++) {
+      seq.push(poolMidi[idx]);
+      const leap = Math.random() < 0.25 ? (Math.random() < 0.5 ? 2 : -2) : (Math.random() < 0.5 ? 1 : -1);
+      idx = Math.max(0, Math.min(poolMidi.length - 1, idx + leap));
+    }
+    return {
+      module: 'TRANSCRIPTION', moduleClass: 'mod-tx',
+      typeLabel: 'WRITE WHAT YOU HEAR',
+      prompt: 'Listen, then place the notes in order',
+      isTranscription: true,
+      txQ: { targetMidi: seq, poolMidi },
+    };
+  }
+
   if (pick.kind === 'rhythm') {
     return {
       module: 'RHYTHM', moduleClass: 'mod-rhy',
@@ -27286,10 +27344,25 @@ function renderMtRound(r) {
   if (r.isBuildChord) {
     return renderMtChordRound(r);
   }
+  if (r.isTranscription) {
+    return renderMtTranscriptionRound(r);
+  }
 
   const grid = document.getElementById('mt-answer-grid');
   grid.style.display = 'grid';
   grid.innerHTML = '';
+  // Optional visual prompt (e.g. a notation staff SVG) rendered above the grid.
+  // Lives in the rhythm-host container so it clears between rounds like other visuals.
+  const vhost = document.getElementById('mt-rhythm-host');
+  if (r.visual) {
+    vhost.style.display = 'block';
+    vhost.innerHTML = '';
+    if (typeof r.visual === 'string') vhost.innerHTML = '<div style="text-align:center;padding:6px 0 4px;">' + r.visual + '</div>';
+    else { const box = document.createElement('div'); box.style.textAlign = 'center'; box.style.padding = '6px 0 4px'; box.appendChild(r.visual); vhost.appendChild(box); }
+  } else {
+    vhost.style.display = 'none';
+    vhost.innerHTML = '';
+  }
   r.answers.forEach(ans => {
     const btn = document.createElement('button');
     btn.className = 'mt-answer-btn';
@@ -27301,14 +27374,21 @@ function renderMtRound(r) {
 
   const ctx = getAudio();
   const t0 = ctx.currentTime + 0.1;
-  document.getElementById('mt-status').textContent = '🔊 LISTEN...';
-  const audioMs = r.audio(ctx, t0);
-  setTimeout(() => {
-    if (mtState.isAnswered) return;
+  if (typeof r.audio === 'function') {
+    document.getElementById('mt-status').textContent = '🔊 LISTEN...';
+    const audioMs = r.audio(ctx, t0);
+    setTimeout(() => {
+      if (mtState.isAnswered) return;
+      document.getElementById('mt-status').textContent = 'ANSWER NOW';
+      hearBtn.style.visibility = 'visible';
+      startMtTimer();
+    }, audioMs);
+  } else {
+    // Visual-only MCQ (notation/theory): no audio, answer window starts at once.
     document.getElementById('mt-status').textContent = 'ANSWER NOW';
-    hearBtn.style.visibility = 'visible';
+    hearBtn.style.visibility = 'hidden';
     startMtTimer();
-  }, audioMs);
+  }
 }
 
 window.replayMtAudio = function() {
@@ -27685,6 +27765,113 @@ function renderMtChordRound(r) {
   });
 
   setTimeout(() => { if (!mtState.isAnswered) startMtTimer(); }, 200);
+}
+
+// Transcription (arcade): hear a short melody, then place each note on a compact
+// pitch×step grid. Grades per-column via the shared gradeTranscription. Uses a
+// self-contained grid so it fits the arcade host and needs no Lesson DOM.
+function renderMtTranscriptionRound(r) {
+  document.getElementById('mt-answer-grid').style.display = 'none';
+  const host = document.getElementById('mt-rhythm-host');
+  host.style.display = 'block';
+  host.innerHTML = '';
+  document.getElementById('mt-status').textContent = '';
+  document.getElementById('mt-hear-btn').style.visibility = 'hidden';
+
+  const q = r.txQ;                       // { targetMidi:[...], poolMidi:[low..high] }
+  const target = q.targetMidi;
+  const nCols = target.length;
+  const rowsMidi = q.poolMidi.slice().sort((a, b) => b - a);  // high → low (top row highest)
+  const placed = new Array(nCols).fill(null);
+  let activeCol = 0;
+
+  const noteLabel = m => midiToNoteName(m).replace(/-?\d+$/, '');
+  const cellPx = nCols > 6 ? 34 : 40;
+
+  // Build grid: a left label column + nCols step columns.
+  let gridHtml = '<div class="mt-tx-grid" style="display:inline-grid;grid-template-columns:auto repeat(' + nCols + ',' + cellPx + 'px);gap:4px;justify-content:center;">';
+  // header row (step numbers)
+  gridHtml += '<div></div>';
+  for (let c = 0; c < nCols; c++) gridHtml += '<div class="mt-tx-colhead" data-c="' + c + '" style="text-align:center;font-family:var(--font-mono);font-size:10px;color:var(--text3);">' + (c + 1) + '</div>';
+  // pitch rows
+  rowsMidi.forEach((m) => {
+    gridHtml += '<div class="mt-tx-rowlbl" data-m="' + m + '" style="display:flex;align-items:center;justify-content:flex-end;padding-right:6px;font-family:var(--font-display);font-weight:800;font-size:13px;color:var(--text2);cursor:pointer;">' + noteLabel(m) + '</div>';
+    for (let c = 0; c < nCols; c++) {
+      gridHtml += '<div class="mt-tx-cell" data-c="' + c + '" data-m="' + m + '" style="width:' + cellPx + 'px;height:' + cellPx + 'px;border-radius:8px;background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.1);cursor:pointer;"></div>';
+    }
+  });
+  gridHtml += '</div>';
+
+  host.innerHTML =
+    '<div style="text-align:center;padding:10px 8px 6px;">' +
+      '<div style="font-family:var(--font-mono);font-size:12px;color:var(--text3);margin-bottom:10px;">Tap a cell to place each note — left to right</div>' +
+      '<div style="overflow-x:auto;">' + gridHtml + '</div>' +
+      '<div class="build-ab-row" style="display:flex;gap:10px;margin-top:12px;">' +
+        '<button class="build-hear-btn" id="mt-tx-hear-target" type="button" style="flex:1;">\u25B6 HEAR MELODY</button>' +
+        '<button class="build-hear-btn" id="mt-tx-hear-yours" type="button" style="flex:1;">\u25B6 HEAR YOURS</button>' +
+      '</div>' +
+      '<button class="build-submit-btn" id="mt-tx-submit" type="button" style="width:100%;margin-top:10px;">SUBMIT</button>' +
+    '</div>';
+
+  const gridEl = host.querySelector('.mt-tx-grid');
+
+  function paint() {
+    gridEl.querySelectorAll('.mt-tx-cell').forEach(cell => {
+      const c = +cell.dataset.c, m = +cell.dataset.m;
+      const on = placed[c] === m;
+      cell.style.background = on ? 'var(--gold)' : 'rgba(255,255,255,0.05)';
+      cell.style.borderColor = on ? 'var(--gold)' : 'rgba(255,255,255,0.1)';
+    });
+    gridEl.querySelectorAll('.mt-tx-colhead').forEach(h => {
+      h.style.color = (+h.dataset.c === activeCol) ? 'var(--gold)' : 'var(--text3)';
+    });
+  }
+  paint();
+
+  function auditNote(m) {
+    const ctx = getAudio();
+    playNote(midiFreq(m), ctx.currentTime + 0.02, 0.45, ctx, 0.28, 'piano');
+  }
+
+  gridEl.querySelectorAll('.mt-tx-cell').forEach(cell => {
+    cell.addEventListener('click', () => {
+      if (mtState.isAnswered) return;
+      const c = +cell.dataset.c, m = +cell.dataset.m;
+      placed[c] = (placed[c] === m) ? null : m;   // toggle
+      if (placed[c] != null) { auditNote(m); activeCol = Math.min(nCols - 1, c + 1); }
+      paint();
+    });
+  });
+  // clicking a row label auditions that pitch
+  gridEl.querySelectorAll('.mt-tx-rowlbl').forEach(lbl => {
+    lbl.addEventListener('click', () => auditNote(+lbl.dataset.m));
+  });
+
+  function playSeq(seq) {
+    const ctx = getAudio(); const t0 = ctx.currentTime + 0.05; const step = 0.42;
+    seq.forEach((m, i) => { if (m != null) playNote(midiFreq(m), t0 + i * step, step * 0.92, ctx, 0.26, 'piano'); });
+  }
+  document.getElementById('mt-tx-hear-target').addEventListener('click', () => playSeq(target));
+  document.getElementById('mt-tx-hear-yours').addEventListener('click', () => playSeq(placed));
+
+  document.getElementById('mt-tx-submit').addEventListener('click', () => {
+    if (mtState.isAnswered) return;
+    mtState.isAnswered = true;
+    stopMtTimer();
+    const { allHit, perCol } = gradeTranscription(placed, target);   // shared grader
+    // reveal: color each column's correct target cell green; wrong placements red
+    gridEl.querySelectorAll('.mt-tx-cell').forEach(cell => {
+      const c = +cell.dataset.c, m = +cell.dataset.m;
+      if (m === target[c]) { cell.style.background = '#4ade80'; cell.style.borderColor = '#4ade80'; }
+      else if (placed[c] === m) { cell.style.background = '#f87171'; cell.style.borderColor = '#f87171'; }
+    });
+    document.getElementById('mt-tx-submit').disabled = true;
+    if (allHit) mtCorrect(); else mtWrong();
+  });
+
+  // auto-play the melody once so the player hears the target to start.
+  setTimeout(() => { if (!mtState.isAnswered) playSeq(target); }, 250);
+  setTimeout(() => { if (!mtState.isAnswered) startMtTimer(); }, 300);
 }
 
 // ── Rhythm round adapter ──────────────────────────────────────────────────
