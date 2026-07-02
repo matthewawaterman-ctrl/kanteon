@@ -3574,6 +3574,7 @@
     transition: width 0.1s linear;
   }
   .mt-timer-fill.urgent { animation: timerUrgent 0.4s ease-in-out infinite; }
+  .mt-timer-fill.paused { animation-play-state: paused; opacity: 0.55; filter: saturate(0.4); }
   @keyframes timerUrgent {
     0%, 100% { filter: brightness(1); }
     50% { filter: brightness(1.4); }
@@ -7239,8 +7240,14 @@ let klRhyTapOsc = null, klRhyTapGain = null;
 // running silently so the first tap has zero oscillator-creation latency — every tap
 // is just a fast gain ramp. It dies with the AudioContext (stopAllAudio closes it).
 function klRhyTapPrime() {
-  if (klRhyTapOsc) return;
   const ctx = getAudio();
+  // If the primed osc lives on a stale/closed context (stopAllAudio recreated it),
+  // it plays into nothing → silent taps. Detect and rebuild against the live ctx.
+  if (klRhyTapOsc && klRhyTapOsc.context !== ctx) {
+    try { klRhyTapOsc.disconnect(); } catch (e) {}
+    klRhyTapOsc = null; klRhyTapGain = null;
+  }
+  if (klRhyTapOsc) return;
   try {
     klRhyTapOsc = ctx.createOscillator();
     klRhyTapGain = ctx.createGain();
@@ -20602,7 +20609,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.02a'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.02c'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -26926,6 +26933,8 @@ function installMtDevSkip() {
     const live = document.getElementById('mixtape-session');
     if (!live || !live.classList.contains('active')) return;
     if (!klIsDevAvailable()) return;
+    // P = freeze/resume the countdown for the current question (no score/level change).
+    if (e.code === 'KeyP') { e.preventDefault(); mtToggleTimerPause(); return; }
     // ↑/↓ = jump the DIFFICULTY LEVEL for real (bumps momentum so it sticks, rebuilds
     // the pool, and the very next question is drawn at the new level — unlike ←/→
     // which only steps through questions without changing score or level).
@@ -27436,28 +27445,62 @@ window.replayMtAudio = function() {
 
 function startMtTimer() {
   const dur = mtState.currentTimer * 1000;
+  mtState.timerDur = dur;
   mtState.timerStartTime = performance.now();
   mtState.timerDeadline = mtState.timerStartTime + dur;
   mtState.timerRunning = true;
+  mtState.timerPaused = false;
   const fill = document.getElementById('mt-timer-fill');
   fill.style.width = '100%';
-  fill.classList.remove('urgent');
+  fill.classList.remove('urgent', 'paused');
   cancelAnimationFrame(mtState.timerRAF);
+  mtRunTimerLoop();
+}
+
+// The RAF countdown, shared by start and resume so pause can rebuild the deadline
+// and pick the loop back up without duplicating logic.
+function mtRunTimerLoop() {
+  const fill = document.getElementById('mt-timer-fill');
+  const dur = mtState.timerDur || (mtState.currentTimer * 1000);
   const tick = () => {
-    if (mtState.isAnswered) return;
+    if (mtState.isAnswered || mtState.timerPaused) return;
     const now = performance.now();
     const remaining = mtState.timerDeadline - now;
     if (remaining <= 0) { mtTimeout(); return; }
     const pct = (remaining / dur) * 100;
-    fill.style.width = pct + '%';
-    if (pct < 30 && !fill.classList.contains('urgent')) fill.classList.add('urgent');
+    if (fill) { fill.style.width = pct + '%'; if (pct < 30 && !fill.classList.contains('urgent')) fill.classList.add('urgent'); }
     mtState.timerRAF = requestAnimationFrame(tick);
   };
   mtState.timerRAF = requestAnimationFrame(tick);
 }
 
+// DEV: freeze/resume the arcade timer mid-question (inspect a glitchy round without
+// the buzzer firing). Preserves the exact remaining time across the pause.
+function mtToggleTimerPause() {
+  if (mtState.isAnswered) return;
+  const fill = document.getElementById('mt-timer-fill');
+  if (mtState.timerPaused) {
+    mtState.timerPaused = false;
+    mtState.timerDeadline = performance.now() + (mtState.timerRemainingAtPause || 0);
+    mtState.timerRunning = true;
+    if (fill) fill.classList.remove('paused');
+    mtRunTimerLoop();
+    mtFlash('\u25B6 RESUMED', 'levelup');
+  } else {
+    if (!mtState.timerRunning) { mtFlash('\u23F8 NO TIMER YET', 'levelup'); return; }
+    mtState.timerRemainingAtPause = Math.max(0, mtState.timerDeadline - performance.now());
+    mtState.timerPaused = true;
+    mtState.timerRunning = false;
+    cancelAnimationFrame(mtState.timerRAF);
+    mtState.timerRAF = null;
+    if (fill) fill.classList.add('paused');
+    mtFlash('\u23F8 TIMER PAUSED', 'levelup');
+  }
+}
+
 function stopMtTimer() {
   mtState.timerRunning = false;
+  mtState.timerPaused = false;
   cancelAnimationFrame(mtState.timerRAF);
   mtState.timerRAF = null;
 }
@@ -27540,6 +27583,43 @@ function mtFlash(text, kind) {
   setTimeout(() => f.classList.remove('show'), 600);
 }
 
+// ── Live drag audio for the arcade interval builder ───────────────────────
+// A sustained root + "yours" sine pair (gentle low-pass) that GLIDES pitch as
+// you drag, so the cents sweep is audible and the control feels smooth — not
+// steppy. Mirrors Lesson's live re-pitch, sized down for a fast single-marker
+// round. Started on pointer-down, pitch-ramped on move, faded out on release.
+function mtBuildLiveStop() {
+  const L = window._mtBuildLive;
+  if (!L) return;
+  window._mtBuildLive = null;
+  try {
+    const t = L.ctx.currentTime;
+    L.gain.gain.cancelScheduledValues(t);
+    L.gain.gain.setValueAtTime(Math.max(0.0001, L.gain.gain.value), t);
+    L.gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+    L.rootOsc.stop(t + 0.1); L.yoursOsc.stop(t + 0.1);
+  } catch (e) {}
+}
+function mtBuildLiveStart(rootFreq, cents) {
+  mtBuildLiveStop();
+  const ctx = getAudio();               // also resumes a suspended context
+  const gain = ctx.createGain(); gain.gain.value = 0;
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2200;
+  const rootOsc  = ctx.createOscillator(); rootOsc.type  = 'sine'; rootOsc.frequency.value  = rootFreq;
+  const yoursOsc = ctx.createOscillator(); yoursOsc.type = 'sine'; yoursOsc.frequency.value = rootFreq * Math.pow(2, cents / 1200);
+  rootOsc.connect(gain); yoursOsc.connect(gain); gain.connect(lp); lp.connect(ctx.destination);
+  const t = ctx.currentTime;
+  rootOsc.start(t); yoursOsc.start(t);
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(0.12, t + 0.02);
+  window._mtBuildLive = { ctx, gain, rootOsc, yoursOsc, rootFreq };
+}
+function mtBuildLiveUpdate(cents) {
+  const L = window._mtBuildLive;
+  if (!L) return;
+  try { L.yoursOsc.frequency.setTargetAtTime(L.rootFreq * Math.pow(2, cents / 1200), L.ctx.currentTime, 0.012); } catch (e) {}
+}
+
 // ── Build Mode round adapter ──────────────────────────────────────────────
 function renderMtBuildRound(r) {
   document.getElementById('mt-answer-grid').style.display = 'none';
@@ -27575,6 +27655,8 @@ function renderMtBuildRound(r) {
   const marker = document.getElementById('mt-build-marker');
   const rootMk = document.getElementById('mt-build-root');
   rootMk.dataset.label = rootName;
+  marker.style.transition = 'none';   // 1:1 finger tracking — the shared 0.04s left-transition felt laggy/clunky
+  mtBuildLiveStop();                  // kill any live drag voice left over from a previous build round
 
   let userCents = 0;                  // continuous cents from root
   const centsToPct = c => { let s = c / 100; s = Math.max(-range, Math.min(range, s)); return (s + range) / (range * 2) * 100; };
@@ -27596,15 +27678,17 @@ function renderMtBuildRound(r) {
     if (mtState.isAnswered) return;
     dragging = true;
     const x = e.touches ? e.touches[0].clientX : e.clientX;
-    userCents = xToCents(x); place(); previewYours();
+    userCents = xToCents(x); place();
+    mtBuildLiveStart(midiFreq(q.rootMidi), userCents);   // start the live sustained sweep
     e.preventDefault();
   }
   function onMove(e) {
     if (!dragging || mtState.isAnswered) return;
     const x = e.touches ? e.touches[0].clientX : e.clientX;
     userCents = xToCents(x); place();
+    mtBuildLiveUpdate(userCents);                        // glide the pitch live as you drag
   }
-  function onUp() { dragging = false; }
+  function onUp() { if (dragging) { dragging = false; mtBuildLiveStop(); } }
   window._mtBuildMove = onMove;
   window._mtBuildUp = onUp;
   ruler.addEventListener('pointerdown', onDown);
@@ -27614,11 +27698,12 @@ function renderMtBuildRound(r) {
   window.addEventListener('touchmove', onMove, { passive: false });
   window.addEventListener('touchend', onUp);
 
-  function previewYours() {
+  function previewYours() {   // one-shot strike, kept for HEAR YOURS parity (live sweep handles dragging)
     const ctx = getAudio(); const t = ctx.currentTime + 0.03;
     playTone(midiFreq(q.rootMidi), t, 0.5, ctx, 0.18, 'piano');
     playTone(midiFreq(q.rootMidi) * Math.pow(2, (userCents / 100) / 12), t, 0.5, ctx, 0.18, 'piano');
   }
+
 
   document.getElementById('mt-build-hear-target').addEventListener('click', () => {
     const ctx = getAudio(); const t = ctx.currentTime + 0.05;
@@ -27636,6 +27721,7 @@ function renderMtBuildRound(r) {
     mtState.isAnswered = true;
     stopMtTimer();
     dragging = false;
+    mtBuildLiveStop();   // silence the live drag sweep before verdict playback
     const targetCents = q.targetSemis * 100;
     const isCorrect = gradeBuildCents(userCents, targetCents);   // shared grader
     // reveal the target ghost at its true position
@@ -28021,10 +28107,12 @@ function renderMtRhythmRound(r) {
 
   const onSpace = (e) => {
     if (e.code !== 'Space') return;
+    if (e.repeat) return;   // auto-repeat fires keydown many times while held — one tap per press
     const tag = document.activeElement?.tagName;
     const type = document.activeElement?.type;
     if (tag === 'TEXTAREA' || tag === 'SELECT' || (tag === 'INPUT' && type !== 'range')) return;
     e.preventDefault();
+    getAudio();   // resume/refresh the context on the KEYBOARD path (a click already does this; a keydown may not)
     onTap();
   };
   if (window._activeSpaceHandler) document.removeEventListener('keydown', window._activeSpaceHandler);
