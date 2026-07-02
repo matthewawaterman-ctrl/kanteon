@@ -12931,6 +12931,31 @@ function updateStreak(prevDate) {
   else userData.streak = 1;
 }
 
+// === DAILY STREAK — the live trigger (fires once per calendar day, from any mode) ===
+// Lesson Mode is INDEFINITE, so finishSession/saveXp almost never fire — meaning the
+// streak logic above was correct but ORPHANED and never ran in normal play. This is the
+// hook that actually ticks it. Called from every mode's render (Lesson renderQuestion,
+// Story klRenderPuzzle, Arcade nextMtRound); it no-ops after the first call each day.
+// Writes to Firestore too: loadUserData pulls Firestore over local on every launch, so a
+// local-only streak would be clobbered by the stale server value on next load.
+async function klMarkDailyActivity() {
+  if (!klState.kid || klState.guest) return;          // saved profiles only (matches the landing badge)
+  const today = new Date().toDateString();
+  if (userData.lastSessionDate === today) return;      // already counted today — cheap early-out
+  const prevDate = userData.lastSessionDate;           // capture BEFORE overwrite (one-day-grace needs it)
+  userData.lastSessionDate = today;
+  updateStreak(prevDate);                              // locked one-day-grace logic
+  window._streakJustTicked = true;                     // hook for an optional in-session celebrate later
+  klSaveLocalUser();                                   // local mirror (survives offline)
+  if (!uid || dbDisabled) return;                      // Firestore mirror — silent-fail like saveXp
+  try {
+    await updateDoc(doc(db, 'users', uid), {
+      streak: userData.streak,
+      lastSessionDate: userData.lastSessionDate
+    });
+  } catch (e) { /* offline — local mirror already holds it */ }
+}
+
 // ── HOME ───────────────────────────────────────────────────────────────────
 function buildTxIndex() {
   const tbody = document.getElementById('tx-index-tbody');
@@ -20188,6 +20213,7 @@ function klRenderGroovePuzzle(p) {
 
 
 function klRenderPuzzle() {
+  klMarkDailyActivity();  // tick the daily streak on real Story practice (once/day)
   // === ECONOMY: SET BOUNDARY — finishing a set returns to town, not the next set
   if (klState.activeSet && !klState.activeModule && !klShow.active) {
     const r = klSetRanges()[klState.activeSet];
@@ -20576,7 +20602,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.01l'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.02a'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -21978,6 +22004,7 @@ window.startSession = function(level) {
 
 // ── QUESTION RENDERING ─────────────────────────────────────────────────────
 function renderQuestion() {
+  klMarkDailyActivity();  // tick the daily streak on real Lesson practice (once/day)
   // Kill active transport and space handler from previous question
   if (window._activeTransportStop) { try { window._activeTransportStop(); } catch(e) {} }
   window._activeTransportStop = null;
@@ -27011,6 +27038,7 @@ function pickWeighted(pool) {
 }
 
 window.nextMtRound = function() {
+  klMarkDailyActivity();  // tick the daily streak on real Arcade practice (once/day)
   // Level is driven by MOMENTUM (fast answers accumulate it faster → reach hard puzzles sooner).
   const newLevel = Math.min(MT_TUNE.MAX_LEVEL, 1 + Math.floor(mtState.momentum / MT_TUNE.LEVEL_MOMENTUM));
   if (newLevel > mtState.level) {
