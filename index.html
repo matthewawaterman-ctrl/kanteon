@@ -13261,6 +13261,28 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && carouselState.level !== 'home') { e.preventDefault(); carouselBack(); }
 });
 
+// Enter/Return advances to the next question in Lesson Mode: whenever a
+// feedback "NEXT →" button is actually visible, Enter clicks it. Covers all
+// lesson modules (ear, build, AL, theory, notation, rhythm/transcription).
+// Keyed off the button's visibility (only shown mid-lesson after an answer),
+// not a screen name — so it works across every module screen. Skips text fields.
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  const tag = document.activeElement?.tagName;
+  const type = document.activeElement?.type;
+  if (tag === 'TEXTAREA' || tag === 'SELECT' || (tag === 'INPUT' && type !== 'range')) return;
+  const nextBtns = document.querySelectorAll('.feedback-next, .rhythm-next-btn');
+  for (const btn of nextBtns) {
+    if (btn.id === 'feedback-try-again') continue;   // Enter should advance, not retry
+    // visible = laid out (offsetParent present, i.e. not display:none) and enabled
+    if (btn.offsetParent !== null && !btn.disabled) {
+      e.preventDefault();
+      btn.click();
+      return;
+    }
+  }
+});
+
 // Trackpad horizontal swipe (wheel event) for carousel
 (function() {
   let wheelCooldown = false;
@@ -15565,6 +15587,17 @@ function klRenderBetaEnd() {
   } catch (e) {}
 }
 
+// Re-render the shop interior WITHOUT losing the player's scroll position in the
+// item list. klRenderInterior rebuilds #kl-wrap wholesale, which resets the
+// scrollable .kt-shop-card to the top; capture + restore its scrollTop so a
+// purchase doesn't yank the view back up.
+function klRerenderShopKeepScroll() {
+  const prev = document.querySelector('.kt-shop-card');
+  const y = prev ? prev.scrollTop : 0;
+  klRenderInterior('shop');
+  const next = document.querySelector('.kt-shop-card');
+  if (next && y) next.scrollTop = y;
+}
 window.klRepairGear = function() {
   if (klGearCount() === 0 || klState.gearCondition >= 100) return;
   const cost = klRepairCost();
@@ -15573,7 +15606,7 @@ window.klRepairGear = function() {
   klState.gearCondition = 100;
   klSaveProgress();
   klToast('🔧 Gear repaired to 100%.');
-  klRenderInterior('shop');
+  klRerenderShopKeepScroll();
 };
 window.klBuy = function(key, price) {
   if (klState.money < price) { klToast('💸 Not enough cash.'); return; }
@@ -15586,7 +15619,7 @@ window.klBuy = function(key, price) {
   else { if (klState.gear.includes(key)) return; klState.gear.push(key); }
   klState.money -= price;
   klSaveProgress();
-  klRenderInterior('shop');
+  klRerenderShopKeepScroll();
 };
 // Radio promotion now lives at the RADIO TOWER (gated behind a song scoring 80+),
 // not the shop. Same effect as the old shop radio spot: +50% hype for one window.
@@ -16960,6 +16993,13 @@ function klRenderSongwriter(step) {
     '</div>';
     document.getElementById('kidlab').appendChild(el);
     setTimeout(function() { const i = document.getElementById('kl-song-name'); if (i) i.focus(); }, 60);
+    // Enter/Return in the name field saves the song (the purple primary button).
+    (function () {
+      const i = document.getElementById('kl-song-name');
+      if (i) i.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter') { ev.preventDefault(); klSongSave(); }
+      });
+    })();
     return;
   }
   const lvl = klLevel();
@@ -20568,7 +20608,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.01c'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.01f'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -21701,6 +21741,13 @@ window.klExportSessions = function() {
 
 window.showScreen = function(id) {
   if (typeof klCloseComposeSong === 'function') klCloseComposeSong(); // bug #6: never leave the composer open / time frozen across a screen change
+  // Leaving the arcade session: cancel any pending arcade timers (count-in,
+  // scorer, tap-holds) so none fire from inside another screen (e.g. Lesson),
+  // which previously dumped the player to the arcade score screen mid-Lesson.
+  if (id !== 'mixtape-session' && typeof mtClearTimers === 'function') {
+    mtClearTimers();
+    if (typeof mtState !== 'undefined') mtState.rhythmActive = false;
+  }
   // GARAGE BRIDGE: when a Book module (Anatomy / Active Listening) was launched
   // from inside the Garage, leaving it (back to the Book home) instead drops the
   // player back at the Garage in the main story — the Book never shows.
@@ -22342,7 +22389,8 @@ function klRhythmNotation(visual, meterBeats, ts, level, seed) {
   var pitches = klRhyMelody(parsed.events, parsed.onsetEventIdx, seed || 1);
   var svg = klGrooveNotationSVG(parsed.events, meterBeats, ts);
   svg = svg.split('id="kl-gnote-').join('id="lm-gnote-'); // namespace so it can't collide
-  return { svg: svg, onsets: parsed.onsets, onsetEventIdx: parsed.onsetEventIdx, pitches: pitches };
+  var onsetDurs = parsed.onsetEventIdx.map(function (ei) { return parsed.events[ei].d; });
+  return { svg: svg, onsets: parsed.onsets, onsetEventIdx: parsed.onsetEventIdx, pitches: pitches, onsetDurs: onsetDurs };
 }
 function klLmLightNote(idx) {
   var g = document.getElementById('lm-gnote-' + idx);
@@ -26629,6 +26677,27 @@ function mtBuildPool(maxLevel) {
   return pool;
 }
 
+// Arcade timer registry: every setTimeout scheduled by an arcade round goes
+// through mtTimeout so it can be cancelled when the round changes or the player
+// leaves arcade. Without this, a pending rhythm-scorer fires later (even from
+// inside Lesson Mode) and calls mtWrong()/endMixtape() — dumping the player to
+// the arcade score screen mid-Lesson, plus stray count-in tones ("rogue chord").
+let _mtTimers = [];
+function mtTimeout(fn, ms) {
+  const id = setTimeout(() => {
+    _mtTimers = _mtTimers.filter(t => t !== id);
+    fn();
+  }, ms);
+  _mtTimers.push(id);
+  return id;
+}
+function mtClearTimers() {
+  _mtTimers.forEach(id => clearTimeout(id));
+  _mtTimers = [];
+  // Kill any held tap tone so a sustained note doesn't ring on after we leave.
+  if (typeof klRhyTapStop === 'function') { try { klRhyTapStop(); } catch (e) {} }
+}
+
 // ── State ─────────────────────────────────────────────────────────────────
 const mtState = {
   difficulty: 2,
@@ -27276,103 +27345,106 @@ function renderMtBuildRound(r) {
   const hearBtn = document.getElementById('mt-hear-btn');
   hearBtn.style.visibility = 'hidden';
 
-  const q = r.buildQ;
-  const range = 15;
-  const totalSpan = range * 2;
+  const q = r.buildQ;                 // { def, rootMidi, direction, targetSemis }
+  const range = 15;                  // matches Lesson BUILD_STRIP_RANGE
+  const TOL = 30;                    // ±30¢ pure-ear, matches Lesson BUILD_CENTS_TOLERANCE
+  const rootName = midiToNoteName(q.rootMidi).replace(/-?\d+$/, '');
 
-  // Build the ruler HTML
-  let ticksHtml = '<div class="build-ruler-rail"></div>';
-  for (let s = -range; s <= range; s++) {
-    const pct = ((s + range) / totalSpan) * 100;
-    const isRoot = (s === 0);
-    const isMajor = (s !== 0 && (s % 12 === 0));
-    const tickCls = isRoot ? 'root' : isMajor ? 'major' : '';
-    ticksHtml += '<div class="build-ruler-tick ' + tickCls + '" style="left:' + pct + '%;"></div>';
-    const showLabel = isRoot || isMajor || (Math.abs(s) <= 12 && (s % 2 === 0));
-    if (showLabel) {
-      const lblCls = isRoot ? 'root' : isMajor ? 'major' : '';
-      const txt = isRoot ? midiToNoteName(q.rootMidi).replace(/-?\d+$/, '') : (s > 0 ? '+' + s : s);
-      ticksHtml += '<div class="build-ruler-label ' + lblCls + '" style="left:' + pct + '%;">' + txt + '</div>';
-    }
-  }
-  ticksHtml += '<div class="build-marker" id="mt-build-marker"></div>';
-
+  // Modern ruler (same classes/visuals as Lesson) — drag anywhere to build by ear, no slider, no numbers.
   host.innerHTML =
-    '<div class="build-strip-wrap" style="padding:14px 12px 12px;">' +
-      '<div class="build-ruler" id="mt-build-ruler">' + ticksHtml + '</div>' +
-      '<div class="build-slider-row">' +
-        '<div class="build-slider-readout" id="mt-build-readout">0 st</div>' +
-        '<input type="range" class="build-slider" id="mt-build-slider" min="-' + range + '" max="' + range + '" step="1" value="0">' +
+    '<div class="build-strip-wrap" style="padding:16px 14px 14px;">' +
+      '<div class="build-ruler" id="mt-build-ruler">' +
+        '<div class="build-ruler-rail"></div>' +
+        '<div class="build-root-marker" id="mt-build-root" style="left:50%;"></div>' +
+        '<div class="build-target-marker" id="mt-build-target"></div>' +
+        '<div class="build-marker" id="mt-build-marker"></div>' +
       '</div>' +
-      '<div class="build-ab-row">' +
-        '<button class="build-ab-btn target" id="mt-build-hear-target" type="button">▶ HEAR TARGET</button>' +
-        '<button class="build-ab-btn" id="mt-build-hear-yours" type="button">▶ HEAR YOURS</button>' +
+      '<div class="build-drag-hint" id="mt-build-hint" style="text-align:center;margin:8px 0 4px;">Drag the bar to build the note — by ear</div>' +
+      '<div class="build-ab-row" style="display:flex;gap:10px;margin-top:10px;">' +
+        '<button class="build-hear-btn" id="mt-build-hear-target" type="button" style="flex:1;">\u25B6 HEAR TARGET</button>' +
+        '<button class="build-hear-btn" id="mt-build-hear-yours" type="button" style="flex:1;">\u25B6 HEAR YOURS</button>' +
       '</div>' +
-      '<div style="margin-top:10px;">' +
-        '<button class="mt-answer-btn" id="mt-build-submit" type="button" style="width:100%;padding:14px;">SUBMIT</button>' +
-      '</div>' +
+      '<button class="build-submit-btn" id="mt-build-submit" type="button" style="width:100%;margin-top:10px;">SUBMIT</button>' +
     '</div>';
 
-  // Marker position helper
-  function positionMarker(val) {
-    const pct = ((val + range) / totalSpan) * 100;
-    const m = document.getElementById('mt-build-marker');
-    if (m) m.style.left = pct + '%';
+  const ruler  = document.getElementById('mt-build-ruler');
+  const marker = document.getElementById('mt-build-marker');
+  const rootMk = document.getElementById('mt-build-root');
+  rootMk.dataset.label = rootName;
+
+  let userCents = 0;                  // continuous cents from root
+  const centsToPct = c => { let s = c / 100; s = Math.max(-range, Math.min(range, s)); return (s + range) / (range * 2) * 100; };
+  const place = () => { marker.style.left = centsToPct(userCents) + '%'; };
+  place();
+
+  // Drag anywhere on the ruler to set the pitch (pointer + touch), like Lesson.
+  function xToCents(clientX) {
+    const rect = ruler.getBoundingClientRect();
+    let f = (clientX - rect.left) / rect.width;
+    f = Math.max(0, Math.min(1, f));
+    return (-range + f * 2 * range) * 100;
   }
-  positionMarker(0);
+  // Remove drag listeners from any previous build round before wiring new ones.
+  if (window._mtBuildMove) { window.removeEventListener('pointermove', window._mtBuildMove); window.removeEventListener('touchmove', window._mtBuildMove); }
+  if (window._mtBuildUp)   { window.removeEventListener('pointerup', window._mtBuildUp);   window.removeEventListener('touchend', window._mtBuildUp); }
+  let dragging = false;
+  function onDown(e) {
+    if (mtState.isAnswered) return;
+    dragging = true;
+    const x = e.touches ? e.touches[0].clientX : e.clientX;
+    userCents = xToCents(x); place(); previewYours();
+    e.preventDefault();
+  }
+  function onMove(e) {
+    if (!dragging || mtState.isAnswered) return;
+    const x = e.touches ? e.touches[0].clientX : e.clientX;
+    userCents = xToCents(x); place();
+  }
+  function onUp() { dragging = false; }
+  window._mtBuildMove = onMove;
+  window._mtBuildUp = onUp;
+  ruler.addEventListener('pointerdown', onDown);
+  window.addEventListener('pointermove', onMove);
+  window.addEventListener('pointerup', onUp);
+  ruler.addEventListener('touchstart', onDown, { passive: false });
+  window.addEventListener('touchmove', onMove, { passive: false });
+  window.addEventListener('touchend', onUp);
 
-  const slider = document.getElementById('mt-build-slider');
-  const readout = document.getElementById('mt-build-readout');
-  let userSemis = 0;
-  slider.addEventListener('input', (e) => {
-    userSemis = parseInt(e.target.value, 10);
-    readout.textContent = (userSemis > 0 ? '+' : '') + userSemis + ' st';
-    positionMarker(userSemis);
-  });
+  function previewYours() {
+    const ctx = getAudio(); const t = ctx.currentTime + 0.03;
+    playTone(midiFreq(q.rootMidi), t, 0.5, ctx, 0.18, 'piano');
+    playTone(midiFreq(q.rootMidi) * Math.pow(2, (userCents / 100) / 12), t, 0.5, ctx, 0.18, 'piano');
+  }
 
-  // Audio AB buttons
   document.getElementById('mt-build-hear-target').addEventListener('click', () => {
-    const ctx = getAudio();
-    const t = ctx.currentTime + 0.05;
-    playTone(midiFreq(q.rootMidi),               t, 1.4, ctx, 0.22, 'piano');
+    const ctx = getAudio(); const t = ctx.currentTime + 0.05;
+    playTone(midiFreq(q.rootMidi),                 t, 1.4, ctx, 0.22, 'piano');
     playTone(midiFreq(q.rootMidi + q.targetSemis), t, 1.4, ctx, 0.22, 'piano');
   });
   document.getElementById('mt-build-hear-yours').addEventListener('click', () => {
-    const ctx = getAudio();
-    const t = ctx.currentTime + 0.05;
-    playTone(midiFreq(q.rootMidi),             t, 1.4, ctx, 0.22, 'piano');
-    playTone(midiFreq(q.rootMidi + userSemis), t, 1.4, ctx, 0.22, 'piano');
+    const ctx = getAudio(); const t = ctx.currentTime + 0.05;
+    playTone(midiFreq(q.rootMidi), t, 1.4, ctx, 0.22, 'piano');
+    playTone(midiFreq(q.rootMidi) * Math.pow(2, (userCents / 100) / 12), t, 1.4, ctx, 0.22, 'piano');
   });
 
-  // Submit
   document.getElementById('mt-build-submit').addEventListener('click', () => {
     if (mtState.isAnswered) return;
     mtState.isAnswered = true;
     stopMtTimer();
-    const isCorrect = (userSemis === q.targetSemis);
-    const marker = document.getElementById('mt-build-marker');
-    if (isCorrect) {
-      if (marker) marker.classList.add('correct');
-      mtCorrect();
-    } else {
-      if (marker) marker.classList.add('wrong');
-      // Show the target ghost
-      const ghost = document.createElement('div');
-      ghost.className = 'build-target-marker show';
-      const pct = ((q.targetSemis + range) / totalSpan) * 100;
-      ghost.style.left = pct + '%';
-      document.getElementById('mt-build-ruler').appendChild(ghost);
-      mtWrong();
-    }
-    // Lock interaction
-    slider.disabled = true;
+    dragging = false;
+    const targetCents = q.targetSemis * 100;
+    const isCorrect = Math.abs(userCents - targetCents) <= TOL;   // pure ear, ±30¢
+    // reveal the target ghost at its true position
+    const ghost = document.getElementById('mt-build-target');
+    ghost.style.left = centsToPct(targetCents) + '%';
+    ghost.classList.add('show');
+    if (isCorrect) { marker.classList.add('correct'); mtCorrect(); }
+    else           { marker.classList.add('wrong');   mtWrong();  }
     document.getElementById('mt-build-submit').disabled = true;
   });
 
-  // Tight timer to match arcade feel — 8 seconds
-  setTimeout(() => {
-    if (!mtState.isAnswered) startMtTimer();
-  }, 200);
+  // Tight arcade timer — starts after a beat so the player can orient.
+  setTimeout(() => { if (!mtState.isAnswered) startMtTimer(); }, 200);
 }
 
 // ── Rhythm round adapter ──────────────────────────────────────────────────
@@ -27400,6 +27472,9 @@ function renderMtRhythmRound(r) {
   const rNotation = klRhythmNotation(rVisual, rMeterBeats, rTs, 'beginner', rSeed);
   const mtMelodyFreqs = (rNotation && rNotation.pitches && rNotation.pitches.length)
     ? rNotation.pitches.map(m => 440 * Math.pow(2, (m - 69) / 12))
+    : null;
+  const mtOnsetDurs = (rNotation && rNotation.onsetDurs && rNotation.onsetDurs.length)
+    ? rNotation.onsetDurs
     : null;
   const rPatternHtml = rNotation
     ? '<div class="rhythm-notation" style="color:#e9e6dc;">' + rNotation.svg + '</div>' +
@@ -27440,12 +27515,12 @@ function renderMtRhythmRound(r) {
   for (let i = 0; i < countBeats; i++) {
     const beatNum = i + 1;
     const wallDelay = Math.max(0, (startT + i * interval - ctx.currentTime) * 1000);
-    setTimeout(() => {
+    mtTimeout(() => {
       if (!mtState.rhythmActive) return;
       beatEl.textContent = beatNum;
       beatEl.classList.add('pulse');
       zone.classList.add('tapped');
-      setTimeout(() => {
+      mtTimeout(() => {
         beatEl.classList.remove('pulse');
         zone.classList.remove('tapped');
       }, 120);
@@ -27454,11 +27529,11 @@ function renderMtRhythmRound(r) {
 
   const firstTapBeatTime = startT + countBeats * interval;
   const goDelay = Math.max(0, (firstTapBeatTime - ctx.currentTime - 0.05) * 1000);
-  setTimeout(() => {
+  mtTimeout(() => {
     if (!mtState.rhythmActive) return;
     beatEl.textContent = 'GO!';
     beatEl.classList.add('go');
-    setTimeout(() => {
+    mtTimeout(() => {
       beatEl.classList.remove('go');
       beatEl.textContent = '';
     }, 200);
@@ -27476,7 +27551,11 @@ function renderMtRhythmRound(r) {
     const status = abs <= 80 ? 'perfect' : abs <= 200 ? 'close' : 'miss';
     tapResults.push({ status, deltaMs: delta });
     klRhyTapStart(mtMelodyFreqs ? mtMelodyFreqs[idx % mtMelodyFreqs.length] : 330);
-    setTimeout(() => klRhyTapStop(), 110);  // audible melodic tap — matches Lesson
+    // Hold the tone for the NOTE'S duration so sustained notes ring (bug: arcade
+    // used a flat 110ms, so half/whole notes sounded clipped). d is in beats.
+    const durBeats = mtOnsetDurs ? (mtOnsetDurs[idx] || 1) : 1;
+    const holdMs = Math.max(110, durBeats * beatInterval * 1000 * 0.9);
+    mtTimeout(() => klRhyTapStop(), holdMs);  // melodic tap, held to note length — matches Lesson
     const dot = indicators.children[idx];
     if (dot) dot.className = 'tap-dot ' + status;
     zone.classList.add('tapped');
@@ -27508,8 +27587,11 @@ function renderMtRhythmRound(r) {
 
   const finishAt = firstTapBeatTime + (beats - 1) * beatInterval + 0.6;
   const scoreDelay = Math.max(0, (finishAt - ctx.currentTime) * 1000);
-  setTimeout(() => {
-    if (!mtState.rhythmActive || mtState.isAnswered) return;
+  mtTimeout(() => {
+    // Guard: only score if we're still actually in an arcade rhythm round on the
+    // arcade screen. Prevents a stale scorer from firing inside Lesson Mode.
+    const live = document.getElementById('mixtape-session');
+    if (!mtState.rhythmActive || mtState.isAnswered || !live || !live.classList.contains('active')) return;
     mtState.isAnswered = true;
     while (tapResults.length < beats) tapResults.push({ status: 'miss', deltaMs: null });
     const hits = tapResults.filter(r => r.status === 'perfect' || r.status === 'close').length;
@@ -27527,6 +27609,7 @@ function renderMtRhythmRound(r) {
 
 function endMixtape() {
   stopMtTimer();
+  mtClearTimers();
   mtState.rhythmActive = false;
   if (window._activeSpaceHandler) {
     document.removeEventListener('keydown', window._activeSpaceHandler);
@@ -27613,6 +27696,7 @@ window.quitMixtape = function() {
   // Don't show confirm if they haven't even scored anything yet — just exit clean to home
   if (mtState.score === 0 && mtState.rounds === 0) {
     stopMtTimer();
+    mtClearTimers();
     mtState.rhythmActive = false;
     if (window._activeSpaceHandler) {
       document.removeEventListener('keydown', window._activeSpaceHandler);
