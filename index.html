@@ -20609,7 +20609,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.02c'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.02d'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -27515,6 +27515,7 @@ function handleMtAnswer(pickedId, btn) {
     mtState.lastSpeedFrac = 1;  // answered during LISTEN, before the timer started — fastest possible
   }
   stopMtTimer();
+  stopAllAudio();   // cut the excerpt the moment you answer — AL/instrument demos are scheduled ahead and would otherwise ring into the next round
   document.getElementById('mt-hear-btn').style.visibility = 'hidden';
   const r = mtState.currentRound;
   const isCorrect = pickedId === r.correctId;
@@ -27535,6 +27536,7 @@ function mtTimeout() {
   if (mtState.isAnswered) return;
   mtState.isAnswered = true;
   stopMtTimer();
+  stopAllAudio();   // same cut on buzzer-out
   document.getElementById('mt-hear-btn').style.visibility = 'hidden';
   const r = mtState.currentRound;
   document.querySelectorAll('#mt-answer-grid .mt-answer-btn').forEach(b => {
@@ -28082,7 +28084,10 @@ function renderMtRhythmRound(r) {
 
   const tapResults = [];
   let armed = false;
-  const onTap = () => {
+  let tapMaxStop = null;
+  // DOWN: score the onset + start the tone ringing. The tone now sustains for as
+  // long as the key/tap is HELD (was a predetermined holdMs — felt canned).
+  const onTapDown = () => {
     if (!armed || tapResults.length >= beats) return;
     const ctxNow = ctx.currentTime;
     const idx = tapResults.length;
@@ -28092,18 +28097,24 @@ function renderMtRhythmRound(r) {
     const status = abs <= 80 ? 'perfect' : abs <= 200 ? 'close' : 'miss';
     tapResults.push({ status, deltaMs: delta });
     klRhyTapStart(mtMelodyFreqs ? mtMelodyFreqs[idx % mtMelodyFreqs.length] : 330);
-    // Hold the tone for the NOTE'S duration so sustained notes ring (bug: arcade
-    // used a flat 110ms, so half/whole notes sounded clipped). d is in beats.
-    const durBeats = mtOnsetDurs ? (mtOnsetDurs[idx] || 1) : 1;
-    const holdMs = Math.max(110, durBeats * beatInterval * 1000 * 0.9);
-    mtSchedule(() => klRhyTapStop(), holdMs);  // melodic tap, held to note length — matches Lesson
+    clearTimeout(tapMaxStop);
+    tapMaxStop = setTimeout(() => klRhyTapStop(), 2500);  // safety ceiling if an up-event is ever missed
     const dot = indicators.children[idx];
     if (dot) dot.className = 'tap-dot ' + status;
     zone.classList.add('tapped');
-    setTimeout(() => zone.classList.remove('tapped'), 80);
   };
-  zone.addEventListener('click', onTap);
-  zone.addEventListener('touchstart', (e) => { e.preventDefault(); onTap(); }, { passive: false });
+  // UP: release the tone — the held duration is whatever the player held.
+  const onTapUp = () => {
+    clearTimeout(tapMaxStop); tapMaxStop = null;
+    klRhyTapStop();
+    zone.classList.remove('tapped');
+  };
+  zone.addEventListener('mousedown', onTapDown);
+  zone.addEventListener('mouseup', onTapUp);
+  zone.addEventListener('mouseleave', onTapUp);
+  zone.addEventListener('touchstart', (e) => { e.preventDefault(); onTapDown(); }, { passive: false });
+  zone.addEventListener('touchend',   (e) => { e.preventDefault(); onTapUp(); }, { passive: false });
+  zone.addEventListener('touchcancel', onTapUp);
 
   const onSpace = (e) => {
     if (e.code !== 'Space') return;
@@ -28113,11 +28124,19 @@ function renderMtRhythmRound(r) {
     if (tag === 'TEXTAREA' || tag === 'SELECT' || (tag === 'INPUT' && type !== 'range')) return;
     e.preventDefault();
     getAudio();   // resume/refresh the context on the KEYBOARD path (a click already does this; a keydown may not)
-    onTap();
+    onTapDown();
+  };
+  const onSpaceUp = (e) => {
+    if (e.code !== 'Space') return;
+    e.preventDefault();
+    onTapUp();    // release on key-up → sustain length = how long Space was held
   };
   if (window._activeSpaceHandler) document.removeEventListener('keydown', window._activeSpaceHandler);
+  if (window._mtRhythmKeyUp)      document.removeEventListener('keyup', window._mtRhythmKeyUp);
   window._activeSpaceHandler = onSpace;
+  window._mtRhythmKeyUp = onSpaceUp;
   document.addEventListener('keydown', onSpace);
+  document.addEventListener('keyup', onSpaceUp);
 
   playCountIn(bpm, countBeats, () => {
     armed = true;
@@ -28144,6 +28163,11 @@ function renderMtRhythmRound(r) {
       document.removeEventListener('keydown', onSpace);
       window._activeSpaceHandler = null;
     }
+    if (window._mtRhythmKeyUp === onSpaceUp) {
+      document.removeEventListener('keyup', onSpaceUp);
+      window._mtRhythmKeyUp = null;
+    }
+    klRhyTapStop();   // kill any tone still ringing if the round scored mid-hold
     mtState.rhythmActive = false;
     if (isCorrect) mtCorrect();
     else mtWrong();
@@ -28158,6 +28182,11 @@ function endMixtape() {
     document.removeEventListener('keydown', window._activeSpaceHandler);
     window._activeSpaceHandler = null;
   }
+  if (window._mtRhythmKeyUp) {
+    document.removeEventListener('keyup', window._mtRhythmKeyUp);
+    window._mtRhythmKeyUp = null;
+  }
+  klRhyTapStop();
 
   const scores = mtLoadHiScores();
   const prev = scores[mtState.difficulty] || 0;
