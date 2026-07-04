@@ -3614,6 +3614,7 @@
     letter-spacing: 1.5px; text-transform: uppercase;
     min-height: 20px;
   }
+  #mt-status { display: none; }
   .mt-hear-btn {
     width: 100%; padding: 12px;
     background: var(--bg2); border: 1px solid rgba(124,111,247,0.4);
@@ -3627,6 +3628,7 @@
   }
   .mt-hear-btn:active:not(:disabled) { transform: scale(0.99); }
   .mt-hear-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  #mt-hear-btn { display: none; }   /* obsolete — samples now loop while the timer runs */
   .mt-hear-btn.playing {
     background: rgba(124,111,247,0.2);
     border-color: var(--text2);
@@ -4330,9 +4332,17 @@
   }
   /* the chrome logo sitting in the player-select sky (top-right, where the flat one was) */
   .kl-scene-logo {
-    position: absolute; top: 4vh; left: 50%; transform: translateX(-50%); z-index: 3;
+    position: absolute; top: 4vh; left: 50%;
+    transform: translateX(-50%) scale(1.5); transform-origin: center center;
+    padding: 47px;
+    z-index: 3;
     font-size: clamp(38px, 8vw, 88px);
     pointer-events: none;
+    animation: klSceneLogoIn 0.7s cubic-bezier(0.2,0.7,0.3,1) 0.3s both;
+  }
+  @keyframes klSceneLogoIn {
+    from { opacity: 0; transform: translateX(-50%) scale(1.275); filter: contrast(1.08) blur(6px); }
+    to   { opacity: 1; transform: translateX(-50%) scale(1.5);   filter: contrast(1.08) blur(0); }
   }
   @keyframes klLogoIn {
     from { opacity: 0; transform: scale(0.85); filter: contrast(1.08) blur(6px); }
@@ -5531,7 +5541,7 @@
 
   <div class="home-logo-wrap">
     <div class="home-logo">
-      <span class="rock">📖 LESSON&nbsp;</span><span class="ear">MODE</span>
+      <span class="rock">📖 LESSON&nbsp;</span><span class="ear" style="color:var(--gold);">MODE</span>
     </div>
   </div>
 
@@ -7232,6 +7242,9 @@ const KANTEON_CONFIG = {
   // ——— Lesson Mode ———
   lessonQuestionsPerSession: 5,    // how many questions make up one lesson session
 
+  // ——— Arcade layout ———
+  transcriptionCellSize: 40,       // px size of each sequencer cell in the Transcription round (bigger = larger grid, buttons reflow below)
+
   // ——— Ear-training difficulty ———
   earToleranceCents: 40,           // how close a build answer must be, in cents. Higher = easier. (100 = a full semitone)
   earLowestRoot: 'C4',             // lowest note interval/chord-ID questions play from. 'C4' = middle C. Lower (C3) = darker/muddier, higher (C5) = brighter
@@ -7243,6 +7256,32 @@ const KANTEON_CONFIG = {
   // ——— Wording (edit the text between the quotes) ———
   streakToast: '{n}-day streak!',  // when a returning player's streak goes up  ({n} = the number)
   streakToastFirst: 'Streak started!',   // shown on the very first day
+};
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   KANTEON LADDER — the difficulty curriculum (one source of truth)
+   ───────────────────────────────────────────────────────────────────────────
+   Intervals + chords, ordered easiest→hardest and CUMULATIVE by level (each
+   level includes everything below it). Feeds BOTH "build by ear" and "identify
+   by ear" in Arcade, so the whole game teaches on one curriculum.
+   To re-tier: move an id between levels. Keep the id spelling exact.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const KANTEON_LADDER = {
+  // Intervals — most-distinct anchors first, tritone last
+  intervals: {
+    1: ['unison', 'P5', 'P8'],
+    2: ['unison', 'P5', 'P8', 'P4', 'M3', 'm3'],
+    3: ['unison', 'P5', 'P8', 'P4', 'M3', 'm3', 'M2', 'M6', 'm6'],
+    4: ['unison', 'P5', 'P8', 'P4', 'M3', 'm3', 'M2', 'M6', 'm6', 'm2', 'M7', 'm7'],
+    5: ['unison', 'P5', 'P8', 'P4', 'M3', 'm3', 'M2', 'M6', 'm6', 'm2', 'M7', 'm7', 'TT', 'm9', 'M9'],
+  },
+  // Chords — start at L2 (L1 is interval-only foundation), 7ths mid-game, exotic last
+  chords: {
+    2: ['major', 'minor'],
+    3: ['major', 'minor', 'sus2', 'sus4', 'dom7'],
+    4: ['major', 'minor', 'sus2', 'sus4', 'dom7', 'maj7', 'min7', 'dim', 'aug'],
+    5: ['major', 'minor', 'sus2', 'sus4', 'dom7', 'maj7', 'min7', 'dim', 'aug', 'dim7', 'half_dim', 'maj6', 'min6', 'aug7'],
+  },
 };
 
 // ── STATE ──────────────────────────────────────────────────────────────────
@@ -7831,20 +7870,8 @@ const EAR_SCALE_DEGREES = [
 
 // Difficulty presets (for future level system; level 2 is the default starter)
 const EAR_PRESETS = {
-  intervals: {
-    1: ['unison', 'P5', 'P8'],
-    2: ['unison', 'm3', 'M3', 'P4', 'P5', 'P8'],
-    3: ['unison', 'm3', 'M3', 'P4', 'TT', 'P5', 'm7', 'M7', 'P8'],
-    4: ['unison', 'm2', 'M2', 'm3', 'M3', 'P4', 'TT', 'P5', 'm6', 'M6', 'm7', 'M7', 'P8'],
-    5: ['unison', 'm2', 'M2', 'm3', 'M3', 'P4', 'TT', 'P5', 'm6', 'M6', 'm7', 'M7', 'P8', 'm9', 'M9'],
-  },
-  chords: {
-    1: ['major', 'minor'],
-    2: ['major', 'minor', 'dom7'],
-    3: ['major', 'minor', 'aug', 'dim', 'dom7', 'maj7', 'min7'],
-    4: ['major', 'minor', 'aug', 'dim', 'sus2', 'sus4', 'dom7', 'maj7', 'min7', 'minMaj7', 'dim7'],
-    5: EAR_CHORDS.map(c => c.id),
-  },
+  intervals: KANTEON_LADDER.intervals,   // unified ladder
+  chords: KANTEON_LADDER.chords,   // unified ladder
   scales: {
     1: ['major', 'natural_minor'],
     2: ['major', 'natural_minor', 'dorian'],
@@ -11027,21 +11054,65 @@ function playDynamicsDemo(ctx, t0, dynamicsId) {
 function playArticulationDemo(ctx, t0, artId) {
   const root = randPitch(55, 65);
   const scale = [0, 2, 4, 5, 7, 9, 11, 12];
-  const phrase = buildPhrase(root, scale, 8);
-  const beat = 0.35;
-  const opts = { beat, gain: 0.25 };
-  if (artId === 'sustained') {
-    // Sustained = a few LONG held tones (sparse) — clearly unlike legato's flowing run.
-    const held = buildPhrase(root, scale, 4);
-    const sb = beat * 1.8;
-    held.forEach((m, i) => playTone(midiFreq(m), t0 + i * sb, sb * 1.4, ctx, 0.24, 'guitar'));
-    return held.length * sb * 1000 + 300;
+  const beat = 0.4, gain = 0.26;
+  let phrase, spacing, dur, glide = false;
+  if (artId === 'sustained')      { phrase = buildPhrase(root, scale, 4); spacing = beat * 1.8;  dur = spacing * 0.96; }        // long, even, held
+  else if (artId === 'staccato')  { phrase = buildPhrase(root, scale, 8); spacing = beat;        dur = beat * 0.16; }           // short, clear GAPS
+  else if (artId === 'legato')    { phrase = buildPhrase(root, scale, 8); spacing = beat;        dur = beat * 1.18; glide = true; } // OVERLAP + pitch glide
+  else                            { phrase = buildPhrase(root, scale, 8); spacing = beat * 0.68; dur = beat * 0.30; }           // muted: tight dark chugs
+  let prev = null;
+  phrase.forEach((m, i) => {
+    const f = midiFreq(m);
+    playArticNote(ctx, f, t0 + i * spacing, dur, gain, artId, glide ? prev : null);
+    prev = f;
+  });
+  return phrase.length * spacing * 1000 + 300;
+}
+
+// Dedicated articulation voice: saw → lowpass → ADSR, shaped PER articulation so
+// staccato / legato / sustained / muted are unmistakable by ear (not just length).
+function playArticNote(ctx, freq, t, dur, gain, art, prevFreq) {
+  const out = ctx.destination;
+  const osc = ctx.createOscillator(); osc.type = 'sawtooth';
+  const lp  = ctx.createBiquadFilter(); lp.type = 'lowpass';
+  const env = ctx.createGain();
+  osc.connect(lp); lp.connect(env); env.connect(out);
+
+  let atk, cutoff, q = 0.7, sustainFrac = 0;
+  if (art === 'staccato')       { atk = 0.003; cutoff = 4200; }                 // bright, snappy, quick decay
+  else if (art === 'legato')    { atk = 0.055; cutoff = 2400; sustainFrac = 0.9; } // soft attack, held, connected
+  else if (art === 'sustained') { atk = 0.02;  cutoff = 3000; sustainFrac = 1.0; } // steady, full
+  else                          { atk = 0.002; cutoff = 620;  q = 1.1; }         // muted: heavy lowpass "chunk"
+  lp.frequency.value = cutoff; lp.Q.value = q;
+
+  if (art === 'legato' && prevFreq) {                 // slur: glide from the previous pitch
+    osc.frequency.setValueAtTime(prevFreq, t);
+    osc.frequency.exponentialRampToValueAtTime(freq, t + Math.min(0.09, dur * 0.4));
+  } else {
+    osc.frequency.setValueAtTime(freq, t);
   }
-  if (artId === 'staccato')  { opts.shortNotes = true; opts.noteLen = beat * 0.18; }
-  if (artId === 'legato')    { opts.noteLen = beat * 1.0; }   // 8 notes, just touching = smooth connected line
-  if (artId === 'muted')     { opts.muted = true; opts.noteLen = beat * 0.3; }
-  const timbre = (artId === 'muted') ? 'distGuitar' : 'guitar';
-  return playPhrase(ctx, t0, phrase, timbre, opts);
+
+  env.gain.setValueAtTime(0.0001, t);
+  env.gain.exponentialRampToValueAtTime(gain, t + atk);
+  if (sustainFrac > 0) {                              // hold, then release
+    env.gain.setValueAtTime(gain, t + dur * sustainFrac);
+    env.gain.exponentialRampToValueAtTime(0.001, t + dur + 0.04);
+  } else {                                            // percussive decay (staccato/muted)
+    env.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  }
+
+  if (art === 'muted') {                              // palm-mute pick "thunk" — a short filtered noise transient
+    const nb = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.03), ctx.sampleRate);
+    const d = nb.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+    const ns = ctx.createBufferSource(); ns.buffer = nb;
+    const nlp = ctx.createBiquadFilter(); nlp.type = 'lowpass'; nlp.frequency.value = 1100;
+    const ng = ctx.createGain(); ng.gain.value = gain * 0.5;
+    ns.connect(nlp); nlp.connect(ng); ng.connect(out);
+    ns.start(t); ns.stop(t + 0.03);
+  }
+
+  osc.start(t); osc.stop(t + dur + 0.12);
 }
 
 // ── Tempo & Feel demos ───────────────────────────────────────────────────
@@ -18714,7 +18785,7 @@ function klStyleLabPickStart() {
   if (!document.getElementById('ksl-pe-override')) {
     const st = document.createElement('style');
     st.id = 'ksl-pe-override';
-    st.textContent = '*{pointer-events:auto !important;}';
+    st.textContent = '*{pointer-events:auto !important;} svg,svg *{pointer-events:all !important;}';
     document.head.appendChild(st);
   }
   const btn = document.getElementById('ksl-pick');
@@ -18737,7 +18808,24 @@ function klStyleLabOnPick(e) {
   if (e.target.closest('#kl-stylelab')) return;   // panel clicks (sliders/buttons) don't select
   e.preventDefault(); e.stopPropagation();
   if (e.stopImmediatePropagation) e.stopImmediatePropagation();
-  klStyleLabSelect(e.target);
+  // A full-screen transparent layer (e.g. the scene SVG spanning the whole stage)
+  // sits over small elements like the machine. Among EVERYTHING under the cursor,
+  // grab the smallest — that's the thing you're visually pointing at. Use ⬆ Parent
+  // to climb up if it went too specific.
+  let el = e.target;
+  try {
+    const stack = document.elementsFromPoint(e.clientX, e.clientY)
+      .filter(n => n && !n.closest('#kl-stylelab') && n !== document.body && n !== document.documentElement);
+    if (stack.length) {
+      el = stack.reduce((best, n) => {
+        const r = n.getBoundingClientRect(); const area = r.width * r.height;
+        if (area <= 0) return best;
+        const br = best.getBoundingClientRect(); const ba = br.width * br.height;
+        return (ba <= 0 || area < ba) ? n : best;
+      }, stack[0]);
+    }
+  } catch (err) {}
+  klStyleLabSelect(el);
 }
 function klStyleLabSwallow(e) {
   if (window._kslPicking && !e.target.closest('#kl-stylelab')) { e.preventDefault(); e.stopPropagation(); }
@@ -20966,7 +21054,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.04p'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.04x'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -27035,24 +27123,13 @@ function mtBuildPool(maxLevel) {
 
   // Build Mode — construct intervals on the ruler
   // Use a curated set of common intervals by level
-  const buildIntervalSets = {
-    1: ['m2', 'M2', 'm3', 'M3', 'P5'],
-    2: ['m2', 'M2', 'm3', 'M3', 'P4', 'P5', 'P8'],
-    3: ['m2', 'M2', 'm3', 'M3', 'P4', 'TT', 'P5', 'm6', 'M6', 'P8'],
-    4: ['m2', 'M2', 'm3', 'M3', 'P4', 'TT', 'P5', 'm6', 'M6', 'm7', 'M7', 'P8'],
-    5: ['m2', 'M2', 'm3', 'M3', 'P4', 'TT', 'P5', 'm6', 'M6', 'm7', 'M7', 'P8', 'M9'],
-  };
+  const buildIntervalSets = KANTEON_LADDER.intervals;   // unified ladder
   const buildSet = buildIntervalSets[Math.min(maxLevel, 5)] || buildIntervalSets[1];
   buildSet.forEach(id => pool.push({ kind: 'build-interval', id, lvl: maxLevel }));
 
   // Build Mode — construct CHORDS by ear (multi-marker). Introduced at level 2+
   // so the first level stays interval-only. Harder chords unlock with level.
-  const buildChordSets = {
-    2: ['major', 'minor'],
-    3: ['major', 'minor', 'sus4', 'sus2'],
-    4: ['major', 'minor', 'sus4', 'sus2', 'dim', 'aug'],
-    5: ['major', 'minor', 'sus4', 'sus2', 'dim', 'aug', 'maj7', 'min7', 'dom7'],
-  };
+  const buildChordSets = KANTEON_LADDER.chords;   // unified ladder (re-tiered: 7ths mid-game, exotic at L5)
   if (maxLevel >= 2) {
     const cset = buildChordSets[Math.min(maxLevel, 5)] || buildChordSets[2];
     cset.forEach(id => { if (EAR_CHORDS.find(c => c.id === id)) pool.push({ kind: 'build-chord', id, lvl: maxLevel }); });
@@ -27122,6 +27199,7 @@ function mtSchedule(fn, ms) {
 function mtClearTimers() {
   _mtTimers.forEach(id => clearTimeout(id));
   _mtTimers = [];
+  clearTimeout(mtState._audioLoop); mtState._audioLoop = null;
   // Kill any held tap tone so a sustained note doesn't ring on after we leave.
   if (typeof klRhyTapStop === 'function') { try { klRhyTapStop(); } catch (e) {} }
   if (typeof mtBuildLiveStop === 'function') { try { mtBuildLiveStop(); } catch (e) {} }
@@ -27417,6 +27495,14 @@ function pickWeighted(pool) {
 }
 
 window.nextMtRound = function() {
+  // Hard cut: kill anything still sounding from the puzzle we're leaving — the
+  // looping sample, scheduled clips, and any live drone/tap tone — so nothing
+  // bleeds into the next puzzle.
+  stopAllAudio();
+  clearTimeout(mtState._audioLoop);
+  if (typeof klRhyTapStop === 'function') { try { klRhyTapStop(); } catch (e) {} }
+  if (typeof mtBuildLiveStop === 'function') { try { mtBuildLiveStop(); } catch (e) {} }
+  if (typeof mtChordLiveStop === 'function') { try { mtChordLiveStop(); } catch (e) {} }
   klMarkDailyActivity();  // tick the daily streak on real Arcade practice (once/day)
   // Level is driven by MOMENTUM (fast answers accumulate it faster → reach hard puzzles sooner).
   const newLevel = Math.min(MT_TUNE.MAX_LEVEL, 1 + Math.floor(mtState.momentum / MT_TUNE.LEVEL_MOMENTUM));
@@ -27785,15 +27871,20 @@ function renderMtRound(r) {
 
   const ctx = getAudio();
   const t0 = ctx.currentTime + 0.1;
+  clearTimeout(mtState._audioLoop); mtState._audioLoop = null;
   if (typeof r.audio === 'function') {
-    document.getElementById('mt-status').textContent = '🔊 LISTEN...';
-    const audioMs = r.audio(ctx, t0);
-    setTimeout(() => {
+    // Timer starts NOW (not after the clip). The sample loops in the background
+    // until answered or time runs out — so HEAR AGAIN is unnecessary.
+    document.getElementById('mt-status').textContent = 'ANSWER NOW';
+    hearBtn.style.visibility = 'hidden';
+    startMtTimer();
+    const loop = () => {
       if (mtState.isAnswered) return;
-      document.getElementById('mt-status').textContent = 'ANSWER NOW';
-      hearBtn.style.visibility = 'visible';
-      startMtTimer();
-    }, audioMs);
+      const ac = getAudio();
+      const ms = r.audio(ac, ac.currentTime + 0.05) || 1000;
+      mtState._audioLoop = setTimeout(loop, Math.max(500, ms + 300));   // small breath between plays
+    };
+    loop();
   } else {
     // Visual-only MCQ (notation/theory): no audio, answer window starts at once.
     document.getElementById('mt-status').textContent = 'ANSWER NOW';
@@ -27889,6 +27980,7 @@ function handleMtAnswer(pickedId, btn) {
     mtState.lastSpeedFrac = 1;  // answered during LISTEN, before the timer started — fastest possible
   }
   stopMtTimer();
+  clearTimeout(mtState._audioLoop);
   stopAllAudio();   // cut the excerpt the moment you answer — AL/instrument demos are scheduled ahead and would otherwise ring into the next round
   document.getElementById('mt-hear-btn').style.visibility = 'hidden';
   const r = mtState.currentRound;
@@ -27910,6 +28002,7 @@ function mtTimeout() {
   if (mtState.isAnswered) return;
   mtState.isAnswered = true;
   stopMtTimer();
+  clearTimeout(mtState._audioLoop);
   stopAllAudio();   // same cut on buzzer-out
   document.getElementById('mt-hear-btn').style.visibility = 'hidden';
   const r = mtState.currentRound;
@@ -28323,7 +28416,7 @@ function renderMtTranscriptionRound(r) {
   let activeCol = 0;
 
   const noteLabel = m => midiToNoteName(m).replace(/-?\d+$/, '');
-  const cellPx = nCols > 6 ? 34 : 40;
+  const cellPx = Math.max(20, KANTEON_CONFIG.transcriptionCellSize || 40);   // knob-driven: bigger grid reflows buttons below
 
   // Build grid: a left label column + nCols step columns.
   let gridHtml = '<div class="mt-tx-grid" style="display:inline-grid;grid-template-columns:auto repeat(' + nCols + ',' + cellPx + 'px);gap:4px;justify-content:center;">';
@@ -28339,15 +28432,16 @@ function renderMtTranscriptionRound(r) {
   });
   gridHtml += '</div>';
 
+  host.style.overflowY = 'auto';   // if a big grid overflows, keep buttons reachable
   host.innerHTML =
-    '<div style="text-align:center;padding:10px 8px 6px;">' +
-      '<div style="font-family:var(--font-mono);font-size:12px;color:var(--text3);margin-bottom:10px;">Tap a cell to place each note — left to right</div>' +
-      '<div style="overflow-x:auto;">' + gridHtml + '</div>' +
-      '<div class="build-ab-row" style="display:flex;gap:10px;margin-top:12px;">' +
+    '<div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 8px 16px;">' +
+      '<div style="font-family:var(--font-mono);font-size:12px;color:var(--text3);">Tap a cell to place each note — left to right</div>' +
+      '<div style="overflow-x:auto;max-width:100%;">' + gridHtml + '</div>' +
+      '<div class="build-ab-row" style="display:flex;gap:10px;width:100%;">' +
         '<button class="build-hear-btn" id="mt-tx-hear-target" type="button" style="flex:1;">\u25B6 HEAR MELODY</button>' +
         '<button class="build-hear-btn" id="mt-tx-hear-yours" type="button" style="flex:1;">\u25B6 HEAR YOURS</button>' +
       '</div>' +
-      '<button class="build-submit-btn" id="mt-tx-submit" type="button" style="width:100%;margin-top:10px;">SUBMIT</button>' +
+      '<button class="build-submit-btn" id="mt-tx-submit" type="button" style="width:100%;">SUBMIT</button>' +
     '</div>';
 
   const gridEl = host.querySelector('.mt-tx-grid');
@@ -28407,8 +28501,8 @@ function renderMtTranscriptionRound(r) {
   });
 
   // auto-play the melody once so the player hears the target to start.
-  setTimeout(() => { if (!mtState.isAnswered) playSeq(target); }, 250);
-  setTimeout(() => { if (!mtState.isAnswered) startMtTimer(); }, 300);
+  startMtTimer();   // timer visible immediately (bar depletes from the start)
+  setTimeout(() => { if (!mtState.isAnswered) playSeq(target); }, 250);   // then auto-play the target
 }
 
 // ── Rhythm round adapter ──────────────────────────────────────────────────
@@ -28852,4 +28946,3 @@ boot();
 
 </body>
 </html>
-
