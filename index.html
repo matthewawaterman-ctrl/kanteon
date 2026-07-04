@@ -4117,6 +4117,18 @@
     box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: opacity 0.4s;
   }
   .kl-toast.out { opacity: 0; }
+  .kl-streak-toast {
+    bottom: auto; top: 84px;
+    border-color: rgba(240,192,64,0.55);
+    background: linear-gradient(180deg, rgba(48,34,70,0.97), rgba(30,20,52,0.97));
+    color: var(--gold, #f0c040); font-weight: 800; letter-spacing: 0.3px;
+    animation: klStreakPop 0.45s cubic-bezier(.2,1.4,.4,1);
+  }
+  @keyframes klStreakPop {
+    0%   { transform: translateX(-50%) scale(0.7); opacity: 0; }
+    60%  { transform: translateX(-50%) scale(1.06); }
+    100% { transform: translateX(-50%) scale(1); opacity: 1; }
+  }
   .kl-clock-ff {
     position: fixed; top: 84px; left: 50%; transform: translateX(-50%); z-index: 998;
     pointer-events: none; font-family: 'Barlow Condensed', sans-serif; font-weight: 900;
@@ -12945,6 +12957,20 @@ function updateStreak(prevDate) {
 // Story klRenderPuzzle, Arcade nextMtRound); it no-ops after the first call each day.
 // Writes to Firestore too: loadUserData pulls Firestore over local on every launch, so a
 // local-only streak would be clobbered by the stale server value on next load.
+// A body-level celebrate toast (works in ANY mode — Lesson/Story/Arcade), unlike
+// klToast which lives inside #kidlab. Fires once/day when the streak ticks.
+function klStreakToast(days) {
+  try {
+    const old = document.getElementById('kl-streak-toast'); if (old) old.remove();
+    const el = document.createElement('div');
+    el.id = 'kl-streak-toast';
+    el.className = 'kl-toast kl-streak-toast';
+    el.innerHTML = '\uD83D\uDD25\u00A0 ' + (days > 1 ? days + '-day streak!' : 'Streak started!');
+    document.body.appendChild(el);
+    setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 400); }, 2600);
+  } catch (e) {}
+}
+
 async function klMarkDailyActivity() {
   if (!klState.kid || klState.guest) return;          // saved profiles only (matches the landing badge)
   const today = new Date().toDateString();
@@ -12952,7 +12978,8 @@ async function klMarkDailyActivity() {
   const prevDate = userData.lastSessionDate;           // capture BEFORE overwrite (one-day-grace needs it)
   userData.lastSessionDate = today;
   updateStreak(prevDate);                              // locked one-day-grace logic
-  window._streakJustTicked = true;                     // hook for an optional in-session celebrate later
+  window._streakJustTicked = true;                     // hook for other surfaces
+  klStreakToast(userData.streak || 1);                 // in-the-moment payoff — the streak's whole point
   klSaveLocalUser();                                   // local mirror (survives offline)
   if (!uid || dbDisabled) return;                      // Firestore mirror — silent-fail like saveXp
   try {
@@ -20609,7 +20636,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.02d'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.02f'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -25952,15 +25979,30 @@ function notationPromptForMode(mode) {
   }
 }
 
-function pickMcqChoices(mode, correctItem, count) {
+// Strip a trailing octave digit from a note label: 'F#3' -> 'F#', 'E4' -> 'E'.
+function noteLetterOf(label) { return String(label).replace(/-?\d+$/, ''); }
+
+function pickMcqChoices(mode, correctItem, count, opts) {
+  opts = opts || {};
   const catalog = NOTATION_META[mode].catalog;
   const set = notationState[NOTATION_META[mode].setKey];
   // Pool of distractors = selected items in this mode minus the correct one.
   // If too few selected, top up from the rest of the catalog.
   const selected = catalog.filter(i => set.has(i.id) && i.id !== correctItem.id);
-  let distractors = shuffleArray(selected.slice()).slice(0, count - 1);
+  // Pitch modes on easier levels: don't offer the SAME letter in another octave
+  // (F4 vs F5) — that's an octave-recognition skill, not note-reading. Only relax
+  // once the player is at a harder level (opts.hard).
+  const avoidSameLetter = (mode === 'treble' || mode === 'bass') && !opts.hard;
+  const cl = avoidSameLetter ? noteLetterOf(correctItem.label) : null;
+  const distinctOnly = (arr) => {
+    if (!avoidSameLetter) return arr;
+    const d = arr.filter(i => noteLetterOf(i.label) !== cl);
+    return d.length >= (count - 1) ? d : arr;   // only enforce if enough distinct-letter options remain
+  };
+  let distractors = shuffleArray(distinctOnly(selected).slice()).slice(0, count - 1);
   if (distractors.length < count - 1) {
-    const extras = catalog.filter(i => i.id !== correctItem.id && !set.has(i.id));
+    let extras = catalog.filter(i => i.id !== correctItem.id && !set.has(i.id));
+    extras = distinctOnly(extras);
     distractors = distractors.concat(shuffleArray(extras).slice(0, count - 1 - distractors.length));
   }
   const choices = shuffleArray([correctItem, ...distractors]);
@@ -26753,6 +26795,8 @@ function mtClearTimers() {
   _mtTimers = [];
   // Kill any held tap tone so a sustained note doesn't ring on after we leave.
   if (typeof klRhyTapStop === 'function') { try { klRhyTapStop(); } catch (e) {} }
+  if (typeof mtBuildLiveStop === 'function') { try { mtBuildLiveStop(); } catch (e) {} }
+  if (typeof mtChordLiveStop === 'function') { try { mtChordLiveStop(); } catch (e) {} }
 }
 
 // ── State ─────────────────────────────────────────────────────────────────
@@ -27227,7 +27271,7 @@ function buildMtRound(pick) {
   // Rhythm
   if (pick.kind === 'build-interval') {
     const def = EAR_INTERVALS.find(i => i.id === pick.id);
-    const rootMidi = 48 + Math.floor(Math.random() * 12); // C3 to B3
+    const rootMidi = 60 + Math.floor(Math.random() * 12); // C4 to B4 (raised an octave — C3 range was muddy)
     const direction = (def.semis > 0 && Math.random() < 0.3) ? 'below' : 'above';
     return {
       module: 'BUILD', moduleClass: 'mod-build',
@@ -27240,7 +27284,7 @@ function buildMtRound(pick) {
 
   if (pick.kind === 'build-chord') {
     const def = EAR_CHORDS.find(c => c.id === pick.id);
-    const rootMidi = 48 + Math.floor(Math.random() * 12); // C3 to B3
+    const rootMidi = 60 + Math.floor(Math.random() * 12); // C4 to B4 (raised an octave — C3 range was muddy)
     // The root (0) is the given/fixed note; the player tunes the OTHER tones by ear.
     const otherSemis = def.ints.filter(s => s !== 0);
     const rootName = midiToNoteName(rootMidi).replace(/-?\d+$/, '');
@@ -27255,7 +27299,7 @@ function buildMtRound(pick) {
 
   if (pick.kind === 'build-scale') {
     const def = EAR_SCALES.find(s => s.id === pick.id);
-    const rootMidi = 48 + Math.floor(Math.random() * 8); // keep top of scale in range
+    const rootMidi = 60 + Math.floor(Math.random() * 8); // C4-ish (raised an octave); keeps scale top in range
     // Root (0) and octave (12) are the given anchors; tune the inner degrees by ear.
     const inner = def.semis.filter(s => s !== 0 && s !== 12);
     const rootName = midiToNoteName(rootMidi).replace(/-?\d+$/, '');
@@ -27307,9 +27351,9 @@ function buildMtRound(pick) {
     const mode = pick.mode || 'treble';
     const catalog = NOTATION_META[mode].catalog;
     const correct = catalog[Math.floor(Math.random() * catalog.length)];
-    // self-contained distractor pick (no dependency on Lesson selection state)
-    const others = shuffleArray(catalog.filter(i => i.id !== correct.id)).slice(0, 3);
-    const answers = shuffleArray([correct, ...others]).map(i => ({ id: i.id, label: i.label }));
+    // Same letter-avoid rule as Lesson: no same-letter octave dupes until L4+.
+    const answers = pickMcqChoices(mode, correct, 4, { hard: (pick.lvl || 1) >= 4 })
+      .map(i => ({ id: i.id, label: i.label }));
     return {
       module: 'NOTATION', moduleClass: 'mod-notation',
       typeLabel: 'READ THE STAFF',
@@ -27622,6 +27666,48 @@ function mtBuildLiveUpdate(cents) {
   try { L.yoursOsc.frequency.setTargetAtTime(L.rootFreq * Math.pow(2, cents / 1200), L.ctx.currentTime, 0.012); } catch (e) {}
 }
 
+// ── Live drag audio for the arcade CHORD/SCALE builder (multi-voice) ──────────
+// A sustained voice per tone (root + each draggable dot, + octave anchor for a
+// scale). The dragged dot's pitch glides live via setTargetAtTime, so you HEAR
+// the note move — same feel as the interval builder, extended to N markers.
+function mtChordLiveStop() {
+  const L = window._mtChordLive;
+  if (!L) return;
+  window._mtChordLive = null;
+  try {
+    const t = L.ctx.currentTime;
+    L.gain.gain.cancelScheduledValues(t);
+    L.gain.gain.setValueAtTime(Math.max(0.0001, L.gain.gain.value), t);
+    L.gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+    L.oscs.forEach(o => o.stop(t + 0.1));
+  } catch (e) {}
+}
+function mtChordLiveStart(rootFreq, centsArr, extraFreqs) {
+  mtChordLiveStop();
+  const ctx = getAudio();
+  const gain = ctx.createGain(); gain.gain.value = 0;
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2200;
+  gain.connect(lp); lp.connect(ctx.destination);
+  const oscs = [];
+  const mk = (freq) => { const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = freq; o.connect(gain); o.start(ctx.currentTime); oscs.push(o); return o; };
+  mk(rootFreq);                                              // root
+  const noteOscs = centsArr.map(c => mk(rootFreq * Math.pow(2, c / 1200)));  // one per draggable tone
+  (extraFreqs || []).forEach(f => mk(f));                    // e.g. octave anchor for a scale
+  const t = ctx.currentTime;
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(0.10, t + 0.02);
+  window._mtChordLive = { ctx, gain, rootFreq, noteOscs, oscs };
+}
+function mtChordLiveUpdate(centsArr) {
+  const L = window._mtChordLive;
+  if (!L) return;
+  const t = L.ctx.currentTime;
+  centsArr.forEach((c, i) => {
+    const o = L.noteOscs[i];
+    if (o) { try { o.frequency.setTargetAtTime(L.rootFreq * Math.pow(2, c / 1200), t, 0.012); } catch (e) {} }
+  });
+}
+
 // ── Build Mode round adapter ──────────────────────────────────────────────
 function renderMtBuildRound(r) {
   document.getElementById('mt-answer-grid').style.display = 'none';
@@ -27793,6 +27879,8 @@ function renderMtChordRound(r) {
   const cents = q.targets.map(() => 0);   // each marker's cents-from-root; start on root
   const centsToPct = c => { let s = c / 100; s = Math.max(-range, Math.min(range, s)); return (s + range) / (range * 2) * 100; };
   function placeAll() { for (let i = 0; i < nTargets; i++) document.getElementById('mt-chord-mk-' + i).style.left = centsToPct(cents[i]) + '%'; }
+  for (let i = 0; i < nTargets; i++) { const mk = document.getElementById('mt-chord-mk-' + i); if (mk) mk.style.transition = 'none'; }  // 1:1 tracking (kill the laggy shared left-transition)
+  mtChordLiveStop();  // clear any live drone left over from a prior chord round
   placeAll();
 
   function xToCents(clientX) {
@@ -27834,15 +27922,16 @@ function renderMtChordRound(r) {
     const c = xToCents(x);
     activeMk = nearestMarker(c);
     cents[activeMk] = c; placeAll();
-    playChord(cents, 0.5, 0.16);
+    mtChordLiveStart(midiFreq(q.rootMidi), cents, isScale ? [midiFreq(q.rootMidi) * 2] : []);  // start the live chord drone
     e.preventDefault();
   }
   function onMove(e) {
     if (activeMk < 0 || mtState.isAnswered) return;
     const x = e.touches ? e.touches[0].clientX : e.clientX;
     cents[activeMk] = xToCents(x); placeAll();
+    mtChordLiveUpdate(cents);   // glide the dragged dot's pitch live
   }
-  function onUp() { activeMk = -1; }
+  function onUp() { if (activeMk >= 0) { activeMk = -1; mtChordLiveStop(); } }
   window._mtBuildMove = onMove;
   window._mtBuildUp = onUp;
   ruler.addEventListener('pointerdown', onDown);
@@ -27864,6 +27953,7 @@ function renderMtChordRound(r) {
     mtState.isAnswered = true;
     stopMtTimer();
     activeMk = -1;
+    mtChordLiveStop();   // silence the live drone before verdict playback
     // Grade as a set via the shared grader (order-independent, ±tol).
     const targetCents = q.targets.map(s => s * 100);
     const { allHit, perMarker } = gradeBuildSet(cents, targetCents);
@@ -28019,6 +28109,13 @@ function renderMtRhythmRound(r) {
   const mtOnsetDurs = (rNotation && rNotation.onsetDurs && rNotation.onsetDurs.length)
     ? rNotation.onsetDurs
     : null;
+  // Real onset times (in beats) from note durations, so a whole note's onset is
+  // beat 0 and the round waits its FULL length before scoring. Falls back to a
+  // steady 1-beat spacing when durations aren't available.
+  const rOnsetBeats = [];
+  let _accBeats = 0;
+  for (let i = 0; i < beats; i++) { rOnsetBeats.push(_accBeats); _accBeats += (mtOnsetDurs ? (mtOnsetDurs[i] || 1) : 1); }
+  const rTotalBeats = Math.max(_accBeats, beats);
   const rPatternHtml = rNotation
     ? '<div class="rhythm-notation" style="color:#e9e6dc;">' + rNotation.svg + '</div>' +
       '<div class="rhythm-meta" style="text-align:center;">' + rMeta + '</div>'
@@ -28085,27 +28182,33 @@ function renderMtRhythmRound(r) {
   const tapResults = [];
   let armed = false;
   let tapMaxStop = null;
-  // DOWN: score the onset + start the tone ringing. The tone now sustains for as
-  // long as the key/tap is HELD (was a predetermined holdMs — felt canned).
+  let heldIdx = -1;
+  const tapSafetyMs = Math.max(2500, rTotalBeats * beatInterval * 1000 + 800);  // ceiling covers the longest note
+  // DOWN: score the onset + start the tone. The tone sustains while held, and the
+  // HELD DURATION is recorded so note length can be graded (a whole note hit as a
+  // blip is wrong).
   const onTapDown = () => {
     if (!armed || tapResults.length >= beats) return;
     const ctxNow = ctx.currentTime;
     const idx = tapResults.length;
-    const expectedT = firstTapBeatTime + idx * beatInterval;
+    const expectedT = firstTapBeatTime + (rOnsetBeats[idx] || 0) * beatInterval;
     const delta = (ctxNow - expectedT) * 1000;
     const abs = Math.abs(delta);
-    const status = abs <= 80 ? 'perfect' : abs <= 200 ? 'close' : 'miss';
-    tapResults.push({ status, deltaMs: delta });
+    const onsetStatus = abs <= 80 ? 'perfect' : abs <= 200 ? 'close' : 'miss';
+    tapResults.push({ onsetStatus, deltaMs: delta, downT: ctxNow, upT: null });
+    heldIdx = idx;
     klRhyTapStart(mtMelodyFreqs ? mtMelodyFreqs[idx % mtMelodyFreqs.length] : 330);
     clearTimeout(tapMaxStop);
-    tapMaxStop = setTimeout(() => klRhyTapStop(), 2500);  // safety ceiling if an up-event is ever missed
+    tapMaxStop = setTimeout(() => klRhyTapStop(), tapSafetyMs);
     const dot = indicators.children[idx];
-    if (dot) dot.className = 'tap-dot ' + status;
+    if (dot) dot.className = 'tap-dot ' + onsetStatus;   // preliminary; finalized (with duration) at scoring
     zone.classList.add('tapped');
   };
-  // UP: release the tone — the held duration is whatever the player held.
+  // UP: release the tone and stamp the hold end for the current note.
   const onTapUp = () => {
     clearTimeout(tapMaxStop); tapMaxStop = null;
+    if (heldIdx >= 0 && tapResults[heldIdx]) tapResults[heldIdx].upT = ctx.currentTime;
+    heldIdx = -1;
     klRhyTapStop();
     zone.classList.remove('tapped');
   };
@@ -28143,11 +28246,12 @@ function renderMtRhythmRound(r) {
     zone.classList.remove('counting');
     zone.classList.add('armed');
     if (subEl) subEl.textContent = 'TAP THE PATTERN';
-    // steady metronome click through the perform bar so the player can keep time (matches Lesson)
-    for (let _b = 0; _b < beats; _b++) playClick(firstTapBeatTime + _b * beatInterval, ctx, _b === 0);
+    // steady metronome click across the WHOLE pattern length (so a whole note gets 4 clicks to hold through)
+    const clickCount = Math.max(rMeterBeats, Math.ceil(rTotalBeats));
+    for (let _b = 0; _b < clickCount; _b++) playClick(firstTapBeatTime + _b * beatInterval, ctx, _b === 0);
   });
 
-  const finishAt = firstTapBeatTime + (beats - 1) * beatInterval + 0.6;
+  const finishAt = firstTapBeatTime + rTotalBeats * beatInterval + 0.6;   // wait the full pattern, not (beats-1) beats
   const scoreDelay = Math.max(0, (finishAt - ctx.currentTime) * 1000);
   mtSchedule(() => {
     // Guard: only score if we're still actually in an arcade rhythm round on the
@@ -28155,7 +28259,22 @@ function renderMtRhythmRound(r) {
     const live = document.getElementById('mixtape-session');
     if (!mtState.rhythmActive || mtState.isAnswered || !live || !live.classList.contains('active')) return;
     mtState.isAnswered = true;
-    while (tapResults.length < beats) tapResults.push({ status: 'miss', deltaMs: null });
+    const scoreT = ctx.currentTime;
+    while (tapResults.length < beats) tapResults.push({ onsetStatus: 'miss', deltaMs: null, downT: null, upT: null });
+    // Finalize each note: onset timing AND hold duration. A long note (half/whole)
+    // must be sustained — hitting only the downbeat is a miss.
+    tapResults.forEach((tr, i) => {
+      let status = tr.onsetStatus || 'miss';
+      if (status !== 'miss' && tr.downT != null) {
+        const upT = (tr.upT != null) ? tr.upT : scoreT;   // still holding at scoring → count up to now
+        const heldBeats = (upT - tr.downT) / beatInterval;
+        const expBeats = mtOnsetDurs ? (mtOnsetDurs[i] || 1) : 1;
+        if (expBeats > 1.25 && heldBeats < Math.max(expBeats * 0.6, expBeats - 1)) status = 'miss';  // didn't sustain
+      }
+      tr.status = status;
+      const dot = indicators.children[i];
+      if (dot) dot.className = 'tap-dot ' + status;
+    });
     const hits = tapResults.filter(r => r.status === 'perfect' || r.status === 'close').length;
     const ratio = hits / beats;
     const isCorrect = ratio >= 0.7;
