@@ -18730,6 +18730,11 @@ function klStyleLabSelect(el) {
   window._kslNudge = { x: 0, y: 0 };
   window._kslScale = 1;
   el.classList.add('ksl-highlight');
+  // Remember an SVG element's original transform ONCE, so we can layer on top of it
+  // and restore it — never overwrite it on re-select.
+  if (el.ownerSVGElement && el._kslOrigTransform === undefined) {
+    el._kslOrigTransform = el.getAttribute('transform') || '';
+  }
   const cs = getComputedStyle(el);
   const setR = (id, v) => { const r = document.getElementById(id); if (r) r.value = v; };
   const setV = (id, v) => { const b = document.getElementById(id); if (b) b.textContent = v; };
@@ -18778,27 +18783,53 @@ function klStyleLabApplyXform() {
   const el = window._kslTarget; if (!el) return;
   const n = window._kslNudge || { x: 0, y: 0 };
   const s = window._kslScale || 1;
-  if (n.x === 0 && n.y === 0 && s === 1) {
+  const identity = (n.x === 0 && n.y === 0 && s === 1);
+  if (el.ownerSVGElement) {
+    // SVG element (a <g>, shape, etc.): CSS px transforms + fill-box collapse it.
+    // Use the SVG transform ATTRIBUTE in the element's OWN coordinate units,
+    // scaling around its real bbox centre, layered on top of its original.
     ['transform', 'transform-origin', 'transform-box'].forEach(p => el.style.removeProperty(p));
+    const orig = el._kslOrigTransform || '';
+    if (identity) {
+      if (orig) el.setAttribute('transform', orig); else el.removeAttribute('transform');
+    } else {
+      let centre = 'scale(' + s + ')';
+      try { const b = el.getBBox(); const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
+            centre = 'translate(' + cx + ' ' + cy + ') scale(' + s + ') translate(' + (-cx) + ' ' + (-cy) + ')'; } catch (e) {}
+      // order (SVG = right-applied-first): scale-in-place → original placement → my move
+      el.setAttribute('transform', ('translate(' + n.x + ' ' + n.y + ') ' + orig + ' ' + centre).trim());
+    }
   } else {
-    el.style.setProperty('transform', 'translate(' + n.x + 'px,' + n.y + 'px) scale(' + s + ')');
-    el.style.setProperty('transform-origin', 'center');
-    if (el.ownerSVGElement) el.style.setProperty('transform-box', 'fill-box');   // so SVG groups scale around their own center
+    // HTML element: CSS transform in real pixels around its centre.
+    if (identity) {
+      ['transform', 'transform-origin', 'transform-box'].forEach(p => el.style.removeProperty(p));
+    } else {
+      el.style.setProperty('transform', 'translate(' + n.x + 'px,' + n.y + 'px) scale(' + s + ')');
+      el.style.setProperty('transform-origin', 'center');
+    }
   }
   klStyleLabRender();
 }
 window.klStyleLabReset = function () {
-  if (!window._kslTarget) return;
-  ['font-size', 'width', 'padding', 'transform', 'transform-origin', 'transform-box'].forEach(p => window._kslTarget.style.removeProperty(p));
+  const el = window._kslTarget; if (!el) return;
+  ['font-size', 'width', 'padding', 'transform', 'transform-origin', 'transform-box'].forEach(p => el.style.removeProperty(p));
+  if (el.ownerSVGElement) { if (el._kslOrigTransform) el.setAttribute('transform', el._kslOrigTransform); else el.removeAttribute('transform'); }
   window._kslNudge = { x: 0, y: 0 }; window._kslScale = 1;
-  klStyleLabSelect(window._kslTarget);
+  klStyleLabSelect(el);
 };
 function klStyleLabRender() {
   const el = window._kslTarget; if (!el) return;
+  const out = document.getElementById('ksl-out'); if (!out) return;
+  const n = window._kslNudge || { x: 0, y: 0 };
+  const s = window._kslScale || 1;
+  // SVG element uses the transform ATTRIBUTE — output that, since it's what makes it permanent.
+  if (el.ownerSVGElement && !(n.x === 0 && n.y === 0 && s === 1) && el.getAttribute('transform')) {
+    out.textContent = '<!-- on the <' + (el.tagName || 'g').toLowerCase() + '> in the SVG, set: -->\ntransform="' + el.getAttribute('transform') + '"';
+    return;
+  }
   const props = ['font-size', 'width', 'padding', 'transform', 'transform-origin', 'transform-box'];
   const lines = props.filter(p => el.style.getPropertyValue(p)).map(p => '  ' + p + ': ' + el.style.getPropertyValue(p) + ';');
-  const out = document.getElementById('ksl-out');
-  if (out) out.textContent = lines.length ? (window._kslSel + ' {\n' + lines.join('\n') + '\n}') : '/* no changes yet */';
+  out.textContent = lines.length ? (window._kslSel + ' {\n' + lines.join('\n') + '\n}') : '/* no changes yet */';
 }
 window.klStyleLabCopy = function () {
   const out = document.getElementById('ksl-out'); if (!out) return;
@@ -20875,7 +20906,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.04k'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.04l'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
