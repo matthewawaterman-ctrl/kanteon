@@ -18651,19 +18651,24 @@ window.klStyleLab = function () {
     '<div class="ksl-body">' +
       '<button class="ksl-act" id="ksl-pick" onclick="klStyleLabPick()">🎯 Pick an element</button>' +
       '<div id="ksl-target">Nothing selected — tap “Pick” then click anything on screen.</div>' +
+      '<div class="ksl-nudge">Select: ' +
+        '<button onclick="klStyleLabParent()" title="grab the bigger group this sits inside — tap a few times to select a whole scene">⬆ Parent</button>' +
+        '<button onclick="klStyleLabChild()" title="go back down into it">⬇ Child</button>' +
+      '</div>' +
+      '<label><span>Scale (whole thing) <b id="ksl-sc-v">100%</b></span><input type="range" id="ksl-sc" min="20" max="300" step="5" value="100" oninput="klStyleLabScale(this.value)"></label>' +
       '<label><span>Text size <b id="ksl-fs-v">—</b></span><input type="range" id="ksl-fs" min="8" max="64" step="1" oninput="klStyleLabSet(\'font-size\', this.value + \'px\', \'ksl-fs-v\')"></label>' +
       '<label><span>Width <b id="ksl-w-v">—</b></span><input type="range" id="ksl-w" min="40" max="1200" step="2" oninput="klStyleLabSet(\'width\', this.value + \'px\', \'ksl-w-v\')"></label>' +
       '<label><span>Padding <b id="ksl-pad-v">—</b></span><input type="range" id="ksl-pad" min="0" max="60" step="1" oninput="klStyleLabSet(\'padding\', this.value + \'px\', \'ksl-pad-v\')"></label>' +
       '<div class="ksl-nudge">Move: ' +
-        '<button onclick="klStyleLabNudge(0,-2)">↑</button>' +
-        '<button onclick="klStyleLabNudge(0,2)">↓</button>' +
-        '<button onclick="klStyleLabNudge(-2,0)">←</button>' +
-        '<button onclick="klStyleLabNudge(2,0)">→</button>' +
+        '<button onclick="klStyleLabNudge(0,-4)">↑</button>' +
+        '<button onclick="klStyleLabNudge(0,4)">↓</button>' +
+        '<button onclick="klStyleLabNudge(-4,0)">←</button>' +
+        '<button onclick="klStyleLabNudge(4,0)">→</button>' +
         '<button onclick="klStyleLabReset()" title="undo all changes to this element">↺</button>' +
       '</div>' +
       '<div class="ksl-out" id="ksl-out">/* pick an element to see its CSS */</div>' +
       '<button class="ksl-act" onclick="klStyleLabCopy()">📋 Copy CSS</button>' +
-      '<div class="ksl-note">Changes are TEMPORARY (refresh resets them). Use this to find the right look, then Copy the CSS and send it to Claude — or paste it into the file with Cursor — to make it stick.</div>' +
+      '<div class="ksl-note">Scale + Move affect the WHOLE selected thing at once — use ⬆ Parent to grab a full scene (e.g. the band + rocket), then Scale/Move it. Changes are TEMPORARY (refresh resets). Copy the CSS and send it to Claude or paste with Cursor to make it stick.</div>' +
     '</div>';
   document.body.appendChild(p);
 };
@@ -18675,19 +18680,28 @@ window.klStyleLabClose = function () {
 window.klStyleLabPick = function () {
   document.body.style.cursor = 'crosshair';
   const pickBtn = document.getElementById('ksl-pick'); if (pickBtn) pickBtn.textContent = '👆 Now click any element…';
-  const onClick = (e) => {
-    if (e.target.closest('#kl-stylelab')) return;   // ignore clicks on the panel
+  const onDown = (e) => {
+    if (e.target.closest('#kl-stylelab')) return;   // ignore clicks on the panel itself
     e.preventDefault(); e.stopPropagation();
-    document.removeEventListener('click', onClick, true);
+    if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+    document.removeEventListener('pointerdown', onDown, true);
+    document.removeEventListener('click', swallow, true);
     document.body.style.cursor = '';
     if (pickBtn) pickBtn.textContent = '🎯 Pick an element';
     klStyleLabSelect(e.target);
   };
-  document.addEventListener('click', onClick, true);   // capture phase → beats the game's own handlers
+  // pointerdown fires BEFORE the element's own click/navigation, so it catches
+  // even things that would otherwise jump to another screen (like the logo).
+  const swallow = (e) => { if (!e.target.closest('#kl-stylelab')) { e.preventDefault(); e.stopPropagation(); } document.removeEventListener('click', swallow, true); };
+  document.addEventListener('pointerdown', onDown, true);
+  document.addEventListener('click', swallow, true);   // eat the trailing click so nothing navigates
 };
 function klStyleLabSelect(el) {
+  if (!el || el === document.body || el === document.documentElement) return;
   if (window._kslTarget) window._kslTarget.classList.remove('ksl-highlight');
   window._kslTarget = el;
+  window._kslNudge = { x: 0, y: 0 };
+  window._kslScale = 1;
   el.classList.add('ksl-highlight');
   const cs = getComputedStyle(el);
   const setR = (id, v) => { const r = document.getElementById(id); if (r) r.value = v; };
@@ -18698,33 +18712,63 @@ function klStyleLabSelect(el) {
   setR('ksl-fs', fs); setV('ksl-fs-v', fs + 'px');
   setR('ksl-w', w);  setV('ksl-w-v', w + 'px');
   setR('ksl-pad', pad); setV('ksl-pad-v', pad + 'px');
-  const sel = el.id ? '#' + el.id : (el.className && typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\s+/).filter(c => c !== 'ksl-highlight')[0] : el.tagName.toLowerCase());
-  document.getElementById('ksl-target').textContent = 'Selected: ' + sel;
+  setR('ksl-sc', 100); setV('ksl-sc-v', '100%');
+  const tag = (el.tagName || 'el').toLowerCase();
+  const cls = (el.className && typeof el.className === 'string' && el.className.trim())
+    ? '.' + el.className.trim().split(/\s+/).filter(c => c !== 'ksl-highlight')[0] : '';
+  const sel = el.id ? '#' + el.id : (cls || tag);
+  document.getElementById('ksl-target').textContent = 'Selected: ' + tag + (sel !== tag ? ' (' + sel + ')' : '');
   window._kslSel = sel;
   klStyleLabRender();
 }
+window.klStyleLabParent = function () {
+  const el = window._kslTarget; if (!el) return;
+  const par = el.parentElement;
+  if (par && par !== document.body && par !== document.documentElement && !par.closest('#kl-stylelab')) klStyleLabSelect(par);
+};
+window.klStyleLabChild = function () {
+  const el = window._kslTarget; if (!el) return;
+  const kid = el.firstElementChild;
+  if (kid) klStyleLabSelect(kid);
+};
 window.klStyleLabSet = function (prop, val, vId) {
   if (!window._kslTarget) return;
   window._kslTarget.style.setProperty(prop, val);
   if (vId) { const b = document.getElementById(vId); if (b) b.textContent = val; }
   klStyleLabRender();
 };
+window.klStyleLabScale = function (pct) {
+  window._kslScale = (parseFloat(pct) || 100) / 100;
+  const b = document.getElementById('ksl-sc-v'); if (b) b.textContent = Math.round(pct) + '%';
+  klStyleLabApplyXform();
+};
 window.klStyleLabNudge = function (dx, dy) {
-  if (!window._kslTarget) return;
   window._kslNudge = window._kslNudge || { x: 0, y: 0 };
   window._kslNudge.x += dx; window._kslNudge.y += dy;
-  window._kslTarget.style.setProperty('transform', 'translate(' + window._kslNudge.x + 'px,' + window._kslNudge.y + 'px)');
-  klStyleLabRender();
+  klStyleLabApplyXform();
 };
+function klStyleLabApplyXform() {
+  const el = window._kslTarget; if (!el) return;
+  const n = window._kslNudge || { x: 0, y: 0 };
+  const s = window._kslScale || 1;
+  if (n.x === 0 && n.y === 0 && s === 1) {
+    ['transform', 'transform-origin', 'transform-box'].forEach(p => el.style.removeProperty(p));
+  } else {
+    el.style.setProperty('transform', 'translate(' + n.x + 'px,' + n.y + 'px) scale(' + s + ')');
+    el.style.setProperty('transform-origin', 'center');
+    if (el.ownerSVGElement) el.style.setProperty('transform-box', 'fill-box');   // so SVG groups scale around their own center
+  }
+  klStyleLabRender();
+}
 window.klStyleLabReset = function () {
   if (!window._kslTarget) return;
-  ['font-size', 'width', 'padding', 'transform'].forEach(p => window._kslTarget.style.removeProperty(p));
-  window._kslNudge = { x: 0, y: 0 };
+  ['font-size', 'width', 'padding', 'transform', 'transform-origin', 'transform-box'].forEach(p => window._kslTarget.style.removeProperty(p));
+  window._kslNudge = { x: 0, y: 0 }; window._kslScale = 1;
   klStyleLabSelect(window._kslTarget);
 };
 function klStyleLabRender() {
   const el = window._kslTarget; if (!el) return;
-  const props = ['font-size', 'width', 'padding', 'transform'];
+  const props = ['font-size', 'width', 'padding', 'transform', 'transform-origin', 'transform-box'];
   const lines = props.filter(p => el.style.getPropertyValue(p)).map(p => '  ' + p + ': ' + el.style.getPropertyValue(p) + ';');
   const out = document.getElementById('ksl-out');
   if (out) out.textContent = lines.length ? (window._kslSel + ' {\n' + lines.join('\n') + '\n}') : '/* no changes yet */';
@@ -20804,7 +20848,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.04i'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.04j'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
