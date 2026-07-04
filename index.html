@@ -5937,7 +5937,7 @@
       <button class="ear-mode-label" data-mode="instruments" onclick="setAlTab('instruments')">INSTRUMENTS</button>
       <span class="ear-mode-count" id="al-mode-count-instruments">0</span>
     </div>
-    <div class="ear-mode-row" data-mode="dynamics">
+    <div class="ear-mode-row" data-mode="dynamics" style="display:none">
       <span class="ear-toggle ear-include-tog" id="al-include-dynamics-tog" onclick="toggleAlInclude('dynamics', event)">
         <span class="ear-toggle-track"><span class="ear-toggle-thumb"></span></span>
       </span>
@@ -10455,7 +10455,6 @@ const alState = {
 
 const AL_MODE_META = {
   instruments:  { catalog: AL_INSTRUMENTS,  setKey: 'selectedInstruments',  gridId: 'al-instruments-grid',  countIds: ['al-instruments-count','al-mode-count-instruments'],  sectionId: 'al-instruments-section',  includeKey: 'includeInstruments',  includeTogId: 'al-include-instruments-tog' },
-  dynamics:     { catalog: AL_DYNAMICS,     setKey: 'selectedDynamics',     gridId: 'al-dynamics-grid',     countIds: ['al-dynamics-count','al-mode-count-dynamics'],         sectionId: 'al-dynamics-section',     includeKey: 'includeDynamics',     includeTogId: 'al-include-dynamics-tog' },
   articulation: { catalog: AL_ARTICULATION, setKey: 'selectedArticulation', gridId: 'al-articulation-grid', countIds: ['al-articulation-count','al-mode-count-articulation'], sectionId: 'al-articulation-section', includeKey: 'includeArticulation', includeTogId: 'al-include-articulation-tog' },
   tempo:        { catalog: AL_TEMPO,        setKey: 'selectedTempo',        gridId: 'al-tempo-grid',        countIds: ['al-tempo-count','al-mode-count-tempo'],               sectionId: 'al-tempo-section',        includeKey: 'includeTempo',        includeTogId: 'al-include-tempo-tog' },
   texture:      { catalog: AL_TEXTURE,      setKey: 'selectedTexture',      gridId: 'al-texture-grid',      countIds: ['al-texture-count','al-mode-count-texture'],           sectionId: 'al-texture-section',      includeKey: 'includeTexture',      includeTogId: 'al-include-texture-tog' },
@@ -16038,24 +16037,18 @@ const KL_LISTEN_DEFS = [
   // Every magnitude question is DIRECTIONAL — the change happens inside the clip,
   // so the clip is its own reference (no isolated "is this loud?" with nothing to
   // compare to). q = the question shown under the title.
-  { id: 601, kind: 'vol',   up: true,    q: 'does it get LOUDER or QUIETER?',  answer: 'Louder',     choices: ['Louder', 'Quieter'] },
-  { id: 602, kind: 'vol',   up: false,   q: 'does it get LOUDER or QUIETER?',  answer: 'Quieter',    choices: ['Louder', 'Quieter'] },
   { id: 603, kind: 'pitch', up: true,    q: 'does the pitch go UP or DOWN?',   answer: 'Up',         choices: ['Up', 'Down'] },
   { id: 604, kind: 'pitch', up: false,   q: 'does the pitch go UP or DOWN?',   answer: 'Down',       choices: ['Up', 'Down'] },
   { id: 605, kind: 'tempo', up: true,    q: 'does it SPEED UP or SLOW DOWN?',  answer: 'Speeds Up',  choices: ['Speeds Up', 'Slows Down'] },
   { id: 606, kind: 'tempo', up: false,   q: 'does it SPEED UP or SLOW DOWN?',  answer: 'Slows Down', choices: ['Speeds Up', 'Slows Down'] },
   { id: 607, kind: 'art',   legato: true,  q: 'is it SMOOTH or CHOPPY?',       answer: 'Smooth',     choices: ['Smooth', 'Choppy'] },
   { id: 608, kind: 'art',   legato: false, q: 'is it SMOOTH or CHOPPY?',       answer: 'Choppy',     choices: ['Smooth', 'Choppy'] },
-  { id: 609, kind: 'vol',   up: true,    q: 'does it get LOUDER or QUIETER?',  answer: 'Louder',     choices: ['Louder', 'Quieter'] },
-  { id: 610, kind: 'vol',   up: false,   q: 'does it get LOUDER or QUIETER?',  answer: 'Quieter',    choices: ['Louder', 'Quieter'] },
   { id: 611, kind: 'pitch', up: true,    q: 'does the pitch go UP or DOWN?',   answer: 'Up',         choices: ['Up', 'Down'] },
   { id: 612, kind: 'pitch', up: false,   q: 'does the pitch go UP or DOWN?',   answer: 'Down',       choices: ['Up', 'Down'] },
   { id: 613, kind: 'tempo', up: true,    q: 'does it SPEED UP or SLOW DOWN?',  answer: 'Speeds Up',  choices: ['Speeds Up', 'Slows Down'] },
   { id: 614, kind: 'tempo', up: false,   q: 'does it SPEED UP or SLOW DOWN?',  answer: 'Slows Down', choices: ['Speeds Up', 'Slows Down'] },
   { id: 615, kind: 'art',   legato: true,  q: 'is it SMOOTH or CHOPPY?',       answer: 'Smooth',     choices: ['Smooth', 'Choppy'] },
   { id: 616, kind: 'art',   legato: false, q: 'is it SMOOTH or CHOPPY?',       answer: 'Choppy',     choices: ['Smooth', 'Choppy'] },
-  { id: 617, kind: 'vol',   up: true,    q: 'does it get LOUDER or QUIETER?',  answer: 'Louder',     choices: ['Louder', 'Quieter'] },
-  { id: 618, kind: 'vol',   up: false,   q: 'does it get LOUDER or QUIETER?',  answer: 'Quieter',    choices: ['Louder', 'Quieter'] },
   { id: 619, kind: 'pitch', up: true,    q: 'does the pitch go UP or DOWN?',   answer: 'Up',         choices: ['Up', 'Down'] },
   { id: 620, kind: 'pitch', up: false,   q: 'does the pitch go UP or DOWN?',   answer: 'Down',       choices: ['Up', 'Down'] },
   { id: 621, kind: 'tempo', up: true,    q: 'does it SPEED UP or SLOW DOWN?',  answer: 'Speeds Up',  choices: ['Speeds Up', 'Slows Down'] },
@@ -20674,7 +20667,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.04g'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.04h'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -26722,11 +26715,6 @@ function mtBuildPool(maxLevel) {
     (instSets[lvl] || []).forEach(id => {
       if (!pool.find(p => p.kind === 'al-instrument' && p.id === id)) {
         pool.push({ kind: 'al-instrument', id, lvl });
-      }
-    });
-    (dynSets[lvl] || []).forEach(id => {
-      if (!pool.find(p => p.kind === 'al-dynamics' && p.id === id)) {
-        pool.push({ kind: 'al-dynamics', id, lvl });
       }
     });
     (artSets[lvl] || []).forEach(id => {
