@@ -26,6 +26,9 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <style>
   :root {
+    /* ═══ EDIT COLORS — Matt: change the hex codes (#xxxxxx) below to recolor the app.
+       Keep the "--name:" part and the semicolon. Google "hex color picker" to find codes.
+       --gold = main highlight, --red = the purple accent, --cyan/--green = extras. ═══ */
     --bg: #0f0e2a;
     --neb-layers:
       radial-gradient(ellipse 60% 40% at 30% 30%, rgba(120,60,200,0.25) 0%, transparent 60%),
@@ -7168,6 +7171,35 @@ const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
 const db = getFirestore(fbApp);
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   KANTEON — CONTROL PANEL   (safe-to-edit knobs — Matt edits these)
+   ───────────────────────────────────────────────────────────────────────────
+   Change the VALUES below and nothing breaks, as long as you:
+     • only change what's AFTER the colon (the number, or the text in quotes)
+     • keep the "quotes" around text, and the comma at the end of each line
+     • never change the words on the LEFT of the colon
+   Colors are separate — in the CSS up top, search:  EDIT COLORS
+   After editing: commit on GitHub, then hard-refresh (Cmd-Shift-R).
+   ═══════════════════════════════════════════════════════════════════════════ */
+const KANTEON_CONFIG = {
+  // ——— Arcade Mode ———
+  arcadeStartSeconds: 12,          // seconds per question at the start (lower = harder)
+  arcadeLives: 3,                  // hearts before game over
+
+  // ——— Lesson Mode ———
+  lessonQuestionsPerSession: 5,    // how many questions make up one lesson session
+
+  // ——— Ear-training difficulty ———
+  earToleranceCents: 40,           // how close a build answer must be, in cents. Higher = easier. (100 = a full semitone)
+
+  // ——— Leveling ———
+  xpPerLevel: 100,                 // XP needed to gain a level
+
+  // ——— Wording (edit the text between the quotes) ———
+  streakToast: '{n}-day streak!',  // when a returning player's streak goes up  ({n} = the number)
+  streakToastFirst: 'Streak started!',   // shown on the very first day
+};
+
 // ── STATE ──────────────────────────────────────────────────────────────────
 const kanteon = new KanteonContent();
 let uid = null;
@@ -7179,8 +7211,8 @@ let sessionIdx = 0;
 let sessionXp = 0;
 let sessionCorrect = 0;
 let seenIds = [];
-const SESSION_LEN = 5;
-const XP_PER_LEVEL = 100;
+const SESSION_LEN = KANTEON_CONFIG.lessonQuestionsPerSession;
+const XP_PER_LEVEL = KANTEON_CONFIG.xpPerLevel;
 let audioCtx = null;
 
 // ── AUDIO ENGINE ───────────────────────────────────────────────────────────
@@ -8477,7 +8509,7 @@ const buildState = {
 const BUILD_CENTS_TOLERANCE = 30;
 // Build puzzles (interval + chord) grade the ear within this window. 40c is a
 // touch more forgiving than the old 30c, which felt punishing note-by-note.
-const BUILD_EAR_TOLERANCE = 40;
+const BUILD_EAR_TOLERANCE = KANTEON_CONFIG.earToleranceCents;
 
 // ── SHARED BUILD GRADERS (single source of truth for Lesson + Arcade) ────────
 // UI-agnostic: take cents values, return correctness. Both modes call these so a
@@ -12968,7 +13000,8 @@ function klStreakToast(days) {
     const el = document.createElement('div');
     el.id = 'kl-streak-toast';
     el.className = 'kl-toast kl-streak-toast';
-    el.innerHTML = '\uD83D\uDD25\u00A0 ' + (days > 1 ? days + '-day streak!' : 'Streak started!');
+    const msg = days > 1 ? KANTEON_CONFIG.streakToast.replace('{n}', days) : KANTEON_CONFIG.streakToastFirst;
+    el.innerHTML = '\uD83D\uDD25\u00A0 ' + msg;
     document.body.appendChild(el);
     setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 400); }, 2600);
   } catch (e) {}
@@ -20639,7 +20672,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.04d'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.04f'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -26628,7 +26661,7 @@ const MT_DIFFICULTIES = [
 // One continuous run: starts easy + lenient, ramps to harder + tighter.
 // SPEED drives BOTH score and pace (fast answers = more points AND faster ramp).
 const MT_TUNE = {
-  START_TIMER: 12,    // s — lenient answer window at the start
+  START_TIMER: KANTEON_CONFIG.arcadeStartSeconds,    // s — lenient answer window at the start
   MIN_TIMER:    5,    // s — floor the window tightens toward
   TIMER_STEP: 1.4,    // s shaved off the window per level reached
   MAX_LEVEL:    5,    // pool ceiling (matches mtBuildPool levels 1–5)
@@ -26811,7 +26844,7 @@ const mtState = {
   difficulty: 2,
   pool: [],
   currentPoolLevel: 1,
-  lives: 3,
+  lives: KANTEON_CONFIG.arcadeLives,
   streak: 0,
   bestStreak: 0,
   score: 0,
@@ -26863,8 +26896,7 @@ function mtRenderGlobalHi() {
   if (el) {
     const top = mtBoard[0];
     if (top && top.score > 0) {
-      const dn = (MT_DIFFICULTIES.find(function (d) { return d.lvl === top.difficulty; }) || {}).name;
-      el.textContent = '🌍 WORLD BEST · ' + top.score + (top.name ? ' · ' + top.name : '') + (dn ? ' (' + dn + ')' : '');
+      el.textContent = '🌍 WORLD BEST · ' + top.score + (top.name ? ' · ' + top.name.toUpperCase() : '');
     } else { el.textContent = '🌍 WORLD BEST · —'; }
   }
   // full top-10 list
@@ -26874,11 +26906,9 @@ function mtRenderGlobalHi() {
       list.innerHTML = '<div class="mt-lb-empty">No scores yet — be the first.</div>';
     } else {
       list.innerHTML = mtBoard.map(function (e, i) {
-        const dn = (MT_DIFFICULTIES.find(function (d) { return d.lvl === e.difficulty; }) || {}).name || '';
         return '<div class="mt-lb-row' + (i === 0 ? ' top' : '') + '">' +
           '<span class="mt-lb-rank">' + (i + 1) + '</span>' +
-          '<span class="mt-lb-name">' + (e.name || 'Anon') + '</span>' +
-          '<span class="mt-lb-diff">' + dn + '</span>' +
+          '<span class="mt-lb-name">' + (e.name ? e.name.toUpperCase() : 'ANON') + '</span>' +
           '<span class="mt-lb-score">' + e.score + '</span></div>';
       }).join('');
     }
@@ -26954,7 +26984,7 @@ window.startMixtape = function() {
   mtState.currentPoolLevel = 1;
   mtState.pool = mtBuildPool(1);
 
-  mtState.lives = 3;
+  mtState.lives = KANTEON_CONFIG.arcadeLives;
   mtState.streak = 0;
   mtState.bestStreak = 0;
   mtState.score = 0;
