@@ -7191,6 +7191,8 @@ const KANTEON_CONFIG = {
 
   // ——— Ear-training difficulty ———
   earToleranceCents: 40,           // how close a build answer must be, in cents. Higher = easier. (100 = a full semitone)
+  earLowestRoot: 'C4',             // lowest note interval/chord-ID questions play from. 'C4' = middle C. Lower (C3) = darker/muddier, higher (C5) = brighter
+  earRootSpanSemitones: 12,        // how far above that the pitch randomly wanders (12 = one octave)
 
   // ——— Leveling ———
   xpPerLevel: 100,                 // XP needed to gain a level
@@ -8168,7 +8170,7 @@ function generateEarQuestion() {
   if (earState.fixedRoot) {
     rootMidi = noteToMidi(earState.rootNote + '4');
   } else {
-    rootMidi = 48 + Math.floor(Math.random() * 25); // C3-C5
+    rootMidi = noteToMidi(KANTEON_CONFIG.earLowestRoot) + Math.floor(Math.random() * (KANTEON_CONFIG.earRootSpanSemitones + 1)); // root octave set in CONTROL PANEL (earLowestRoot)
   }
 
   if (pick.kind === 'intervals') {
@@ -20672,7 +20674,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.04f'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.04g'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -27183,7 +27185,7 @@ function buildMtRound(pick) {
   // EAR variants
   if (pick.kind === 'ear-interval') {
     const def = EAR_INTERVALS.find(i => i.id === pick.id);
-    const rootMidi = 48 + Math.floor(Math.random() * 25);
+    const rootMidi = noteToMidi(KANTEON_CONFIG.earLowestRoot) + Math.floor(Math.random() * (KANTEON_CONFIG.earRootSpanSemitones + 1));
     const dir = Math.random() < 0.5 ? 'ascending' : 'descending';
     let rm = rootMidi;
     if (dir === 'ascending' && rm + def.semis > 84) rm = 84 - def.semis;
