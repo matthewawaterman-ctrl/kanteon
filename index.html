@@ -3781,7 +3781,7 @@
      pulsing slowly so it reads as alive but never distracts from the puzzle. */
   /* === KANTEON NAMING — END === */
   #kidlab .kl-machine {
-    position: absolute; top: 4%; left: 50%; transform: translateX(-50%);
+    position: absolute; top: 4%; left: 40%; transform: translateX(-50%);
     width: clamp(220px, 23%, 360px); height: auto; pointer-events: none; z-index: 0;
     opacity: 0.85;
     animation: klMachinePulse 6s ease-in-out infinite;
@@ -4330,7 +4330,7 @@
   }
   /* the chrome logo sitting in the player-select sky (top-right, where the flat one was) */
   .kl-scene-logo {
-    position: absolute; top: 4vh; left: 2.5vw; z-index: 3;
+    position: absolute; top: 4vh; left: 50%; transform: translateX(-50%); z-index: 3;
     font-size: clamp(38px, 8vw, 88px);
     pointer-events: none;
   }
@@ -18669,12 +18669,16 @@ window.klStyleLab = function () {
       '<label><span>Width <b id="ksl-w-v">—</b></span><input type="range" id="ksl-w" min="40" max="1200" step="2" oninput="klStyleLabSet(\'width\', this.value + \'px\', \'ksl-w-v\')"></label>' +
       '<label><span>Padding <b id="ksl-pad-v">—</b></span><input type="range" id="ksl-pad" min="0" max="60" step="1" oninput="klStyleLabSet(\'padding\', this.value + \'px\', \'ksl-pad-v\')"></label>' +
       '<div class="ksl-nudge">Move: ' +
-        '<button onclick="klStyleLabNudge(0,-4)">↑</button>' +
-        '<button onclick="klStyleLabNudge(0,4)">↓</button>' +
-        '<button onclick="klStyleLabNudge(-4,0)">←</button>' +
-        '<button onclick="klStyleLabNudge(4,0)">→</button>' +
+        '<button onpointerdown="klStyleLabHoldStart(0,-4)" onpointerup="klStyleLabHoldStop()" onpointerleave="klStyleLabHoldStop()">↑</button>' +
+        '<button onpointerdown="klStyleLabHoldStart(0,4)" onpointerup="klStyleLabHoldStop()" onpointerleave="klStyleLabHoldStop()">↓</button>' +
+        '<button onpointerdown="klStyleLabHoldStart(-4,0)" onpointerup="klStyleLabHoldStop()" onpointerleave="klStyleLabHoldStop()">←</button>' +
+        '<button onpointerdown="klStyleLabHoldStart(4,0)" onpointerup="klStyleLabHoldStop()" onpointerleave="klStyleLabHoldStop()">→</button>' +
         '<button onclick="klStyleLabReset()" title="undo all changes to this element">↺</button>' +
         '<button class="ksl-del" onclick="klStyleLabDelete()" title="hide this element">🗑</button>' +
+      '</div>' +
+      '<div class="ksl-nudge">Center: ' +
+        '<button onclick="klStyleLabCenter(\'h\')" title="center left-to-right">↔ Across</button>' +
+        '<button onclick="klStyleLabCenter(\'v\')" title="center top-to-bottom">↕ Down</button>' +
       '</div>' +
       '<div class="ksl-out" id="ksl-out">/* pick an element to see its CSS */</div>' +
       '<button class="ksl-act" onclick="klStyleLabCopy()">📋 Copy changes</button>' +
@@ -18811,6 +18815,25 @@ window.klStyleLabDelete = function () {
 window.klStyleLabNudge = function (dx, dy) {
   window._kslNudge = window._kslNudge || { x: 0, y: 0 };
   window._kslNudge.x += dx; window._kslNudge.y += dy;
+  klStyleLabApplyXform();
+};
+// Press-and-hold the arrows to move fast (repeats until released).
+window.klStyleLabHoldStart = function (dx, dy) {
+  klStyleLabNudge(dx, dy);
+  clearInterval(window._kslHold);
+  window._kslHold = setInterval(() => klStyleLabNudge(dx, dy), 55);
+};
+window.klStyleLabHoldStop = function () { clearInterval(window._kslHold); window._kslHold = null; };
+// Center the selected element within its container (live px; refine to responsive on commit).
+window.klStyleLabCenter = function (axis) {
+  const el = window._kslTarget; if (!el) return;
+  if (el.ownerSVGElement) { const o = document.getElementById('ksl-out'); if (o) o.textContent = '/* Center works on HTML elements — for SVG art use ⬆ Parent then Move */'; return; }
+  const rect = el.getBoundingClientRect();
+  const par = el.offsetParent || document.documentElement;
+  const prect = par.getBoundingClientRect();
+  window._kslNudge = window._kslNudge || { x: 0, y: 0 };
+  if (axis === 'v') window._kslNudge.y += (prect.top + prect.height / 2) - (rect.top + rect.height / 2);
+  else window._kslNudge.x += (prect.left + prect.width / 2) - (rect.left + rect.width / 2);
   klStyleLabApplyXform();
 };
 function klStyleLabApplyXform() {
@@ -20943,7 +20966,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.04o'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.04p'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
