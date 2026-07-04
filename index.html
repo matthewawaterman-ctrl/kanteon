@@ -3586,6 +3586,14 @@
     letter-spacing: 3px; font-size: 13px;
     border-bottom: 1px solid var(--border);
   }
+  .mt-continue-btn {
+    display: none; width: 100%; padding: 14px; margin-top: 6px;
+    background: linear-gradient(180deg, #ffd873, #f0a838);
+    color: #2a1c00; font-family: var(--font-display); font-weight: 900;
+    font-size: 16px; letter-spacing: 2px; border: none; border-radius: 8px;
+    cursor: pointer;
+  }
+  .mt-continue-btn:active { transform: scale(0.99); }
   .mt-banner .module-tag { font-size: 13px; color: var(--text3); letter-spacing: 2.5px; }
   .mt-banner .type-tag { font-size: 22px; letter-spacing: 2px; }
   .mt-banner.mod-ear { background: rgba(124,111,247,0.08); }
@@ -8369,6 +8377,23 @@ function handleEarAnswer(pickedId, btn) {
   refreshEarScore();
 }
 
+// Lesson auto-proceed (ON, Matt's call): after a CORRECT answer, auto-advance to
+// the next question so practice flows. WRONG answers still wait — the kid should
+// sit with the correction. Reuses the visible-NEXT-button pattern so it covers
+// every lesson module. (Arcade does the opposite — it waits after every answer.)
+let _lessonAutoNextTimer = null;
+function klLessonAutoNext(isCorrect) {
+  clearTimeout(_lessonAutoNextTimer);
+  if (!isCorrect) return;
+  _lessonAutoNextTimer = setTimeout(() => {
+    const btns = document.querySelectorAll('.feedback-next, .anatomy-next-btn, .rhythm-next-btn');
+    for (const b of btns) {
+      if (b.id === 'feedback-try-again') continue;
+      if (b.offsetParent !== null && !b.disabled) { b.click(); return; }   // the one visible module's NEXT
+    }
+  }, 1100);
+}
+
 function showEarFeedback(isCorrect, xpGain) {
   const bar = document.getElementById('ear-feedback-bar');
   const result = document.getElementById('ear-feedback-result');
@@ -8378,6 +8403,7 @@ function showEarFeedback(isCorrect, xpGain) {
   const q = earState.currentQ;
   expl.textContent = q.label + ' — ' + q.mnemonic;
   bar.classList.add('show');
+  klLessonAutoNext(isCorrect);
 }
 
 function refreshEarScore() {
@@ -9685,6 +9711,7 @@ function showBuildFeedback(isCorrect, xpGain, errCents, retryable = false) {
   tryBtn.style.display  = retryable ? 'inline-block' : 'none';
   nextBtn.style.display = retryable ? 'none' : 'inline-block';
   bar.classList.add('show');
+  klLessonAutoNext(isCorrect);
 }
 
 function refreshBuildScore() {
@@ -10321,6 +10348,7 @@ function showTheoryFeedback(isCorrect) {
   }
   expl.innerHTML = q.explanation;
   bar.classList.add('show');
+  klLessonAutoNext(isCorrect);
 }
 
 function refreshTheoryScore() {
@@ -10657,6 +10685,7 @@ function showAlFeedback(isCorrect, xpGain) {
   const q = alState.currentQ;
   document.getElementById('al-feedback-explanation').textContent = q.label + ' — ' + q.mnemonic;
   bar.classList.add('show');
+  klLessonAutoNext(isCorrect);
 }
 
 function refreshAlScore() {
@@ -20639,7 +20668,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.04b'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.04c'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -24739,6 +24768,7 @@ function showFeedback(isCorrect, q, opts) {
   }
 
   bar.classList.add('show');
+  klLessonAutoNext(isCorrect);
 }
 
 window.tryAgain = function() {
@@ -26061,6 +26091,7 @@ function showNotationFeedback(isCorrect, xpGain) {
   }
   expl.textContent = q.item.label + ' — ' + (q.item.mnemonic || '');
   bar.classList.add('show');
+  klLessonAutoNext(isCorrect);
 }
 
 function refreshNotationScore() {
@@ -26804,6 +26835,8 @@ function mtClearTimers() {
   if (typeof klRhyTapStop === 'function') { try { klRhyTapStop(); } catch (e) {} }
   if (typeof mtBuildLiveStop === 'function') { try { mtBuildLiveStop(); } catch (e) {} }
   if (typeof mtChordLiveStop === 'function') { try { mtChordLiveStop(); } catch (e) {} }
+  if (window._mtContinueCleanup) { try { window._mtContinueCleanup(); } catch (e) {} }
+  mtState.awaitingContinue = false;
 }
 
 // ── State ─────────────────────────────────────────────────────────────────
@@ -27416,6 +27449,7 @@ function renderMtRound(r) {
   const banner = document.getElementById('mt-banner');
   banner.className = 'mt-banner ' + r.moduleClass;
   document.getElementById('mt-banner-module').textContent = r.module;
+  if (window._mtContinueCleanup) window._mtContinueCleanup();   // clear any pending continue gate
   document.getElementById('mt-banner-type').textContent = r.typeLabel;
   document.getElementById('mt-prompt').textContent = r.prompt;
   document.getElementById('mt-status').textContent = '';
@@ -27616,7 +27650,40 @@ function mtCorrect() {
   mtState.score += pts;
   renderMtHud();
   mtFlash('+' + pts, 'correct');
-  setTimeout(() => nextMtRound(), 700);
+  mtAwaitContinue(nextMtRound);
+}
+
+// Arcade auto-proceed OFF (Matt's call): after every answer, wait for the player
+// to continue instead of auto-advancing. Continue via a CONTINUE button, Space,
+// or Enter — NOT click-anywhere, so HEAR TARGET/YOURS stay usable for review.
+function mtAwaitContinue(afterFn) {
+  if (window._mtContinueCleanup) window._mtContinueCleanup();
+  mtState.awaitingContinue = true;
+  let prompt = document.getElementById('mt-continue-btn');
+  if (!prompt) {
+    prompt = document.createElement('button');
+    prompt.id = 'mt-continue-btn';
+    prompt.className = 'mt-continue-btn';
+    const body = document.querySelector('.mt-body');
+    if (body) body.appendChild(prompt);
+  }
+  prompt.textContent = '\u25B6 CONTINUE  (space)';
+  prompt.style.display = 'block';
+  const finish = () => {
+    if (!mtState.awaitingContinue) return;
+    mtState.awaitingContinue = false;
+    cleanup();
+    afterFn();
+  };
+  const onKey = (e) => { if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); finish(); } };
+  function cleanup() {
+    document.removeEventListener('keydown', onKey);
+    if (prompt) { prompt.onclick = null; prompt.style.display = 'none'; }
+    window._mtContinueCleanup = null;
+  }
+  prompt.onclick = finish;
+  document.addEventListener('keydown', onKey);
+  window._mtContinueCleanup = cleanup;
 }
 
 function mtWrong() {
@@ -27624,11 +27691,9 @@ function mtWrong() {
   mtState.streak = 0;
   mtState.lives--;
   renderMtHud();
-  mtFlash('×', 'wrong');
-  setTimeout(() => {
-    if (mtState.lives <= 0) endMixtape();
-    else nextMtRound();
-  }, 900);
+  mtFlash('\u00D7', 'wrong');
+  if (mtState.lives <= 0) { setTimeout(() => endMixtape(), 900); return; }   // game over → auto to score screen
+  mtAwaitContinue(nextMtRound);
 }
 
 function mtFlash(text, kind) {
