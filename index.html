@@ -8475,6 +8475,9 @@ const buildState = {
 
 // Tolerance for "you nailed it" — ±20 cents on either side (pure ear, no snapping).
 const BUILD_CENTS_TOLERANCE = 30;
+// Build puzzles (interval + chord) grade the ear within this window. 40c is a
+// touch more forgiving than the old 30c, which felt punishing note-by-note.
+const BUILD_EAR_TOLERANCE = 40;
 
 // ── SHARED BUILD GRADERS (single source of truth for Lesson + Arcade) ────────
 // UI-agnostic: take cents values, return correctness. Both modes call these so a
@@ -9355,7 +9358,7 @@ window.submitBuildAnswer = function() {
   const userCents   = buildState.markerSemis * 100 + buildState.markerCents;
   const targetCents = buildCurTarget() * 100;
   const errCents    = userCents - targetCents;
-  const isCorrect   = gradeBuildCents(userCents, targetCents); // shared grader (pure ear)
+  const isCorrect   = gradeBuildCents(userCents, targetCents, BUILD_EAR_TOLERANCE); // shared grader (pure ear)
 
   const marker = document.getElementById('build-marker');
 
@@ -9391,7 +9394,7 @@ window.submitBuildAnswer = function() {
 // Delegates to the shared grader so Lesson + Arcade stay in lockstep.
 function gradeChord(q) {
   const tgt = q.targets.map(s => s * 100);
-  const { off, perMarker } = gradeBuildSet(buildState.chordCents, tgt);
+  const { off, perMarker } = gradeBuildSet(buildState.chordCents, tgt, BUILD_EAR_TOLERANCE);
   return { off, perMarker };
 }
 
@@ -20636,7 +20639,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.02f'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.04a'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -26111,21 +26114,24 @@ function staffYFromPos(midY, pos, lineGap) {
 }
 
 function drawLedgers(svg, x, midY, pos, lineGap, headWidth) {
-  // Ledger lines above (pos > 4) or below (pos < -4)
-  // Draw every other half-step starting from ±6, ±8, ... (lines, not spaces)
+  // Ledger lines above (pos > 4) or below (pos < -4). Extend WELL past the
+  // notehead — the notehead's rx (~headWidth, rotated) is wider than it looks,
+  // so a too-short ledger gets fully painted over and vanishes (the "floating
+  // note, no ledger" bug). A fixed staff-relative half-width always pokes out.
+  const half = Math.max(lineGap * 1.15, headWidth * 1.6);
   if (pos >= 6) {
     for (let p = 6; p <= pos; p += 2) {
       svgEl('line', {
-        x1: x - headWidth * 0.8, y1: staffYFromPos(midY, p, lineGap),
-        x2: x + headWidth * 0.8, y2: staffYFromPos(midY, p, lineGap),
+        x1: x - half, y1: staffYFromPos(midY, p, lineGap),
+        x2: x + half, y2: staffYFromPos(midY, p, lineGap),
         class: 'notation-staff-line ledger'
       }, svg);
     }
   } else if (pos <= -6) {
     for (let p = -6; p >= pos; p -= 2) {
       svgEl('line', {
-        x1: x - headWidth * 0.8, y1: staffYFromPos(midY, p, lineGap),
-        x2: x + headWidth * 0.8, y2: staffYFromPos(midY, p, lineGap),
+        x1: x - half, y1: staffYFromPos(midY, p, lineGap),
+        x2: x + half, y2: staffYFromPos(midY, p, lineGap),
         class: 'notation-staff-line ledger'
       }, svg);
     }
@@ -26756,8 +26762,9 @@ function mtBuildPool(maxLevel) {
     if (maxLevel >= 3) pool.push({ kind: 'notation', id: 'not-bs', mode: 'bass', lvl: maxLevel });
   }
 
-  // Theory — modes & keys MCQ. Introduced at L2 (needs some grounding first).
-  if (maxLevel >= 2) {
+  // Theory — modes & keys MCQ. This is genuinely advanced (parent-major / modal
+  // degree naming). Gated to L5 only so it doesn't ambush early players.
+  if (maxLevel >= 5) {
     pool.push({ kind: 'theory', id: 'th0', lvl: maxLevel });
     pool.push({ kind: 'theory', id: 'th1', lvl: maxLevel });
   }
@@ -27105,6 +27112,9 @@ window.nextMtRound = function() {
   mtState.lastSpeedFrac = 0.5;  // neutral default for non-MCQ rounds (rhythm/build); MCQ overwrites at answer
 
   const pick = pickWeighted(mtState.pool);
+  // Slower puzzle types need a longer window: multi-note tuning by ear (chord/
+  // scale) and full-melody entry (transcription) can't be rushed like an MCQ.
+  const KIND_TIME_MULT = { 'build-chord': 1.6, 'build-scale': 1.6, 'build-interval': 1.3, 'transcription': 1.7 };
   mtState.recentKinds.push(pick.kind);
   if (mtState.recentKinds.length > 5) mtState.recentKinds.shift();
   // Defensive: if a pool item is broken (e.g. stale id after a catalog rename),
@@ -27117,6 +27127,7 @@ window.nextMtRound = function() {
     if (!mtState.pool.length) mtState.pool = mtBuildPool(1);
     attempt = pickWeighted(mtState.pool);
   }
+  mtState.currentTimer *= (KIND_TIME_MULT[attempt.kind] || 1);   // extend window for the round we actually drew
   mtState.currentRound = round;
   mtState.isAnswered = false;
   // dev-skip history: append this fresh round, drop any "future" if we'd stepped back
@@ -27811,7 +27822,7 @@ function renderMtBuildRound(r) {
     dragging = false;
     mtBuildLiveStop();   // silence the live drag sweep before verdict playback
     const targetCents = q.targetSemis * 100;
-    const isCorrect = gradeBuildCents(userCents, targetCents);   // shared grader
+    const isCorrect = gradeBuildCents(userCents, targetCents, BUILD_EAR_TOLERANCE);   // shared grader
     // reveal the target ghost at its true position
     const ghost = document.getElementById('mt-build-target');
     ghost.style.left = centsToPct(targetCents) + '%';
@@ -27956,7 +27967,7 @@ function renderMtChordRound(r) {
     mtChordLiveStop();   // silence the live drone before verdict playback
     // Grade as a set via the shared grader (order-independent, ±tol).
     const targetCents = q.targets.map(s => s * 100);
-    const { allHit, perMarker } = gradeBuildSet(cents, targetCents);
+    const { allHit, perMarker } = gradeBuildSet(cents, targetCents, BUILD_EAR_TOLERANCE);
     const okByMarker = {};
     perMarker.forEach(pm => { okByMarker[pm.idx] = pm.ok; });
     // reveal ghosts + color markers (marker i is a placed note → use its own result)
