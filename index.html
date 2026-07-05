@@ -4979,7 +4979,8 @@
   #kl-stylelab .ksl-out {
     background: #0a0919; border: 1px solid rgba(124,111,247,0.25); border-radius: 6px;
     padding: 8px; font-family: ui-monospace, monospace; font-size: 11px; color: #4ade80;
-    white-space: pre-wrap; min-height: 20px;
+    white-space: pre-wrap; overflow-wrap: anywhere;
+    min-height: 20px; max-height: 132px; overflow-y: auto;
   }
   #kl-stylelab .ksl-note { font-size: 10.5px; color: #7d79a8; line-height: 1.4; }
   #kl-stylelab textarea {
@@ -15081,7 +15082,10 @@ function klHomeScene() {
     ? 'PAY RENT \u00B7 $' + rentOwed + (rentDaysLeft != null ? ' \u00B7 ' + Math.max(0, rentDaysLeft) + 'd' : '')
     : 'PAY RENT';
   const owed = rentOwed > 0;
-  const avatarSvg = klAvatarSVG(klState.avatar || klAvatarDefault(), 110);
+  // ART-PH: mirror avatar sizing/placement — bigger + lower, MIRROR ONLY (editor
+  // preview + player tiles are separate klAvatarSVG calls, so they're unaffected).
+  const avatarSvg = klAvatarSVG(klState.avatar || klAvatarDefault(), 110,
+    'translate(0 20) translate(50 53.46499967575073) scale(1.2) translate(-50 -53.46499967575073)');
 
   return '<svg class="kl-garage-svg" viewBox="0 0 1200 620" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">' +
     '<defs>' +
@@ -16518,14 +16522,14 @@ function klAvHeadGroup(cfg) {
     klAvAccessory(acc);
 }
 // Full-body avatar, compact enough to sit in a square (tiles, house, creator).
-function klAvatarSVG(cfg, size) {
+function klAvatarSVG(cfg, size, xform) {
   cfg = cfg || klAvatarDefault();
   size = size || 120;
   const sk = AV_SKIN[(cfg.skin || 0) % AV_SKIN.length];
   const sh = AV_SHIRT[(cfg.shirt || 0) % AV_SHIRT.length];
   const pa = AV_PANTS[(cfg.pants || 0) % AV_PANTS.length];
   const shoe = AV_SHOES[(cfg.shoes || 0) % AV_SHOES.length];
-  return '<svg viewBox="0 0 100 100" width="' + size + '" height="' + size + '" xmlns="http://www.w3.org/2000/svg">' +
+  return '<svg viewBox="0 0 100 100" width="' + size + '" height="' + size + '" xmlns="http://www.w3.org/2000/svg"' + (xform ? ' transform="' + xform + '"' : '') + '>' +
     '<ellipse cx="50" cy="96" rx="24" ry="3.5" fill="rgba(0,0,0,0.18)"/>' +
     // hips + legs (pants)
     '<path d="M37 60 L63 60 L62 72 L38 72 Z" fill="' + pa + '"/>' +
@@ -21372,7 +21376,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.05e'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.05g'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
