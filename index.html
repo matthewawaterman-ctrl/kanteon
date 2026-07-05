@@ -3628,7 +3628,6 @@
   }
   .mt-hear-btn:active:not(:disabled) { transform: scale(0.99); }
   .mt-hear-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-  #mt-hear-btn { display: none; }   /* obsolete — samples now loop while the timer runs */
   .mt-hear-btn.playing {
     background: rgba(124,111,247,0.2);
     border-color: var(--text2);
@@ -4889,6 +4888,7 @@
     box-shadow: 0 10px 40px rgba(0,0,0,0.6); font-size: 13px;
   }
   #kl-stylelab .ksl-head {
+    cursor: move; user-select: none;
     display: flex; align-items: center; justify-content: space-between;
     padding: 10px 12px; border-bottom: 1px solid rgba(240,192,64,0.3);
     font-family: 'Barlow Condensed', sans-serif; font-weight: 900; letter-spacing: 1px; color: #f0c040;
@@ -18756,6 +18756,26 @@ window.klStyleLab = function () {
       '<div class="ksl-note">Scale + Move affect the WHOLE selected thing at once — use ⬆ Parent to grab a full scene, then Scale/Move it. ✏️ edits text · 🗑 hides an element. Changes are TEMPORARY (refresh resets). Copy and send to Claude or paste with Cursor to make it stick.</div>' +
     '</div>';
   document.body.appendChild(p);
+  // Drag the panel by its header (grab anywhere except the ✕).
+  const head = p.querySelector('.ksl-head');
+  let dragging = false, sx = 0, sy = 0, ox = 0, oy = 0;
+  head.addEventListener('pointerdown', (e) => {
+    if (e.target.tagName === 'BUTTON') return;
+    const r = p.getBoundingClientRect();
+    p.style.left = r.left + 'px'; p.style.top = r.top + 'px';
+    p.style.right = 'auto'; p.style.bottom = 'auto';
+    dragging = true; sx = e.clientX; sy = e.clientY; ox = r.left; oy = r.top;
+    try { head.setPointerCapture(e.pointerId); } catch (_) {}
+    e.preventDefault();
+  });
+  head.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    p.style.left = Math.max(0, ox + e.clientX - sx) + 'px';
+    p.style.top = Math.max(0, oy + e.clientY - sy) + 'px';
+  });
+  const endDrag = (e) => { dragging = false; try { head.releasePointerCapture(e.pointerId); } catch (_) {} };
+  head.addEventListener('pointerup', endDrag);
+  head.addEventListener('pointercancel', endDrag);
   // Hotkey while the panel is open: P toggles pick mode, Esc stops it.
   window._kslKeyHandler = (e) => {
     const t = e.target;
@@ -18785,7 +18805,7 @@ function klStyleLabPickStart() {
   if (!document.getElementById('ksl-pe-override')) {
     const st = document.createElement('style');
     st.id = 'ksl-pe-override';
-    st.textContent = '*{pointer-events:auto !important;} svg,svg *{pointer-events:all !important;}';
+    st.textContent = '*{pointer-events:auto !important;cursor:crosshair !important;} svg,svg *{pointer-events:all !important;}';
     document.head.appendChild(st);
   }
   const btn = document.getElementById('ksl-pick');
@@ -21054,7 +21074,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.04x'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.04aa'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -27636,6 +27656,7 @@ function buildMtRound(pick) {
       prompt: 'What instrument do you hear?',
       correctId: def.id,
       answers: pickAnswerSet(AL_INSTRUMENTS, def, 4),
+      loopAudio: true,
       audio: (ctx, t0) => playInstrumentDemo(ctx, t0, def.id),
     };
   }
@@ -27659,6 +27680,7 @@ function buildMtRound(pick) {
       prompt: 'Identify the articulation',
       correctId: def.id,
       answers: pickAnswerSet(AL_ARTICULATION, def, 4),
+      loopAudio: true,
       audio: (ctx, t0) => playArticulationDemo(ctx, t0, def.id),
     };
   }
@@ -27670,6 +27692,7 @@ function buildMtRound(pick) {
       prompt: 'Identify the tempo/feel',
       correctId: def.id,
       answers: pickAnswerSet(AL_TEMPO, def, 4),
+      loopAudio: true,
       audio: (ctx, t0) => playTempoDemo(ctx, t0, def.id),
     };
   }
@@ -27681,6 +27704,7 @@ function buildMtRound(pick) {
       prompt: 'Identify the texture',
       correctId: def.id,
       answers: pickAnswerSet(AL_TEXTURE, def, 4),
+      loopAudio: true,
       audio: (ctx, t0) => playTextureDemo(ctx, t0, def.id),
     };
   }
@@ -27872,11 +27896,10 @@ function renderMtRound(r) {
   const ctx = getAudio();
   const t0 = ctx.currentTime + 0.1;
   clearTimeout(mtState._audioLoop); mtState._audioLoop = null;
-  if (typeof r.audio === 'function') {
-    // Timer starts NOW (not after the clip). The sample loops in the background
-    // until answered or time runs out — so HEAR AGAIN is unnecessary.
-    document.getElementById('mt-status').textContent = 'ANSWER NOW';
-    hearBtn.style.visibility = 'hidden';
+  if (typeof r.audio === 'function' && r.loopAudio) {
+    // Active Listening (timbre/feel): timer starts NOW and the clip loops in the
+    // background until answered — continuous listening helps here. No HEAR AGAIN.
+    hearBtn.style.display = 'none';
     startMtTimer();
     const loop = () => {
       if (mtState.isAnswered) return;
@@ -27885,10 +27908,18 @@ function renderMtRound(r) {
       mtState._audioLoop = setTimeout(loop, Math.max(500, ms + 300));   // small breath between plays
     };
     loop();
+  } else if (typeof r.audio === 'function') {
+    // Ear-training (interval / chord / scale / progression): play ONCE, keep the
+    // HEAR AGAIN button, and start the timer after the clip. The "old way."
+    hearBtn.style.display = '';
+    hearBtn.style.visibility = 'visible';
+    hearBtn.textContent = '\u25B6 HEAR AGAIN';
+    hearBtn.disabled = false;
+    const audioMs = r.audio(ctx, t0);
+    setTimeout(() => { if (!mtState.isAnswered) startMtTimer(); }, audioMs);
   } else {
     // Visual-only MCQ (notation/theory): no audio, answer window starts at once.
-    document.getElementById('mt-status').textContent = 'ANSWER NOW';
-    hearBtn.style.visibility = 'hidden';
+    hearBtn.style.display = 'none';
     startMtTimer();
   }
 }
