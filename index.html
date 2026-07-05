@@ -4227,11 +4227,16 @@
   /* ── DEV SOUND PANEL ── */
   .kl-sndpanel {
     position: fixed; top: 12px; left: 12px; z-index: 1000;
-    width: min(360px, 92vw); max-height: 82vh; overflow-y: auto;
+    width: min(360px, 92vw); max-height: 92vh;
+    display: flex; flex-direction: column;
     background: rgba(16,12,26,0.97); border: 1.5px solid rgba(255,255,255,0.22);
     border-radius: 16px; padding: 14px;
     box-shadow: 0 16px 44px rgba(0,0,0,0.6);
   }
+  /* Header + test buttons stay pinned; ONLY the sliders scroll. min-height:0 is
+     required or the flex child refuses to shrink and the scroll never engages
+     (the exact reason the lower sliders were unreachable before). */
+  .kl-snd-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 2px; }
   .kl-snd-head {
     display: flex; align-items: center; gap: 8px; justify-content: space-between;
     font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 16px;
@@ -7257,6 +7262,7 @@ const KANTEON_CONFIG = {
 
   // ——— Audio balance ———
   synthVolume: 0.7,                // synth-lead loudness vs other instruments (1 = full, lower = quieter)
+  winSfxVolume: 1,                 // puzzle-complete "confetti" sting loudness (1 = full, lower = quieter, 0 = silent)
 
   // ——— Wording (edit the text between the quotes) ———
   streakToast: '{n}-day streak!',  // when a returning player's streak goes up  ({n} = the number)
@@ -18557,7 +18563,8 @@ window.klToggleSoundPanel = function() {
       '<button class="kt-int-sub" onclick="klSndTest(\'hat\')">HAT</button>' +
       '<button class="kt-int-sub" onclick="klSndTest(\'bass\')">BASS</button>' +
       '<button class="kt-int-sub" onclick="klSndTest(\'note\')">NOTE</button>' +
-    '</div>' + rows;
+    '</div>' +
+    '<div class="kl-snd-scroll">' + rows + '</div>';
   document.getElementById('kidlab').appendChild(el);
 };
 window.klSndSet = function(key, val) {
@@ -21111,7 +21118,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.05a'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.05b'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -21357,7 +21364,8 @@ const KL_SND = {
   // default so both stay in sync until Matt tunes it live.
   volSynth: (typeof KANTEON_CONFIG !== 'undefined' && KANTEON_CONFIG.synthVolume != null ? KANTEON_CONFIG.synthVolume : 0.7),
   // Completion "confetti"/win-sting master (drives the winBus in klWin).
-  volWin: 1,
+  // Seeded from the CONTROL PANEL default so both stay in sync until tuned live.
+  volWin: (typeof KANTEON_CONFIG !== 'undefined' && KANTEON_CONFIG.winSfxVolume != null ? KANTEON_CONFIG.winSfxVolume : 1),
   // Melody-voice character (live-tunable, parity with bass partials)
   melVocalVib: 0.012,   // vocals pitch-wobble depth (fraction of freq)
   melVocalRate: 5.2,    // vocals vibrato LFO rate (Hz)
