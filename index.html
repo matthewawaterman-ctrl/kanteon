@@ -7555,7 +7555,7 @@ function playBassGuitar(freq, startTime, duration, ctx, gain) {
 
 // Chorus synth — sine + detuned copy + soft reverb tail
 function playChorusSynth(freq, startTime, duration, ctx, gain) {
-  gain = (gain || 0.2) * (KANTEON_CONFIG.synthVolume != null ? KANTEON_CONFIG.synthVolume : 1);   // knob-balanced
+  gain = (gain || 0.2) * (KL_SND.volSynth != null ? KL_SND.volSynth : 1);   // live "Vol · Synth" slider (seeded from CONTROL PANEL synthVolume)
   // Main sine
   const osc1 = ctx.createOscillator();
   osc1.type = 'sine';
@@ -14735,6 +14735,16 @@ const KL_SHOPKEEP_SVG =
 // The persistent game HUD (money / level+XP / day / show+hype) — one source of
 // truth so it can appear identically in town AND inside every building.
 let klShownLevel = null; // last level the HUD painted — used to flash the meter on level-up
+// Story puzzle screens don't render the full town HUD, so the day-time clock
+// vanished during puzzles. This chip re-surfaces it in the puzzle header. It
+// reuses id="kl-hud-clock" so the existing klDayClockTick updates it with no
+// extra wiring — safe because a puzzle screen fully replaces #kl-wrap, so the
+// town HUD's clock is never mounted at the same time (one live id at a time).
+// (This is the imaginary day clock — klState.hour — NOT the audio transport.)
+function klPuzzleClockChip() {
+  return '<span class="kt-hud-item kl-puzzle-clock" id="kl-hud-clock">🕗 ' +
+    klTimeLabel(klState.hour) + (klDayClockPaused ? ' ⏸' : '') + '</span>';
+}
 function klHudMarkup() {
   const showHint = klState.bookedDay
     ? (klState.day >= klState.bookedDay ? '🍽️ SHOW NIGHT — get to the Restaurant!' : '🍽️ show booked · day ' + klState.bookedDay)
@@ -18154,7 +18164,7 @@ function klRenderDrumPuzzle(p) {
     '' +
     (klPuzzleBuilding() ? '<div class="kl-room-bg kt-bg-' + klPuzzleBuilding() + '">' + klSceneArt(klPuzzleBuilding()) + '</div>' : '') +
     '<div class="kl-puzzle-top">' +
-      '<button class="kl-back" onclick="klExit()">←</button>' +
+      '<button class="kl-back" onclick="klExit()">←</button>' + klPuzzleClockChip() +
       storyHtml +
       '<button class="kl-mute" id="kl-mute-btn" onclick="klToggleMute()" title="Mute backing">' +
         (klClock.muted ? '🔇' : '🔊') + '</button>' +
@@ -18521,6 +18531,8 @@ const KL_SND_CONTROLS = [
   ['volGuitar', 'Vol · Guitar', 0, 2, 0.05],
   ['volKeys', 'Vol · Keys', 0, 2, 0.05],
   ['volVocals', 'Vol · Vocals', 0, 2, 0.05],
+  ['volSynth', 'Vol · Synth', 0, 2, 0.05],
+  ['volWin', 'Vol · Win FX', 0, 2, 0.05],
 ];
 window.klToggleSoundPanel = function() {
   const old = document.getElementById('kl-sndpanel');
@@ -19523,7 +19535,7 @@ function klRenderBuildPuzzle(p) {
   wrap.innerHTML =
     (klPuzzleBuilding() ? '<div class="kl-room-bg kt-bg-' + klPuzzleBuilding() + '">' + klSceneArt(klPuzzleBuilding()) + '</div>' : '') +
     '<div class="kl-puzzle-top">' +
-      '<button class="kl-back" onclick="klExit()">←</button>' +
+      '<button class="kl-back" onclick="klExit()">←</button>' + klPuzzleClockChip() +
       '<button class="kl-mute" id="kl-mute-btn" onclick="klToggleMute()" title="Mute backing">' + (klClock.muted ? '🔇' : '🔊') + '</button>' +
     '</div>' +
     '<div class="kl-drumtitle">🧱 Build a ' + b.name + '</div>' +
@@ -19738,7 +19750,7 @@ function klRenderTapPuzzle(p) {
   wrap.innerHTML =
     (klPuzzleBuilding() ? '<div class="kl-room-bg kt-bg-' + klPuzzleBuilding() + '">' + klSceneArt(klPuzzleBuilding()) + '</div>' : '') +
     '<div class="kl-puzzle-top">' +
-      '<button class="kl-back" onclick="klExit()">←</button>' +
+      '<button class="kl-back" onclick="klExit()">←</button>' + klPuzzleClockChip() +
       '<button class="kl-mute" id="kl-mute-btn" onclick="klToggleMute()" title="Mute backing">' + (klClock.muted ? '🔇' : '🔊') + '</button>' +
     '</div>' +
     '<div class="kl-drumtitle">🪘 ' + td.name + '</div>' +
@@ -19847,7 +19859,7 @@ function klRenderEarPuzzle(p) {
   wrap.innerHTML =
     (klPuzzleBuilding() ? '<div class="kl-room-bg kt-bg-' + klPuzzleBuilding() + '">' + klSceneArt(klPuzzleBuilding()) + '</div>' : '') +
     '<div class="kl-puzzle-top">' +
-      '<button class="kl-back" onclick="klExit()">←</button>' +
+      '<button class="kl-back" onclick="klExit()">←</button>' + klPuzzleClockChip() +
       '<button class="kl-mute" id="kl-mute-btn" onclick="klToggleMute()" title="Mute backing">' + (klClock.muted ? '🔇' : '🔊') + '</button>' +
     '</div>' +
     '<div class="kl-drumtitle">👂 Name That Sound</div>' +
@@ -19910,7 +19922,7 @@ function klRenderAnatomyPuzzle(p) {
   klState.anatomySolved = false;
   const art = KL_ANATOMY_ART[ad.inst];
   const top = (klPuzzleBuilding() ? '<div class="kl-room-bg kt-bg-' + klPuzzleBuilding() + '">' + klSceneArt(klPuzzleBuilding()) + '</div>' : '') +
-    '<div class="kl-puzzle-top"><button class="kl-back" onclick="klExit()">←</button></div>';
+    '<div class="kl-puzzle-top"><button class="kl-back" onclick="klExit()">←</button>' + klPuzzleClockChip() + '</div>';
   if (ad.mode === 'find') {
     // TAP THE PART: clickable hotspots on the choice parts; the prompt names the target.
     const hots = ad.choices.map((name, i) => {
@@ -20013,7 +20025,7 @@ function klRenderListenPuzzle(p) {
   const btns = choices.map((c, i) => '<button class="kl-ear-choice" id="kl-lst-' + i + '" onclick="klListenPick(' + i + ')">' + c + '</button>').join('');
   wrap.innerHTML =
     (klPuzzleBuilding() ? '<div class="kl-room-bg kt-bg-' + klPuzzleBuilding() + '">' + klSceneArt(klPuzzleBuilding()) + '</div>' : '') +
-    '<div class="kl-puzzle-top"><button class="kl-back" onclick="klExit()">←</button></div>' +
+    '<div class="kl-puzzle-top"><button class="kl-back" onclick="klExit()">←</button>' + klPuzzleClockChip() + '</div>' +
     '<div class="kl-drumtitle">🔊 What Do You Hear?</div>' +
     '<div class="kl-build-hint">' + (ld.q || 'listen, then pick what you hear') + '</div>' +
     '<div class="kl-listen-row"><button class="kl-listen" id="kl-lst-listen" onclick="klListenReplay()">🔊 LISTEN</button></div>' +
@@ -20119,7 +20131,7 @@ function klRenderModePuzzle(p) {
   const btns = choices.map((c, i) => '<button class="kl-ear-choice" id="kl-mode-' + i + '" onclick="klModePick(' + i + ')">' + c + '</button>').join('');
   wrap.innerHTML =
     (klPuzzleBuilding() ? '<div class="kl-room-bg kt-bg-' + klPuzzleBuilding() + '">' + klSceneArt(klPuzzleBuilding()) + '</div>' : '') +
-    '<div class="kl-puzzle-top"><button class="kl-back" onclick="klExit()">←</button></div>' +
+    '<div class="kl-puzzle-top"><button class="kl-back" onclick="klExit()">←</button>' + klPuzzleClockChip() + '</div>' +
     '<div class="kl-drumtitle">' + title + '</div>' +
     '<div class="kl-build-hint">' + hint + '</div>' +
     '<div class="kl-listen-row"><button class="kl-listen" id="kl-mode-listen" onclick="klModeReplay()">🔊 LISTEN' + (clip.kind === 'seq' ? ' (both)' : '') + '</button></div>' +
@@ -20177,7 +20189,7 @@ function klRenderNotationPuzzle(p) {
   const btns = choices.map((c, i) => '<button class="kl-ear-choice" id="kl-note-' + i + '" onclick="klNotationPick(' + i + ')">' + c + '</button>').join('');
   wrap.innerHTML =
     (klPuzzleBuilding() ? '<div class="kl-room-bg kt-bg-' + klPuzzleBuilding() + '">' + klSceneArt(klPuzzleBuilding()) + '</div>' : '') +
-    '<div class="kl-puzzle-top"><button class="kl-back" onclick="klExit()">←</button></div>' +
+    '<div class="kl-puzzle-top"><button class="kl-back" onclick="klExit()">←</button>' + klPuzzleClockChip() + '</div>' +
     '<div class="kl-drumtitle">🎼 Name the Note</div>' +
     '<div class="kl-build-hint">which note is on the staff? (lines: E G B D F · spaces: F A C E)</div>' +
     '<div class="kl-notation-stage">' + klNotationStaff(nd.step) + '</div>' +
@@ -20653,7 +20665,7 @@ function klRenderGroovePuzzle(p) {
   wrap.innerHTML =
     (klPuzzleBuilding() ? '<div class="kl-room-bg kt-bg-' + klPuzzleBuilding() + '">' + klSceneArt(klPuzzleBuilding()) + '</div>' : '') +
     '<div class="kl-puzzle-top">' +
-      '<button class="kl-back" onclick="klExit()">←</button>' +
+      '<button class="kl-back" onclick="klExit()">←</button>' + klPuzzleClockChip() +
       '<button class="kl-mute" id="kl-mute-btn" onclick="klToggleMute()" title="Mute backing">' + (klClock.muted ? '🔇' : '🔊') + '</button>' +
     '</div>' +
     '<div class="kl-drumtitle">🥁 ' + gd.name + '<span class="kl-ts-badge">' + klGroove.ts[0] + '/' + klGroove.ts[1] + '</span></div>' +
@@ -20830,7 +20842,7 @@ function klRenderPuzzle() {
   wrap.innerHTML =
     (klPuzzleBuilding() ? '<div class="kl-room-bg kt-bg-' + klPuzzleBuilding() + '">' + klSceneArt(klPuzzleBuilding()) + '</div>' : '') +
     '<div class="kl-puzzle-top">' +
-      '<button class="kl-back" onclick="klExit()">←</button>' +
+      '<button class="kl-back" onclick="klExit()">←</button>' + klPuzzleClockChip() +
       storyHtml +
       '<button class="kl-mute" id="kl-mute-btn" onclick="klToggleMute()" title="Mute backing">' +
         (klClock.muted ? '🔇' : '🔊') +
@@ -21099,7 +21111,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.04ae'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.05a'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -21341,6 +21353,11 @@ const KL_SND = {
   volKick: 1, volSnare: 1, volHat: 1, volBass: 1, volMel: 1,
   // Per-voice melody volumes (stack on top of volMel master): guitar/keys/vocals.
   volGuitar: 1, volKeys: 1, volVocals: 1,
+  // Synth-lead master (drives playChorusSynth). Seeded from the CONTROL PANEL
+  // default so both stay in sync until Matt tunes it live.
+  volSynth: (typeof KANTEON_CONFIG !== 'undefined' && KANTEON_CONFIG.synthVolume != null ? KANTEON_CONFIG.synthVolume : 0.7),
+  // Completion "confetti"/win-sting master (drives the winBus in klWin).
+  volWin: 1,
   // Melody-voice character (live-tunable, parity with bass partials)
   melVocalVib: 0.012,   // vocals pitch-wobble depth (fraction of freq)
   melVocalRate: 5.2,    // vocals vibrato LFO rate (Hz)
@@ -21892,6 +21909,12 @@ function klWin() {
   const ctx = getAudio();
   const beat = klClock.active ? klClock.beat : (60 / p.bpm);
   const t0 = ctx.currentTime + 0.04;
+  // One gain bus for the ENTIRE completion sting (run + peak chord + sweep +
+  // sparkles). Its level is the live "Vol · Win FX" SOUNDBANK slider, so Matt
+  // can dial the celebration loudness by ear. Routes to ctx.destination.
+  const winBus = ctx.createGain();
+  winBus.gain.value = (KL_SND.volWin != null ? KL_SND.volWin : 1);
+  winBus.connect(ctx.destination);
   // Rising pentatonic run spanning ~1.5 octaves, accelerating, landing high.
   // Starts near the puzzle's home pitch and climbs up and beyond.
   const run = [
@@ -21905,17 +21928,17 @@ function klWin() {
   ];
   run.forEach((r, i) => {
     const isPeak = (i === run.length - 1);
-    playTone(midiFreq(r.m), t0 + r.d, isPeak ? 0.6 : 0.16, ctx, isPeak ? 0.34 : 0.24, 'synth');
+    playTone(midiFreq(r.m), t0 + r.d, isPeak ? 0.6 : 0.16, ctx, isPeak ? 0.34 : 0.24, 'synth', winBus);
   });
   // sweeten the peak with a chord shimmer
   const peakT = t0 + run[run.length - 1].d;
-  playTone(midiFreq(KL_SCALE[2] + 24), peakT, 0.6, ctx, 0.16, 'piano');
-  playTone(midiFreq(KL_SCALE[4] + 12), peakT, 0.6, ctx, 0.12, 'piano');
+  playTone(midiFreq(KL_SCALE[2] + 24), peakT, 0.6, ctx, 0.16, 'piano', winBus);
+  playTone(midiFreq(KL_SCALE[4] + 12), peakT, 0.6, ctx, 0.12, 'piano', winBus);
   // sci-fi twist: a quick rising "transmission" sweep under the run...
   const sweep = ctx.createOscillator();
   const sweepGain = ctx.createGain();
   sweep.type = 'sawtooth';
-  sweep.connect(sweepGain); sweepGain.connect(ctx.destination);
+  sweep.connect(sweepGain); sweepGain.connect(winBus);
   sweep.frequency.setValueAtTime(280, t0);
   sweep.frequency.exponentialRampToValueAtTime(2400, t0 + 0.5);
   sweepGain.gain.setValueAtTime(0.0001, t0);
@@ -21924,7 +21947,7 @@ function klWin() {
   sweep.start(t0); sweep.stop(t0 + 0.6);
   // ...and glassy high sparkles on the peak
   [0, 0.07, 0.15].forEach((d, i) => {
-    playTone(midiFreq(KL_SCALE[4] + 24 + i * 3), peakT + d, 0.22, ctx, 0.07, 'piano');
+    playTone(midiFreq(KL_SCALE[4] + 24 + i * 3), peakT + d, 0.22, ctx, 0.07, 'piano', winBus);
   });
   const stingMs = 1000;
 
