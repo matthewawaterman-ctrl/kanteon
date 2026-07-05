@@ -4237,6 +4237,61 @@
      required or the flex child refuses to shrink and the scroll never engages
      (the exact reason the lower sliders were unreachable before). */
   .kl-snd-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 2px; }
+
+  /* ── DEV HOTKEYS PALETTE (Logic-style command list) ── */
+  .kl-hk-overlay {
+    position: fixed; inset: 0; z-index: 1200;
+    background: rgba(6,4,14,0.62);
+    display: flex; align-items: flex-start; justify-content: center;
+  }
+  .kl-hk-modal {
+    margin-top: 7vh; width: min(560px, 94vw); max-height: 82vh;
+    display: flex; flex-direction: column;
+    background: rgba(18,14,30,0.98); border: 1.5px solid rgba(255,255,255,0.22);
+    border-radius: 16px; box-shadow: 0 22px 60px rgba(0,0,0,0.7); padding: 14px;
+  }
+  .kl-hk-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .kl-hk-title {
+    flex: 1 1 auto; font-family: 'Barlow Condensed', sans-serif; font-weight: 900;
+    font-size: 18px; letter-spacing: 1px; color: #fff;
+  }
+  .kl-hk-btn {
+    border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.06);
+    color: #d8d2f0; border-radius: 9px; padding: 5px 11px; font-size: 13px; cursor: pointer;
+  }
+  .kl-hk-btn:hover { background: rgba(255,255,255,0.14); color: #fff; }
+  .kl-hk-search {
+    width: 100%; box-sizing: border-box; margin-bottom: 10px;
+    background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 10px; padding: 9px 12px; color: #fff; font-size: 14px; outline: none;
+  }
+  .kl-hk-search:focus { border-color: rgba(142,240,200,0.7); }
+  .kl-hk-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  .kl-hk-row {
+    display: grid; grid-template-columns: 1fr auto 132px 78px; gap: 10px; align-items: center;
+    padding: 8px 6px; border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+  .kl-hk-row.learning { background: rgba(142,240,200,0.1); border-radius: 8px; }
+  .kl-hk-row.reserved { opacity: 0.62; }
+  .kl-hk-lbl { font-family: 'Barlow', sans-serif; font-size: 14px; color: #f0edff; }
+  .kl-hk-cat {
+    font-size: 10.5px; letter-spacing: 0.5px; text-transform: uppercase;
+    color: rgba(200,192,235,0.6); font-family: 'Barlow Condensed', sans-serif;
+  }
+  .kl-hk-key {
+    justify-self: end; font-family: var(--font-mono, monospace); font-size: 12.5px;
+    color: #8ef0c8; background: rgba(142,240,200,0.12);
+    border: 1px solid rgba(142,240,200,0.3); border-radius: 7px; padding: 4px 9px; white-space: nowrap;
+  }
+  .kl-hk-learn { justify-self: end; font-size: 12px; color: #ffd97a; font-style: italic; }
+  .kl-hk-assign {
+    border: 1px solid rgba(255,255,255,0.22); background: rgba(255,255,255,0.07);
+    color: #e8e4ff; border-radius: 8px; padding: 5px 0; font-size: 12.5px; cursor: pointer; width: 100%;
+  }
+  .kl-hk-assign:hover { background: rgba(142,240,200,0.18); border-color: rgba(142,240,200,0.5); color: #fff; }
+  .kl-hk-lock { justify-self: center; font-size: 13px; }
+  .kl-hk-empty { padding: 20px; text-align: center; color: rgba(200,192,235,0.6); font-size: 13px; }
+  .kl-hk-foot { margin-top: 10px; font-size: 11.5px; color: rgba(200,192,235,0.6); line-height: 1.4; }
   .kl-snd-head {
     display: flex; align-items: center; gap: 8px; justify-content: space-between;
     font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 16px;
@@ -19054,6 +19109,7 @@ function klDevBarMarkup() {
   // ── STYLE LAB — live-tweak size & position of any element ──
   s += lbl('nav', '🎨 STYLE LAB');
   s += btn("klStyleLab()", '🎨 Open Style Lab', 'Click an element, resize/move it live, copy the CSS');
+  s += btn("klHotkeysOpen()", '⌨️ Hotkeys', 'Searchable hotkey list — view & reassign dev keys (hotkey: Shift+K)');
 
   // ── GO TO — real screens / station-select menus ──
   s += lbl('nav', '📍 GO TO');
@@ -19376,6 +19432,147 @@ document.addEventListener('keydown', (e) => {
   e.preventDefault();
   klToggleDevBar();
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+// DEV HOTKEYS — command registry + remappable keybindings + Logic-style palette
+// ════════════════════════════════════════════════════════════════════════════
+// A single registry drives: (1) a global dispatcher that runs a command when its
+// bound key is pressed, and (2) a searchable "Hotkeys" palette (open from the dev
+// bar or via its own hotkey) where each command's key can be reassigned live.
+// Remappable commands default to Shift+<letter> to sidestep every existing key
+// (backtick=dev bar, \=solve, F=fullscreen, Space/M/Enter=puzzles, A–L=labs).
+// Overrides persist in localStorage. Reserved rows are shown for reference only.
+const KL_DEV_COMMANDS = [
+  { id: 'command_palette', label: 'Open Hotkeys palette', category: 'System',
+    defaultKey: 'Shift+K', run: () => { document.getElementById('kl-hk') ? klHotkeysClose() : klHotkeysOpen(); } },
+  { id: 'complete_level', label: 'Complete Level (Story)', category: 'Story',
+    defaultKey: 'Shift+L', run: () => window.klDevWinLevel() },
+  { id: 'freeze_time', label: 'Freeze / Unfreeze Time (Story)', category: 'Story',
+    defaultKey: 'Shift+P', run: () => window.klTogglePause() },
+  { id: 'style_lab', label: 'Toggle Style Lab', category: 'Dev tools',
+    defaultKey: 'Shift+S', run: () => window.klStyleLab() },
+  { id: 'sound_panel', label: 'Toggle Sound Panel (SOUNDBANK)', category: 'Dev tools',
+    defaultKey: 'Shift+D', run: () => window.klToggleSoundPanel() },
+  // Reference-only (fixed, owned by their own handlers — not remappable here):
+  { id: 'r_devbar', label: 'Toggle DEV bar', category: 'Reserved', reserved: true, fixedKey: '`' },
+  { id: 'r_solve',  label: 'Solve / advance current puzzle', category: 'Reserved', reserved: true, fixedKey: '\\' },
+  { id: 'r_fs',     label: 'Toggle fullscreen', category: 'Reserved', reserved: true, fixedKey: 'F' },
+];
+
+// Normalize a keydown event to a stable combo string ('Shift+L', 'Meta+K', 'L').
+// Returns null for a lone modifier press so learning keeps waiting for a real key.
+function klHkNormEvent(e) {
+  if (['Shift', 'Meta', 'Control', 'Alt'].includes(e.key)) return null;
+  const parts = [];
+  if (e.metaKey) parts.push('Meta');
+  if (e.ctrlKey) parts.push('Ctrl');
+  if (e.altKey) parts.push('Alt');
+  if (e.shiftKey) parts.push('Shift');
+  let k = e.key;
+  if (k === ' ') k = 'Space';
+  else if (k.length === 1) k = k.toUpperCase();
+  parts.push(k);
+  return parts.join('+');
+}
+function klHkGetSaved() { try { return JSON.parse(localStorage.getItem('kl_dev_keys') || '{}'); } catch (e) { return {}; } }
+// Full effective map (defaults ⊕ saved overrides) for remappable commands only.
+function klHkGetMap() {
+  const saved = klHkGetSaved(); const m = {};
+  KL_DEV_COMMANDS.forEach(c => { if (!c.reserved) m[c.id] = (saved[c.id] != null ? saved[c.id] : c.defaultKey); });
+  return m;
+}
+function klHkSet(id, combo) {
+  const m = klHkGetMap();
+  Object.keys(m).forEach(k => { if (m[k] === combo) m[k] = ''; }); // clear any conflict (reassign)
+  m[id] = combo;
+  try { localStorage.setItem('kl_dev_keys', JSON.stringify(m)); } catch (e) {}
+}
+window.klHotkeysReset = function () {
+  try { localStorage.removeItem('kl_dev_keys'); } catch (e) {}
+  klHotkeysRender();
+  if (typeof klToast === 'function') klToast('↺ Hotkeys reset to defaults');
+};
+
+// Global dispatcher — one listener runs the matching command.
+document.addEventListener('keydown', (e) => {
+  if (window._klHkLearning) return;                 // palette is capturing a new key
+  const tag = (e.target && e.target.tagName) || '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
+  if (!klIsDevAvailable()) return;
+  const combo = klHkNormEvent(e);
+  if (!combo) return;
+  const map = klHkGetMap();
+  const cmd = KL_DEV_COMMANDS.find(c => !c.reserved && map[c.id] && map[c.id] === combo);
+  if (!cmd) return;
+  e.preventDefault();
+  try { cmd.run(); } catch (err) { if (typeof klToast === 'function') klToast('⚠ ' + cmd.label + ' failed'); }
+});
+
+// ── Palette UI ──
+window.klHotkeysOpen = function () {
+  if (document.getElementById('kl-hk')) return;
+  const el = document.createElement('div');
+  el.id = 'kl-hk'; el.className = 'kl-hk-overlay';
+  el.innerHTML =
+    '<div class="kl-hk-modal">' +
+      '<div class="kl-hk-head">' +
+        '<span class="kl-hk-title">⌨️ HOTKEYS</span>' +
+        '<button class="kl-hk-btn" onclick="klHotkeysReset()" title="reset all to defaults">↺ Reset</button>' +
+        '<button class="kl-hk-btn" onclick="klHotkeysClose()">✕</button>' +
+      '</div>' +
+      '<input id="kl-hk-search" class="kl-hk-search" placeholder="Search commands…" ' +
+        'oninput="klHotkeysRender()" onkeydown="if(event.key===\'Escape\')klHotkeysClose()" ' +
+        'autocomplete="off" spellcheck="false">' +
+      '<div id="kl-hk-list" class="kl-hk-list"></div>' +
+      '<div class="kl-hk-foot">Click <b>Assign</b>, then press any key (with ⌘/⌃/⌥/⇧ if you like). Esc cancels.</div>' +
+    '</div>';
+  el.addEventListener('click', (ev) => { if (ev.target === el) klHotkeysClose(); }); // backdrop closes
+  document.getElementById('kidlab').appendChild(el);
+  klHotkeysRender();
+  setTimeout(() => { const s = document.getElementById('kl-hk-search'); if (s) s.focus(); }, 30);
+};
+window.klHotkeysClose = function () {
+  const el = document.getElementById('kl-hk'); if (el) el.remove();
+  window._klHkLearning = null;
+};
+window.klHotkeysRender = function () {
+  const list = document.getElementById('kl-hk-list'); if (!list) return;
+  const map = klHkGetMap();
+  const q = (document.getElementById('kl-hk-search')?.value || '').toLowerCase();
+  const rows = KL_DEV_COMMANDS.filter(c =>
+      !q || c.label.toLowerCase().includes(q) || (c.category || '').toLowerCase().includes(q)
+    ).map(c => {
+    const learning = (window._klHkLearning === c.id);
+    const key = c.reserved ? c.fixedKey : map[c.id];
+    const keyCell = learning
+      ? '<span class="kl-hk-learn">press a key…</span>'
+      : '<span class="kl-hk-key">' + (key || '—') + '</span>';
+    const act = c.reserved
+      ? '<span class="kl-hk-lock" title="fixed — not remappable">🔒</span>'
+      : '<button class="kl-hk-assign" onclick="klHotkeysLearn(\'' + c.id + '\')">' + (learning ? '…' : 'Assign') + '</button>';
+    return '<div class="kl-hk-row' + (learning ? ' learning' : '') + (c.reserved ? ' reserved' : '') + '">' +
+      '<span class="kl-hk-lbl">' + c.label + '</span>' +
+      '<span class="kl-hk-cat">' + (c.category || '') + '</span>' +
+      keyCell + act + '</div>';
+  }).join('');
+  list.innerHTML = rows || '<div class="kl-hk-empty">No commands match.</div>';
+};
+window.klHotkeysLearn = function (cmdId) {
+  window._klHkLearning = cmdId;
+  klHotkeysRender();
+  const cap = (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (e.key === 'Escape') { window._klHkLearning = null; document.removeEventListener('keydown', cap, true); klHotkeysRender(); return; }
+    const combo = klHkNormEvent(e);
+    if (!combo) return;                              // lone modifier — keep waiting
+    klHkSet(cmdId, combo);
+    window._klHkLearning = null;
+    document.removeEventListener('keydown', cap, true);
+    klHotkeysRender();
+  };
+  document.addEventListener('keydown', cap, true);   // capture phase — beats the global dispatcher
+};
+
 // Hotkey: \ completes the CURRENT level (dev only) — fast testing through puzzles
 // and show layers. During a show it clears the active layer; in the perform
 // surface it finishes the song; in a normal puzzle it solves it.
@@ -21118,7 +21315,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.05b'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.05c'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
