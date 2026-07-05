@@ -12,7 +12,6 @@
 <!-- iPad / home-screen: launch fullscreen like an app when "Add to Home Screen" -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-     
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Kanteon">
 <meta name="theme-color" content="#0a061a">
@@ -549,6 +548,7 @@
   /* Feedback bar is fixed and overlays the header; hide the header while it's up
      so the back button can't peek out beneath it as a ghost sliver. */
   #question-screen:has(.feedback-bar.show) .q-header { visibility: hidden; }
+  #mixtape-start .module-header-title { display: none; }
   .module-header-title {
     font-family: var(--font-display); font-size: 28px; font-weight: 800;
     letter-spacing: -0.5px;
@@ -3408,7 +3408,7 @@
   }
   .mt-hero { text-align: center; padding: 16px 0; }
   .mt-hero-title {
-    font-family: var(--font-display); font-size: 42px; font-weight: 900;
+    font-family: var(--font-display); font-size: 64px; font-weight: 900;
     letter-spacing: 4px;
     background: linear-gradient(90deg, var(--gold) 0%, #ff9d4d 50%, var(--red) 100%);
     -webkit-background-clip: text; background-clip: text;
@@ -3471,10 +3471,11 @@
     border-radius: 6px; padding: 14px 18px; margin-top: 10px;
   }
   .mt-pb-label {
-    font-family: var(--font-display); font-size: var(--fs-label); font-weight: 800;
+    font-family: var(--font-display); font-size: 32px; font-weight: 800;
     color: var(--text2); letter-spacing: 2px;
   }
   .mt-pb-score { font-family: var(--font-display); font-size: 28px; font-weight: 900; color: var(--gold); }
+  #mt-personal-best { font-size: 30px; width: 52px; padding: 0; transform: scale(1.45); transform-origin: center center; }
   .mt-board-modal {
     display: none; position: fixed; inset: 0; z-index: 9000;
     background: rgba(8,7,22,0.78); align-items: center; justify-content: center; padding: 24px;
@@ -6867,7 +6868,7 @@
 
   <div class="mt-start-body">
     <div class="mt-hero">
-      <div class="mt-hero-title">🎧 MIXTAPE</div>
+      <div class="mt-hero-title">ARCADE MODE</div>
       <div class="mt-hero-sub">Rapid-fire arcade · All modules</div>
       <div class="mt-world-best" id="mt-world-best">🌍 WORLD BEST · —</div>
       <button class="mt-board-open" onclick="mtOpenBoard()">🏆 View all-time leaderboard</button>
@@ -7254,6 +7255,9 @@ const KANTEON_CONFIG = {
   // ——— Leveling ———
   xpPerLevel: 100,                 // XP needed to gain a level
 
+  // ——— Audio balance ———
+  synthVolume: 0.7,                // synth-lead loudness vs other instruments (1 = full, lower = quieter)
+
   // ——— Wording (edit the text between the quotes) ———
   streakToast: '{n}-day streak!',  // when a returning player's streak goes up  ({n} = the number)
   streakToastFirst: 'Streak started!',   // shown on the very first day
@@ -7551,7 +7555,7 @@ function playBassGuitar(freq, startTime, duration, ctx, gain) {
 
 // Chorus synth — sine + detuned copy + soft reverb tail
 function playChorusSynth(freq, startTime, duration, ctx, gain) {
-  gain = gain || 0.2;
+  gain = (gain || 0.2) * (KANTEON_CONFIG.synthVolume != null ? KANTEON_CONFIG.synthVolume : 1);   // knob-balanced
   // Main sine
   const osc1 = ctx.createOscillator();
   osc1.type = 'sine';
@@ -20689,6 +20693,21 @@ function klRenderGroovePuzzle(p) {
 }
 
 
+// Once the FULL note palette (allDegrees) is introduced in the melody
+// progression, difficulty should never regress to a reduced palette. This
+// returns true for any melody puzzle at/after the first allDegrees melody
+// puzzle, so the full octave stays available from that point on.
+let _klFirstAllDegIdx = null;
+function klMelodyUsesFullPalette(p) {
+  if (!klIsMelodyPuzzle(p)) return false;
+  if (_klFirstAllDegIdx === null) {
+    _klFirstAllDegIdx = Infinity;
+    for (let i = 0; i < KL_PUZZLES.length; i++) {
+      if (klIsMelodyPuzzle(KL_PUZZLES[i]) && KL_PUZZLES[i].allDegrees) { _klFirstAllDegIdx = i; break; }
+    }
+  }
+  return klState.puzzleIdx >= _klFirstAllDegIdx;
+}
 function klRenderPuzzle() {
   klMarkDailyActivity();  // tick the daily streak on real Story practice (once/day)
   // === ECONOMY: SET BOUNDARY — finishing a set returns to town, not the next set
@@ -20754,7 +20773,8 @@ function klRenderPuzzle() {
   // the FULL diatonic octave 0-7 as rows — real ear training, no reduced palette.
   // Some degrees go unused; that's intended. Otherwise use the puzzle's explicit
   // `degrees`, or the first `rows` degrees for the earliest hand-held levels.
-  const degrees = p.allDegrees ? [0, 1, 2, 3, 4, 5, 6, 7]
+  const degrees = (p.allDegrees || klMelodyUsesFullPalette(p))
+    ? [0, 1, 2, 3, 4, 5, 6, 7]
     : (p.degrees ? p.degrees.slice() : Array.from({length: p.rows}, (_, i) => i));
   const rowCount = degrees.length;
   degrees.sort((a, b) => a - b); // ascending; we render top = highest
@@ -21079,7 +21099,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.04ac'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.04ae'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
