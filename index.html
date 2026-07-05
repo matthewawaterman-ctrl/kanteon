@@ -14825,7 +14825,7 @@ function klHudMarkup() {
   const pct = Math.max(0, Math.min(100, Math.round(xpInto / Math.max(1, xpFor) * 100)));
   const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
   return '<div class="kt-hud">' +
-    (klIsStandalone() ? '' : '<button class="kl-fs-btn" id="kl-fs-btn" onclick="klToggleFullscreen()" title="Fullscreen (press F)" aria-label="Toggle fullscreen">' + (isFs ? '🗗' : '⛶') + '</button>') +
+    (klIsStandalone() ? '' : '<button class="kl-fs-btn" id="kl-fs-btn" onclick="klToggleFullscreen()" title="Fullscreen (Shift+Enter)" aria-label="Toggle fullscreen">' + (isFs ? '🗗' : '⛶') + '</button>') +
     '<button class="kl-fs-btn" id="kl-pause-btn" onclick="klOpenPause()" title="Pause game" aria-label="Pause game">' + (klDayClockPaused ? '▶' : '⏸') + '</button>' +
     '<span class="kt-hud-item">💵 $' + klState.money + '</span>' +
     '<span class="kt-hud-item kt-hud-level' + (leveled ? ' leveled' : '') + '">⭐ Lv.' + lvl +
@@ -19484,15 +19484,7 @@ window.klToggleDevBar = function() {
   const bar = document.getElementById('kl-devbar');
   if (bar) bar.classList.toggle('open', klState.devOpen);
 };
-// Hotkey: backtick ( ` ) toggles the DEV pane from anywhere (ignored while typing).
-document.addEventListener('keydown', (e) => {
-  if (e.key !== '`') return;
-  const tag = (e.target && e.target.tagName) || '';
-  if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
-  if (!klIsDevAvailable()) return;
-  e.preventDefault();
-  klToggleDevBar();
-});
+// (backtick DEV-bar toggle is now the 'dev_bar' hotkey command — see KL_DEV_COMMANDS)
 
 // ════════════════════════════════════════════════════════════════════════════
 // DEV HOTKEYS — command registry + remappable keybindings + Logic-style palette
@@ -19514,10 +19506,19 @@ const KL_DEV_COMMANDS = [
     defaultKey: 'Shift+S', run: () => window.klStyleLab() },
   { id: 'sound_panel', label: 'Toggle Sound Panel (SOUNDBANK)', category: 'Dev tools',
     defaultKey: 'Shift+D', run: () => window.klToggleSoundPanel() },
-  // Reference-only (fixed, owned by their own handlers — not remappable here):
-  { id: 'r_devbar', label: 'Toggle DEV bar', category: 'Reserved', reserved: true, fixedKey: '`' },
-  { id: 'r_solve',  label: 'Solve / advance current puzzle', category: 'Reserved', reserved: true, fixedKey: '\\' },
-  { id: 'r_fs',     label: 'Toggle fullscreen', category: 'Reserved', reserved: true, fixedKey: 'F' },
+  // Migrated from fixed listeners — now real, remappable commands.
+  { id: 'dev_bar', label: 'Toggle DEV bar', category: 'Dev tools',
+    defaultKey: '`', run: () => window.klToggleDevBar() },
+  { id: 'solve', label: 'Solve / advance current puzzle', category: 'Dev tools',
+    defaultKey: '\\', run: () => {
+      const kid = document.getElementById('kidlab');
+      if (kid && kid.classList.contains('kl-playing')) { klWin(); return; }
+      klSolveLessonQuestion();
+    } },
+  // Fullscreen is a PLAYER control (all ages, not dev-gated). Moved off bare 'F'
+  // to Shift+Enter so the whole alphabet stays free for a future playable keyboard.
+  { id: 'fullscreen', label: 'Toggle fullscreen', category: 'Player', player: true,
+    defaultKey: 'Shift+Enter', run: () => window.klToggleFullscreen() },
 ];
 
 // Normalize a keydown event to a stable combo string ('Shift+L', 'Meta+K', 'L').
@@ -19559,12 +19560,12 @@ document.addEventListener('keydown', (e) => {
   if (window._klHkLearning) return;                 // palette is capturing a new key
   const tag = (e.target && e.target.tagName) || '';
   if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
-  if (!klIsDevAvailable()) return;
   const combo = klHkNormEvent(e);
   if (!combo) return;
   const map = klHkGetMap();
-  const cmd = KL_DEV_COMMANDS.find(c => !c.reserved && map[c.id] && map[c.id] === combo);
+  const cmd = KL_DEV_COMMANDS.find(c => map[c.id] && map[c.id] === combo);
   if (!cmd) return;
+  if (!cmd.player && !klIsDevAvailable()) return;   // dev commands need dev; player commands run for all
   e.preventDefault();
   try { cmd.run(); } catch (err) { if (typeof klToast === 'function') klToast('⚠ ' + cmd.label + ' failed'); }
 });
@@ -19626,6 +19627,12 @@ window.klHotkeysLearn = function (cmdId) {
     if (e.key === 'Escape') { window._klHkLearning = null; document.removeEventListener('keydown', cap, true); klHotkeysRender(); return; }
     const combo = klHkNormEvent(e);
     if (!combo) return;                              // lone modifier — keep waiting
+    // Guard the alphabet: bare single letters are reserved for a future playable
+    // keyboard. Require a modifier for letters. Non-letters (` \ Enter digits) are fine.
+    if (/^[A-Z]$/.test(combo)) {
+      if (typeof klToast === 'function') klToast('⚠ Bare letters are reserved — add ⇧/⌘/⌥ (e.g. Shift+' + combo + ')');
+      return;                                        // keep waiting for a valid combo
+    }
     klHkSet(cmdId, combo);
     window._klHkLearning = null;
     document.removeEventListener('keydown', cap, true);
@@ -19674,28 +19681,8 @@ function klSolveLessonQuestion() {
   }
   return false;
 }
-document.addEventListener('keydown', (e) => {
-  if (e.code !== 'Backslash') return;
-  const tag = (e.target && e.target.tagName) || '';
-  if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
-  if (!klIsDevAvailable()) return;
-  // Story mode: clear the active layer / finish the song / solve the puzzle.
-  const kid = document.getElementById('kidlab');
-  if (kid && kid.classList.contains('kl-playing')) { e.preventDefault(); klWin(); return; }
-  // Lesson mode: solve the current question (Build, MCQ) or skip (rhythm/transcription).
-  if (klSolveLessonQuestion()) { e.preventDefault(); return; }
-});
-// Fullscreen hotkey: F. Guarded so it never collides with the home-row (A–L) keys
-// used in Chord/Groove/Ear labs — those set klState.activeModule, where F is off.
-document.addEventListener('keydown', (e) => {
-  if (e.key !== 'f' && e.key !== 'F') return;
-  const tag = (e.target && e.target.tagName) || '';
-  if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
-  if (klState.activeModule) return;            // in a lab → F is a play key, not fullscreen
-  if (e.metaKey || e.ctrlKey || e.altKey) return;
-  e.preventDefault();
-  klToggleFullscreen();
-});
+// (backslash SOLVE is now the 'solve' hotkey command — see KL_DEV_COMMANDS)
+// (fullscreen is now the 'fullscreen' player hotkey command, default Shift+Enter — see KL_DEV_COMMANDS)
 // Keep the on-screen icon in sync with the actual fullscreen state.
 ['fullscreenchange', 'webkitfullscreenchange'].forEach(function(ev) {
   document.addEventListener(ev, function() {
@@ -19703,7 +19690,7 @@ document.addEventListener('keydown', (e) => {
     if (!btn) return;
     const fs = document.fullscreenElement || document.webkitFullscreenElement;
     btn.textContent = fs ? '🗗' : '⛶';
-    btn.title = fs ? 'Exit fullscreen (press F)' : 'Fullscreen (press F)';
+    btn.title = fs ? 'Exit fullscreen (Shift+Enter)' : 'Fullscreen (Shift+Enter)';
   });
 });
 window.klDevCutscene = function(key) {
@@ -21376,7 +21363,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.05g'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.05h'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
