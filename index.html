@@ -144,21 +144,20 @@
   .home-status-dot { width: 6px; height: 6px; background: var(--green); border-radius: 50%; }
 
   .home-logo-wrap { padding: 10px 24px 10px; position: relative; }
-  .home-logo-wrap::after {
-    content: ''; position: absolute; bottom: 6px; left: 24px; right: 24px;
-    height: 2px;
-    background: repeating-linear-gradient(90deg, var(--red) 0 12px, transparent 12px 18px);
-  }
+  .home-logo-wrap::after { content: none; }
   .home-logo {
-    display: flex; align-items: baseline; gap: 0;
-    font-family: var(--font-display); font-size: 30px; font-weight: 900;
-    line-height: 0.9; letter-spacing: 0.5px;
+    display: flex; align-items: baseline; gap: 4px;
+    font-family: var(--font-display); font-size: 42px; font-weight: 900;
+    line-height: 0.9; letter-spacing: 3px;
   }
   .home-logo .rock {
-    color: var(--text); transform: skew(-3deg); display: inline-block;
+    color: var(--text); display: inline-block;
   }
   .home-logo .ear {
-    color: var(--red); transform: skew(-3deg); display: inline-block;
+    display: inline-block;
+    background: linear-gradient(90deg, var(--gold) 0%, #ff9d4d 50%, var(--red) 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
 
   .xp-card {
@@ -5604,7 +5603,7 @@
 
   <div class="home-logo-wrap">
     <div class="home-logo">
-      <span class="rock">📖 LESSON&nbsp;</span><span class="ear" style="color:var(--gold);">MODE</span>
+      <span class="rock">📖&nbsp;</span><span class="ear">LESSON&nbsp;MODE</span>
     </div>
   </div>
 
@@ -14277,7 +14276,7 @@ function klRenderPauseScreen() {
   el.id = 'kt-pause';
   el.style.cssText = 'position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(8,6,24,0.86);backdrop-filter:blur(4px);';
   el.innerHTML =
-    '<div style="width:min(384px,92vw);background:linear-gradient(180deg,#1b1640,#15102e);border:1px solid rgba(140,120,255,0.4);border-radius:20px;padding:20px;box-shadow:0 18px 40px rgba(0,0,0,0.5);font-family:\'Barlow\',sans-serif;color:#fff;max-height:92vh;overflow-y:auto;">' +
+    '<div style="width:min(384px,92vw);transform:scale(1.15);transform-origin:center center;background:linear-gradient(180deg,#1b1640,#15102e);border:1px solid rgba(140,120,255,0.4);border-radius:20px;padding:20px;box-shadow:0 18px 40px rgba(0,0,0,0.5);font-family:\'Barlow\',sans-serif;color:#fff;max-height:92vh;overflow-y:auto;">' +
       '<div style="font-family:\'Barlow Condensed\',sans-serif;font-weight:900;font-size:26px;letter-spacing:1px;text-align:center;">\u23F8 PAUSED</div>' +
       '<div style="text-align:center;opacity:0.7;font-size:13.5px;margin-bottom:16px;">' + klSeasonLabel() + ' \u00B7 ' + klDayName() + ' \u00B7 Day ' + klState.day + ' \u00B7 ' + klTimeLabel(klState.hour) + '</div>' +
       bar('\uD83D\uDD25 Hype', '\u00D7' + hype.toFixed(2), hypePct, 'linear-gradient(90deg,#f59e0b,#ef4444)') +
@@ -15126,7 +15125,7 @@ function klHomeScene() {
     '</g>' +
 
     // ── OBJECT 2: record crate -> Song Bank modal ──
-    '<g class="kl-scene-obj" onclick="klOpenSongBank()">' +
+    '<g class="kl-scene-obj" onclick="klOpenSongBank()" transform="translate(-56 -84) translate(495 521.221435546875) scale(0.95) translate(-495 -521.221435546875)">' +
       '<g transform="rotate(-8 470 480)"><rect x="438" y="450" width="86" height="86" rx="4" fill="#1a1a22"/><circle cx="481" cy="490" r="14" fill="#f0c040"/><circle cx="481" cy="490" r="4" fill="#1a1a22"/></g>' +
       '<g transform="rotate(-3 480 480)"><rect x="448" y="450" width="86" height="86" rx="4" fill="#222"/><circle cx="491" cy="490" r="14" fill="#7c6ff7"/><circle cx="491" cy="490" r="4" fill="#222"/></g>' +
       '<g transform="rotate(2 490 480)"><rect x="458" y="450" width="86" height="86" rx="4" fill="#1c1c26"/><circle cx="501" cy="490" r="14" fill="#2dd4bf"/><circle cx="501" cy="490" r="4" fill="#1c1c26"/></g>' +
@@ -15135,7 +15134,7 @@ function klHomeScene() {
     '</g>' +
 
     // ── OBJECT 3: standing mirror (live avatar) -> style ──
-    '<g class="kl-scene-obj" onclick="klOpenAvatar(\'edit\', function(){ klRenderInterior(\'home\'); })">' +
+    '<g class="kl-scene-obj" onclick="klOpenAvatar(\'edit\', function(){ klRenderInterior(\'home\'); })" transform="translate(20 -12) translate(665 437.8780212402344) scale(1.25) translate(-665 -437.8780212402344)">' +
       '<rect x="586" y="276" width="158" height="252" rx="78" fill="#3a2614"/>' +
       '<rect x="598" y="288" width="134" height="228" rx="66" fill="#0c1b22"/>' +
       '<rect x="606" y="296" width="118" height="212" rx="58" fill="#16323a"/>' +
@@ -18961,9 +18960,15 @@ function klStyleLabSwallow(e) {
 }
 function klStyleLabSelectorFor(el) {
   const tag = (el.tagName || 'el').toLowerCase();
-  const cls = (el.className && typeof el.className === 'string' && el.className.trim())
-    ? '.' + el.className.trim().split(/\s+/).filter(c => c !== 'ksl-highlight')[0] : '';
-  return el.id ? '#' + el.id : (cls || tag);
+  if (el.id) return '#' + el.id;
+  let cls = '';
+  if (el.className && typeof el.className === 'string') {
+    // drop ksl-highlight (Style Lab's own pick class) — if nothing real remains,
+    // fall back to the tag rather than emitting ".undefined".
+    const real = el.className.trim().split(/\s+/).filter(c => c && c !== 'ksl-highlight');
+    if (real.length) cls = '.' + real[0];
+  }
+  return cls || tag;
 }
 function klStyleLabSelect(el, additive) {
   if (!el || el === document.body || el === document.documentElement) return;
@@ -19137,7 +19142,14 @@ function klStyleLabRender() {
     } else {
       const props = ['font-size', 'width', 'padding', 'display', 'transform', 'transform-origin', 'transform-box'];
       const lines = props.filter(p => el.style.getPropertyValue(p)).map(p => '  ' + p + ': ' + el.style.getPropertyValue(p) + ';');
-      if (lines.length) blocks.push(klStyleLabSelectorFor(el) + ' {\n' + lines.join('\n') + '\n}');
+      if (lines.length) {
+        const loc = klStyleLabLocator(el);
+        blocks.push(
+          '/* STYLE LAB · HTML target (paste this WHOLE block) */\n' +
+          '/* where: ' + loc.path + ' */\n' +
+          '/* starts-with: ' + loc.open + ' */\n' +
+          klStyleLabSelectorFor(el) + ' {\n' + lines.join('\n') + '\n}');
+      }
     }
   });
   if (window._kslTextEdited != null) blocks.push('/* text → "' + window._kslTextEdited + '" */');
@@ -19519,6 +19531,13 @@ const KL_DEV_COMMANDS = [
   // to Shift+Enter so the whole alphabet stays free for a future playable keyboard.
   { id: 'fullscreen', label: 'Toggle fullscreen', category: 'Player', player: true,
     defaultKey: 'Shift+Enter', run: () => window.klToggleFullscreen() },
+  // Gameplay keys — reference only (owned by the puzzle/lab screens, not remappable
+  // here). Shown so the full keyboard map is visible and you never bind a dev key
+  // over a play key. (Home row A–L is also protected by the bare-letter guard.)
+  { id: 'g_target',  label: 'Hear the target', category: 'Gameplay', reserved: true, fixedKey: 'Space' },
+  { id: 'g_mine',    label: 'Hear yours', category: 'Gameplay', reserved: true, fixedKey: 'M  /  ⌘Space' },
+  { id: 'g_check',   label: 'Check / lock answer', category: 'Gameplay', reserved: true, fixedKey: 'Enter' },
+  { id: 'g_homerow', label: 'Tap / play notes', category: 'Gameplay', reserved: true, fixedKey: 'A–L' },
 ];
 
 // Normalize a keydown event to a stable combo string ('Shift+L', 'Meta+K', 'L').
@@ -21363,7 +21382,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.05h'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.05j'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
