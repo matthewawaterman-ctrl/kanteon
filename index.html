@@ -19538,6 +19538,13 @@ const KL_DEV_COMMANDS = [
   { id: 'g_mine',    label: 'Hear yours', category: 'Gameplay', reserved: true, fixedKey: 'M  /  ⌘Space' },
   { id: 'g_check',   label: 'Check / lock answer', category: 'Gameplay', reserved: true, fixedKey: 'Enter' },
   { id: 'g_homerow', label: 'Tap / play notes', category: 'Gameplay', reserved: true, fixedKey: 'A–L' },
+  // Arcade (Mixtape) dev keys — active only in a live Arcade session, owned by the
+  // arcade screen. Reference only (not remappable here).
+  { id: 'a_pause', label: 'Arcade: freeze / resume timer', category: 'Arcade', reserved: true, fixedKey: '⌘⇧P' },
+  { id: 'a_lvlup', label: 'Arcade: difficulty up', category: 'Arcade', reserved: true, fixedKey: '⌘⇧↑' },
+  { id: 'a_lvldn', label: 'Arcade: difficulty down', category: 'Arcade', reserved: true, fixedKey: '⌘⇧↓' },
+  { id: 'a_prev', label: 'Arcade: previous question', category: 'Arcade', reserved: true, fixedKey: '⌘⇧←' },
+  { id: 'a_next', label: 'Arcade: next / new question', category: 'Arcade', reserved: true, fixedKey: '⌘⇧→' },
 ];
 
 // Normalize a keydown event to a stable combo string ('Shift+L', 'Meta+K', 'L').
@@ -19608,7 +19615,7 @@ window.klHotkeysOpen = function () {
       '<div class="kl-hk-foot">Click <b>Assign</b>, then press any key (with ⌘/⌃/⌥/⇧ if you like). Esc cancels.</div>' +
     '</div>';
   el.addEventListener('click', (ev) => { if (ev.target === el) klHotkeysClose(); }); // backdrop closes
-  document.getElementById('kidlab').appendChild(el);
+  document.body.appendChild(el);  // body, not #kidlab — #kidlab is display:none in Lesson/Arcade
   klHotkeysRender();
   setTimeout(() => { const s = document.getElementById('kl-hk-search'); if (s) s.focus(); }, 30);
 };
@@ -21382,7 +21389,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.05j'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.05k'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
