@@ -3644,6 +3644,8 @@
     letter-spacing: 1px; cursor: pointer; border-radius: 6px;
     transition: background 0.08s, border-color 0.08s, transform 0.05s;
   }
+  .mt-answer-btn { font-size: 29px; }
+  #mt-rhythm-host svg { padding: 0; transform: translate(0px, 20px) scale(1.5); transform-origin: center center; }
   .mt-answer-btn:hover:not(:disabled) { background: var(--bg3); border-color: var(--border2); }
   .mt-answer-btn:active:not(:disabled) { transform: scale(0.98); }
   .mt-answer-btn:disabled { cursor: not-allowed; opacity: 0.5; }
@@ -7565,12 +7567,12 @@ function playDistGuitar(freq, startTime, duration, ctx, gain) {
   // Low-pass to tame harshness
   const lp = ctx.createBiquadFilter();
   lp.type = 'lowpass';
-  lp.frequency.value = 3200;
+  lp.frequency.value = 4200; // opened up so the distortion grit reads as "guitar"
   lp.Q.value = 1.2;
 
   const env = ctx.createGain();
   env.gain.setValueAtTime(0, startTime);
-  env.gain.linearRampToValueAtTime(gain, startTime + 0.022);
+  env.gain.linearRampToValueAtTime(gain, startTime + 0.006); // snappier pick transient
   env.gain.exponentialRampToValueAtTime(gain * 0.6, startTime + 0.09);
   env.gain.exponentialRampToValueAtTime(0.001, startTime + duration + 0.08);
 
@@ -7619,11 +7621,11 @@ function playChorusSynth(freq, startTime, duration, ctx, gain) {
   gain = (gain || 0.2) * (KL_SND.volSynth != null ? KL_SND.volSynth : 1);   // live "Vol · Synth" slider (seeded from CONTROL PANEL synthVolume)
   // Main sine
   const osc1 = ctx.createOscillator();
-  osc1.type = 'sine';
+  osc1.type = 'sawtooth'; // saw + resonant filter = unmistakably an electronic synth (was sine = too flute-like to tell from guitar)
   osc1.frequency.value = freq;
   // Detuned copy for chorus effect
   const osc2 = ctx.createOscillator();
-  osc2.type = 'sine';
+  osc2.type = 'sawtooth';
   osc2.frequency.value = freq * 1.008; // ~14 cents detune
   // Reverb tail via long gain decay
   const env1 = ctx.createGain();
@@ -7637,8 +7639,11 @@ function playChorusSynth(freq, startTime, duration, ctx, gain) {
   env2.gain.setValueAtTime(gain * 0.6, startTime + duration - 0.05);
   env2.gain.exponentialRampToValueAtTime(0.001, startTime + duration + 0.5);
 
+  // Resonant low-pass — the resonance peak is the "electronic" timbre cue.
+  const synLp = ctx.createBiquadFilter();
+  synLp.type = 'lowpass'; synLp.frequency.value = 1900; synLp.Q.value = 5;
   osc1.connect(env1); osc2.connect(env2);
-  env1.connect(ctx.destination); env2.connect(ctx.destination);
+  env1.connect(synLp); env2.connect(synLp); synLp.connect(ctx.destination);
   osc1.start(startTime); osc2.start(startTime);
   osc1.stop(startTime + duration + 0.55);
   osc2.stop(startTime + duration + 0.55);
@@ -13875,6 +13880,15 @@ function klRenderTown() {
   klStartDayClock();
   klState.activeSet = null;
   if (klCheckRent()) return; // rent came due — notified, or overdue/evicted (eviction takes the screen)
+  // One-time GARAGE-UNLOCK cutscene: first town visit after clearing all of
+  // Waddy's (which opens the Garage). Ledger-guarded so it plays exactly once.
+  if (klState.waddyDone && !(klState.xpAwarded && klState.xpAwarded['cut:garageUnlock']) && !document.querySelector('.kl-cutscene')) {
+    klState.xpAwarded = klState.xpAwarded || {};
+    klState.xpAwarded['cut:garageUnlock'] = true;
+    klSaveProgress();
+    klPlayCutscene('garage_unlocked', () => klRenderTown());
+    return;
+  }
   klExpirePromo();           // clear any promotion whose run has ended
   const wrap = document.getElementById('kl-wrap');
   const showHint = klState.bookedDay
@@ -14386,6 +14400,7 @@ function klRenderBuskPlan() {
         '<button onclick="klBuskPlanAdjust(1)" style="width:46px;height:46px;border-radius:12px;border:1px solid rgba(255,255,255,0.2);background:rgba(0,0,0,0.25);color:#fff;font-size:24px;font-weight:900;cursor:pointer;">+</button>' +
       '</div>' +
       '<div style="display:flex;justify-content:space-between;font-size:13px;"><span style="opacity:0.7;">Done around</span><span style="font-weight:700;">' + klTimeLabel(endRaw) + (endRaw >= 24 ? ' (next day)' : '') + '</span></div>' +
+      (klGearCount() > 0 ? '<div style="display:flex;justify-content:space-between;font-size:12.5px;margin-top:6px;opacity:0.85;"><span>🎸 Gear bonus</span><span style="color:#7ad98a;font-weight:700;">+' + Math.round((klGearBuskFactor() - 1) * 100) + '% earnings</span></div>' : '') +
       '<div style="display:flex;justify-content:space-between;font-size:17px;margin-top:6px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.12);"><span>Est. earnings</span><span style="font-weight:900;color:#7ad98a;">~$' + est + '</span></div>' +
       '<div style="display:flex;gap:10px;margin-top:14px;">' +
         '<button onclick="klBuskPlanCancel()" style="flex:1;padding:11px;border-radius:12px;border:1px solid rgba(255,255,255,0.18);background:transparent;color:#fff;font-weight:700;font-size:14px;cursor:pointer;">Cancel</button>' +
@@ -15272,7 +15287,7 @@ function klRenderInterior(id) {
     const condPct = klState.gearCondition;
     const condColor = condPct > 60 ? '#7ee787' : condPct > 30 ? '#facc15' : '#ef4444';
     const gearStatus = gearOwned > 0
-      ? '<div class="kt-shop-divider">YOUR GEAR · boosts every show ×' + klGearBoost().toFixed(2) + '</div>' +
+      ? '<div class="kt-shop-divider">YOUR GEAR · shows ×' + klGearBoost().toFixed(2) + ' · busking ×' + klGearBuskFactor().toFixed(2) + '</div>' +
         '<div style="padding:2px 4px 6px;">' +
           '<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:800;margin-bottom:4px;">' +
             '<span>🎛 Condition</span><span style="color:' + condColor + '">' + condPct + '%</span></div>' +
@@ -15303,9 +15318,9 @@ function klRenderInterior(id) {
       '<div class="kt-shop-grid">' +
         rentSection +
         '<div class="kt-shop-divider">GEAR (each piece = +8% every show)</div>' +
-        item('guitar', '🎸 Guitar <i>+8%</i>', 400, klState.gear.includes('guitar')) +
-        item('keys', '🎹 Keys <i>+8%</i>', 600, klState.gear.includes('keys')) +
-        item('mic', '🎤 Microphone <i>+8%</i>', 150, klState.gear.includes('mic')) +
+        item('guitar', '🎸 Guitar <i>+8% shows · +12% busk</i>', 400, klState.gear.includes('guitar')) +
+        item('keys', '🎹 Keys <i>+8% shows · +12% busk</i>', 600, klState.gear.includes('keys')) +
+        item('mic', '🎤 Microphone <i>+8% shows · +12% busk</i>', 150, klState.gear.includes('mic')) +
         gearStatus +
         '<div class="kt-shop-divider">PROMOTION (builds hype for your next show)</div>' +
         item('flyers', '📄 Flyers <i>+10%</i>', 20, false, klState.promo.flyers ? '×' + klState.promo.flyers : '') +
@@ -17828,6 +17843,13 @@ const KL_STORY = {
     title: 'The Garage',
     line: '[SOON: A new set of puzzles will live here — the hookier stuff. For now, head to Sweet Waddy\u2019s.]',
   },
+  // ART-PH: garage unlock — fires once when all of Waddy's is cleared and the
+  // Garage opens. Swap the emoji art + rewrite the copy in your voice.
+  garage_unlocked: {
+    art: '🎸🔓',
+    title: 'THE GARAGE IS OPEN',
+    line: '[UNLOCKED: You cleared every station at Sweet Waddy\u2019s — and the Garage doors just swung open. Hookier puzzles are waiting inside. (ART-PH: rewrite + real art.)]',
+  },
   venue_soon: {
     art: '🎤',
     title: 'The Restaurant',
@@ -19250,7 +19272,7 @@ function klDevBarMarkup() {
   s += cut('intro');
   s += sub('Waddy\u2019s:'); ['find_drums', 'find_hat', 'find_bass', 'dot0'].forEach(k => s += cut(k));
   s += sub('Journey:'); ['dot1', 'dot2', 'dot3', 'finale'].forEach(k => s += cut(k));
-  s += sub('Town:'); ['hater', 'garage_soon', 'venue_soon', 'shop_soon', 'van_won'].forEach(k => s += cut(k));
+  s += sub('Town:'); ['hater', 'garage_soon', 'garage_unlocked', 'venue_soon', 'shop_soon', 'van_won'].forEach(k => s += cut(k));
 
   // ── SHOW NIGHT — full flow + isolated show-song auditions ──
   s += lbl('show', '🎤 SHOW NIGHT');
@@ -21499,7 +21521,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.05o'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.05q'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
