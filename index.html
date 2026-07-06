@@ -19844,10 +19844,13 @@ function klSBCentsToLeft(cents) {
   let semis = Math.max(-r, Math.min(r, cents / 100));
   return ((semis + r) / (2 * r)) * 100;
 }
-function klSBPositionMarker() {
-  const m = document.getElementById('kl-sb-marker');
-  if (m) m.style.left = klSBCentsToLeft(klSB.placedCents) + '%';
+function klSBPositionMarkers() {
+  klSB.placed.forEach((c, i) => {
+    const m = document.getElementById('kl-sb-m-' + i);
+    if (m) { m.style.left = klSBCentsToLeft(c) + '%'; m.classList.toggle('active', i === klSB.active); }
+  });
 }
+function klSBFreq(cents) { return midiFreq(klSB.rootMidi) * Math.pow(2, cents / 1200); }
 function klSBWireDrag(ruler) {
   if (ruler._wired) return; ruler._wired = true;
   let dragging = false;
@@ -19857,13 +19860,21 @@ function klSBWireDrag(ruler) {
     let f = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     return Math.round((-klSB.range + f * 2 * klSB.range) * 100);
   };
-  const move = (clientX) => {
+  const grabNearest = (c) => { // pick the closest dot to what the finger touched
+    let best = 0, bd = Infinity;
+    klSB.placed.forEach((pc, i) => { const d = Math.abs(pc - c); if (d < bd) { bd = d; best = i; } });
+    klSB.active = best;
+  };
+  const move = (clientX, grab) => {
     if (!klSB || klSB.answered) return;
     const c = xToCents(clientX); if (c == null) return;
-    klSB.placedCents = c; klSBPositionMarker(); klSBPlay('yours', true);
+    if (grab) grabNearest(c);
+    klSB.placed[klSB.active] = c;
+    klSBPositionMarkers();
+    klSBPlay('active', true);
   };
-  ruler.addEventListener('pointerdown', (e) => { dragging = true; try { ruler.setPointerCapture(e.pointerId); } catch (x) {} move(e.clientX); });
-  ruler.addEventListener('pointermove', (e) => { if (dragging) move(e.clientX); });
+  ruler.addEventListener('pointerdown', (e) => { dragging = true; try { ruler.setPointerCapture(e.pointerId); } catch (x) {} move(e.clientX, true); });
+  ruler.addEventListener('pointermove', (e) => { if (dragging) move(e.clientX, false); });
   ruler.addEventListener('pointerup', () => { dragging = false; });
   ruler.addEventListener('pointercancel', () => { dragging = false; });
 }
@@ -19874,59 +19885,78 @@ window.klSBPlay = function(which, quiet) {
   bus.gain.value = (KL_SND.volMel != null ? KL_SND.volMel : 1);
   bus.connect(ctx.destination);
   const root = midiFreq(klSB.rootMidi);
-  if (which === 'target') {
-    playTone(root, t, 0.5, ctx, 0.3, 'piano', bus);
-    playTone(midiFreq(klSB.rootMidi + klSB.targetSemis), t + 0.28, 0.5, ctx, 0.3, 'piano', bus);
-  } else {
-    const yours = root * Math.pow(2, klSB.placedCents / 1200);
-    if (!quiet) playTone(root, t, 0.4, ctx, 0.28, 'piano', bus);
-    playTone(yours, t + (quiet ? 0 : 0.24), quiet ? 0.18 : 0.5, ctx, quiet ? 0.22 : 0.3, 'synth', bus);
+  if (which === 'active') { // live monitor: just the dot being dragged
+    playTone(klSBFreq(klSB.placed[klSB.active]), t, 0.18, ctx, 0.22, 'synth', bus);
+    return;
   }
+  const arr = which === 'target' ? klSB.targets : klSB.placed;
+  const tim = which === 'target' ? 'piano' : 'synth';
+  playTone(root, t, 0.75, ctx, 0.26, 'piano', bus);              // root always given
+  arr.forEach((c) => playTone(klSBFreq(c), t, 0.75, ctx, 0.24, tim, bus)); // block chord
 };
 window.klSBCheck = function() {
   if (!klSB || klSB.answered) return;
-  const ok = gradeBuildCents(klSB.placedCents, klSB.targetCents, BUILD_EAR_TOLERANCE);
-  const m = document.getElementById('kl-sb-marker');
-  if (ok) {
+  const res = gradeBuildSet(klSB.placed, klSB.targets, BUILD_EAR_TOLERANCE);
+  if (res.allHit) {
     klSB.answered = true;
-    if (m) m.classList.add('correct');
-    const tgt = document.getElementById('kl-sb-target');
-    if (tgt) { tgt.style.left = klSBCentsToLeft(klSB.targetCents) + '%'; tgt.style.display = 'block'; tgt.classList.add('show'); }
-    setTimeout(() => klWin(), 700);
+    klSB.placed.forEach((c, i) => { const m = document.getElementById('kl-sb-m-' + i); if (m) { m.classList.add('correct'); m.classList.remove('active'); } });
+    klSB.targets.forEach((c, i) => { const tg = document.getElementById('kl-sb-t-' + i); if (tg) { tg.style.left = klSBCentsToLeft(c) + '%'; tg.style.display = 'block'; tg.classList.add('show'); } });
+    setTimeout(() => klWin(), 750);
   } else {
-    if (m) { m.classList.add('wrong'); setTimeout(() => { if (m) m.classList.remove('wrong'); }, 600); }
+    res.perMarker.forEach(pm => {
+      const m = document.getElementById('kl-sb-m-' + pm.idx);
+      if (m) { m.classList.add(pm.ok ? 'correct' : 'wrong'); setTimeout(() => { if (m) m.classList.remove('wrong'); }, 700); }
+    });
     klSBPlay('target');
   }
 };
+// Interval (1 dot) AND chord (N dots) share this renderer. Reuses ShapeEngine's
+// degree->pitch via KL_SCALE, the shared gradeBuildSet grader, and the cents-ruler
+// CSS. Story-local state/drag/audio — never touches the Lesson build engine.
 function klRenderStoryBuildSlider(p) {
   const b = p.bdef, degs = b.degrees;
   const rootMidi = KL_SCALE[degs[0]];
-  const targetSemis = KL_SCALE[degs[degs.length - 1]] - rootMidi;
-  const range = Math.max(4, Math.abs(targetSemis) + 2); // kid-friendly strip: tight around the interval
-  klSB = { rootMidi, targetSemis, targetCents: targetSemis * 100, placedCents: 0, range, answered: false };
+  const upperSemis = degs.slice(1).map(d => KL_SCALE[d] - rootMidi); // notes above the given root
+  const N = upperSemis.length;
+  const maxSemis = Math.max.apply(null, upperSemis);
+  const range = Math.max(4, maxSemis + 2);
+  const isChord = N > 1;
+  klSB = {
+    rootMidi, range, answered: false,
+    targets: upperSemis.map(s => s * 100),
+    // start the dots evenly spread across the strip (not on the targets) so each
+    // is visible + grabbable; the kid tunes each up/down by ear.
+    placed: upperSemis.map((_, i) => Math.round((-range + (i + 1) * (2 * range / (N + 1))) * 100)),
+    active: 0,
+  };
+  const markers = klSB.placed.map((c, i) => '<div class="build-cmarker" id="kl-sb-m-' + i + '" data-idx="' + i + '"></div>').join('');
+  const targetMarks = klSB.targets.map((c, i) => '<div class="build-target-marker" id="kl-sb-t-' + i + '"></div>').join('');
+  const hint = isChord
+    ? 'Build the ' + b.name + ' chord: grab each dot and tune it up by ear. TARGET plays the goal, YOURS plays what you have.'
+    : 'Drag the dot up by ear until it matches the TARGET \u2014 then CHECK.';
   const wrap = document.getElementById('kl-wrap');
   wrap.innerHTML =
     (klPuzzleBuilding() ? '<div class="kl-room-bg kt-bg-' + klPuzzleBuilding() + '">' + klSceneArt(klPuzzleBuilding()) + '</div>' : '') +
     '<div class="kl-puzzle-top">' +
-      '<button class="kl-back" onclick="klExit()">←</button>' + klPuzzleClockChip() +
-      '<button class="kl-mute" id="kl-mute-btn" onclick="klToggleMute()" title="Mute backing">' + (klClock.muted ? '🔇' : '🔊') + '</button>' +
+      '<button class="kl-back" onclick="klExit()">\u2190</button>' + klPuzzleClockChip() +
+      '<button class="kl-mute" id="kl-mute-btn" onclick="klToggleMute()" title="Mute backing">' + (klClock.muted ? '\uD83D\uDD07' : '\uD83D\uDD0A') + '</button>' +
     '</div>' +
-    '<div class="kl-drumtitle">🎚️ Build a ' + b.name + '</div>' +
-    '<div class="kl-build-hint">Drag the dot up by ear until it matches the TARGET — then CHECK.</div>' +
+    '<div class="kl-drumtitle">\uD83C\uDF9A\uFE0F Build a ' + b.name + '</div>' +
+    '<div class="kl-build-hint">' + hint + '</div>' +
     '<div class="kl-listen-row">' +
-      '<button class="kl-listen" id="kl-sb-target-btn" onclick="klSBPlay(\'target\')">🔊 TARGET<kbd class="kl-kbd">space</kbd></button>' +
-      '<button class="kl-mine" id="kl-sb-yours-btn" onclick="klSBPlay(\'yours\')">🎧 YOURS<kbd class="kl-kbd">⌘ space</kbd></button>' +
+      '<button class="kl-listen" id="kl-sb-target-btn" onclick="klSBPlay(\'target\')">\uD83D\uDD0A TARGET<kbd class="kl-kbd">space</kbd></button>' +
+      '<button class="kl-mine" id="kl-sb-yours-btn" onclick="klSBPlay(\'yours\')">\uD83C\uDFA7 YOURS<kbd class="kl-kbd">\u2318 space</kbd></button>' +
     '</div>' +
     '<div class="build-ruler" id="kl-sb-ruler">' +
       '<div class="build-ruler-rail"></div>' +
-      '<div class="build-target-marker" id="kl-sb-target"></div>' +
-      '<div class="build-marker" id="kl-sb-marker"></div>' +
+      targetMarks + markers +
     '</div>' +
+    (isChord ? '<div class="kl-build-hint" style="opacity:0.6;font-size:12px;margin-top:2px;">tap a dot to grab it \u00b7 ' + N + ' notes to place</div>' : '') +
     '<div class="kl-bandmate" id="kl-bandmate">&nbsp;</div>' +
-    '<button class="kl-check" id="kl-check-btn" onclick="klSBCheck()">CHECK ✓</button>';
+    '<button class="kl-check" id="kl-check-btn" onclick="klSBCheck()">CHECK \u2713</button>';
   const ruler = document.getElementById('kl-sb-ruler');
   ruler._range = range;
-  klSBPositionMarker();
+  klSBPositionMarkers();
   klSBWireDrag(ruler);
 }
 function klRenderBuildPuzzle(p) {
@@ -21172,7 +21202,7 @@ function klRenderPuzzle() {
   if (p.type === 'drums') { klRenderDrumPuzzle(p); return; }
   // Build Mode: constructive interval/chord stacking (no CHECK, A/B switch).
   if (p.type === 'build') {
-    if (p.bdef && p.bdef.degrees && p.bdef.degrees.length === 2) { klRenderStoryBuildSlider(p); return; }
+    if (p.bdef && p.bdef.degrees && p.bdef.degrees.length >= 2) { klRenderStoryBuildSlider(p); return; }
     klRenderBuildPuzzle(p); return;
   }
   // Rhythm Tap: hear a rhythm, tap it back in time (no CHECK, auto-evaluates).
@@ -21535,7 +21565,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.05t'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.05u'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
