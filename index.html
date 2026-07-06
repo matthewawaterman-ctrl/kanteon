@@ -7025,7 +7025,7 @@
     </div>
     <div class="mt-go-buttons">
       <button class="mt-start-go" onclick="startMixtape()" style="padding:14px;font-size:16px;">▶ PLAY AGAIN</button>
-      <button class="ear-quick-btn" onclick="klArcadeBack()" style="padding:14px;font-size:13px;">BACK TO HOME</button>
+      <button class="ear-quick-btn" onclick="openMixtape()" style="padding:14px;font-size:13px;">BACK TO ARCADE HOME</button>
     </div>
   </div>
 </div>
@@ -7311,7 +7311,7 @@ const KANTEON_CONFIG = {
   transcriptionCellSize: 40,       // px size of each sequencer cell in the Transcription round (bigger = larger grid, buttons reflow below)
 
   // ——— Ear-training difficulty ———
-  earToleranceCents: 40,           // how close a build answer must be, in cents. Higher = easier. (100 = a full semitone)
+  earToleranceCents: 50,           // how close a build answer must be, in cents. Higher = easier. (100 = a full semitone)
   earLowestRoot: 'C4',             // lowest note interval/chord-ID questions play from. 'C4' = middle C. Lower (C3) = darker/muddier, higher (C5) = brighter
   earRootSpanSemitones: 12,        // how far above that the pitch randomly wanders (12 = one octave)
 
@@ -21535,7 +21535,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.05s'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.05t'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
