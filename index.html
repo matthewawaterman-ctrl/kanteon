@@ -7554,7 +7554,7 @@ function playDistGuitar(freq, startTime, duration, ctx, gain) {
 
   // Waveshaper distortion
   const dist = ctx.createWaveShaper();
-  const k = 80;
+  const k = KL_SND.guitarDrive || 80;
   const n = 256;
   const curve = new Float32Array(n);
   for (let i = 0; i < n; i++) {
@@ -7567,12 +7567,12 @@ function playDistGuitar(freq, startTime, duration, ctx, gain) {
   // Low-pass to tame harshness
   const lp = ctx.createBiquadFilter();
   lp.type = 'lowpass';
-  lp.frequency.value = 4200; // opened up so the distortion grit reads as "guitar"
+  lp.frequency.value = KL_SND.guitarCutoff || 4200;
   lp.Q.value = 1.2;
 
   const env = ctx.createGain();
   env.gain.setValueAtTime(0, startTime);
-  env.gain.linearRampToValueAtTime(gain, startTime + 0.006); // snappier pick transient
+  env.gain.linearRampToValueAtTime(gain, startTime + (KL_SND.guitarAttack || 6) / 1000); // pick attack
   env.gain.exponentialRampToValueAtTime(gain * 0.6, startTime + 0.09);
   env.gain.exponentialRampToValueAtTime(0.001, startTime + duration + 0.08);
 
@@ -7617,16 +7617,18 @@ function playBassGuitar(freq, startTime, duration, ctx, gain) {
 }
 
 // Chorus synth — sine + detuned copy + soft reverb tail
+const KL_LEAD_WAVES = ['sine', 'triangle', 'sawtooth', 'square'];
 function playChorusSynth(freq, startTime, duration, ctx, gain) {
   gain = (gain || 0.2) * (KL_SND.volSynth != null ? KL_SND.volSynth : 1);   // live "Vol · Synth" slider (seeded from CONTROL PANEL synthVolume)
   // Main sine
   const osc1 = ctx.createOscillator();
-  osc1.type = 'sawtooth'; // saw + resonant filter = unmistakably an electronic synth (was sine = too flute-like to tell from guitar)
+  const _sw = KL_LEAD_WAVES[KL_SND.synWave | 0] || 'sawtooth'; // saw+filter = electronic; live-tunable
+  osc1.type = _sw;
   osc1.frequency.value = freq;
   // Detuned copy for chorus effect
   const osc2 = ctx.createOscillator();
-  osc2.type = 'sawtooth';
-  osc2.frequency.value = freq * 1.008; // ~14 cents detune
+  osc2.type = _sw;
+  osc2.frequency.value = freq * Math.pow(2, (KL_SND.synDetune || 0) / 1200); // chorus detune (cents)
   // Reverb tail via long gain decay
   const env1 = ctx.createGain();
   env1.gain.setValueAtTime(0, startTime);
@@ -7641,7 +7643,7 @@ function playChorusSynth(freq, startTime, duration, ctx, gain) {
 
   // Resonant low-pass — the resonance peak is the "electronic" timbre cue.
   const synLp = ctx.createBiquadFilter();
-  synLp.type = 'lowpass'; synLp.frequency.value = 1900; synLp.Q.value = 5;
+  synLp.type = 'lowpass'; synLp.frequency.value = KL_SND.synCutoff; synLp.Q.value = KL_SND.synReso;
   osc1.connect(env1); osc2.connect(env2);
   env1.connect(synLp); env2.connect(synLp); synLp.connect(ctx.destination);
   osc1.start(startTime); osc2.start(startTime);
@@ -18645,6 +18647,13 @@ const KL_SND_CONTROLS = [
   ['melVocalVib', 'Vocals vibrato depth', 0, 0.04, 0.002],
   ['melVocalRate', 'Vocals vibrato rate (Hz)', 3, 8, 0.1],
   ['melKeysShimmer', 'Keys octave shimmer', 0, 0.6, 0.02],
+  ['synWave', 'Synth wave · 0sin 1tri 2saw 3sqr', 0, 3, 1],
+  ['synCutoff', 'Synth filter cutoff (Hz)', 300, 6000, 50],
+  ['synReso', 'Synth resonance (Q)', 0.5, 15, 0.5],
+  ['synDetune', 'Synth chorus detune (¢)', 0, 40, 1],
+  ['guitarCutoff', 'Guitar brightness (Hz)', 1500, 8000, 100],
+  ['guitarDrive', 'Guitar distortion', 10, 200, 5],
+  ['guitarAttack', 'Guitar pick attack (ms)', 1, 30, 1],
   ['volWin', 'Vol · Level Complete', 0, 2, 0.05],
   ['volKick', 'Vol · Kick', 0, 2, 0.05],
   ['volSnare', 'Vol · Snare', 0, 2, 0.05],
@@ -18679,6 +18688,8 @@ window.klToggleSoundPanel = function() {
       '<button class="kt-int-sub" onclick="klSndTest(\'hat\')">HAT</button>' +
       '<button class="kt-int-sub" onclick="klSndTest(\'bass\')">BASS</button>' +
       '<button class="kt-int-sub" onclick="klSndTest(\'note\')">NOTE</button>' +
+      '<button class="kt-int-sub" onclick="klSndTest(\'synth\')">SYNTH</button>' +
+      '<button class="kt-int-sub" onclick="klSndTest(\'guitar\')">GUITAR</button>' +
     '</div>' +
     '<div class="kl-snd-scroll">' + rows + '</div>';
   document.getElementById('kidlab').appendChild(el);
@@ -18695,6 +18706,8 @@ window.klSndTest = function(voice) {
   else if (voice === 'snare') klSnare(t, ctx.destination, ctx, 0.4);
   else if (voice === 'hat') klHat(t, ctx.destination, ctx, 0.3);
   else if (voice === 'bass') klBass(t, ctx.destination, ctx, KL_SCALE[0] - 24, 0.8, 0.22);
+  else if (voice === 'synth') { playChorusSynth(midiFreq(KL_SCALE[4] + 12), t, 0.45, ctx, 0.3); playChorusSynth(midiFreq(KL_SCALE[6] + 12), t + 0.4, 0.55, ctx, 0.3); }
+  else if (voice === 'guitar') { playDistGuitar(midiFreq(KL_SCALE[4]), t, 0.35, ctx, 0.25); playDistGuitar(midiFreq(KL_SCALE[6]), t + 0.32, 0.45, ctx, 0.25); }
   else playTone(midiFreq(KL_SCALE[0]), t, 0.6, ctx, 0.3, klCurMelTimbre());
 };
 window.klSndCopy = function() {
@@ -21521,7 +21534,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.05q'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.05r'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -21773,6 +21786,14 @@ const KL_SND = {
   melVocalVib: 0.012,   // vocals pitch-wobble depth (fraction of freq)
   melVocalRate: 5.2,    // vocals vibrato LFO rate (Hz)
   melKeysShimmer: 0.3,  // keys octave-up sine shimmer level
+  // ── LEAD TIMBRES — tune synth vs guitar differentiation live ──
+  synWave: 2,           // 0 sine · 1 triangle · 2 sawtooth · 3 square
+  synCutoff: 1900,      // synth resonant low-pass cutoff (Hz)
+  synReso: 5,           // synth low-pass resonance (Q) — the "electronic" cue
+  synDetune: 14,        // synth chorus detune (cents)
+  guitarCutoff: 4200,   // dist-guitar brightness / low-pass cutoff (Hz)
+  guitarDrive: 80,      // dist-guitar distortion amount
+  guitarAttack: 6,      // dist-guitar pick attack (ms)
 };
 // === DEV SOUND PANEL — END ===
 function klKick(t, dest, ctx, gain) {
