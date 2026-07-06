@@ -18677,7 +18677,8 @@ window.klToggleSoundPanel = function() {
       '<span class="kl-snd-val" id="kl-snd-val-' + k + '">' + KL_SND[k] + '</span>' +
     '</div>').join('');
   const el = document.createElement('div');
-  el.id = 'kl-sndpanel'; el.className = 'kl-sndpanel';
+  el.id = 'kl-sndpanel';
+  el._mountBody = true; el.className = 'kl-sndpanel';
   el.innerHTML =
     '<div class="kl-snd-head">🎛 SOUNDBANK' +
       '<button class="kt-int-sub" onclick="klSndCopy()">COPY</button>' +
@@ -18693,7 +18694,7 @@ window.klToggleSoundPanel = function() {
       '<button class="kt-int-sub" onclick="klSndTest(\'guitar\')">GUITAR</button>' +
     '</div>' +
     '<div class="kl-snd-scroll">' + rows + '</div>';
-  document.getElementById('kidlab').appendChild(el);
+  document.body.appendChild(el);  // body, not #kidlab — #kidlab is display:none in Arcade/Lesson
 };
 window.klSndSet = function(key, val) {
   KL_SND[key] = parseFloat(val);
@@ -21565,7 +21566,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.05u'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.05v'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -28961,7 +28962,10 @@ function renderMtTranscriptionRound(r) {
   let activeCol = 0;
 
   const noteLabel = m => midiToNoteName(m).replace(/-?\d+$/, '');
-  const cellPx = Math.max(20, KANTEON_CONFIG.transcriptionCellSize || 40);   // knob-driven: bigger grid reflows buttons below
+  // Auto-fit to viewport height so the grid + buttons never overflow (was a fixed
+  // 40px that pushed SUBMIT off-screen on short windows). Config value is the MAX.
+  const _txFit = Math.floor((window.innerHeight - 320) / rowsMidi.length) - 4;
+  const cellPx = Math.max(20, Math.min(KANTEON_CONFIG.transcriptionCellSize || 40, _txFit));
 
   // Build grid: a left label column + nCols step columns.
   let gridHtml = '<div class="mt-tx-grid" style="display:inline-grid;grid-template-columns:auto repeat(' + nCols + ',' + cellPx + 'px);gap:4px;justify-content:center;">';
