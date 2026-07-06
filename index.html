@@ -4804,11 +4804,11 @@
     position: relative; z-index: 1;
   }
   .kl-cell {
-    border-radius: 8px;
-    background: rgba(70,80,110,0.38);
-    border: 3px dashed rgba(170,180,210,0.5);
+    border-radius: 10px;
+    background: rgba(255,255,255,0.06);
+    border: 2px solid rgba(160,140,255,0.3);
     cursor: pointer; position: relative;
-    transition: transform 0.1s, background 0.15s;
+    transition: transform 0.1s, background 0.15s, border-color 0.15s;
     display: flex; align-items: center; justify-content: center;
     -webkit-tap-highlight-color: transparent;
     outline: none;
@@ -15624,7 +15624,7 @@ window.klRenderPerform = function(song) {
   document.getElementById('kl-wrap').innerHTML =
     '<div class="kl-perform-stage">' +
       '<div class="kl-perform-title">\uD83C\uDFA4 PERFORM: \u201C' + (song.title || 'your song') + '\u201D</div>' +
-      '<div class="kl-perform-sub">Tap <b>in time with the band</b> \u2014 click, or press the home-row keys \u00B7 <span id="kl-pf-count">0</span>/8</div>' +
+      '<div class="kl-perform-sub">Tap <b>in time with the band</b> \u2014 click, or press SPACE / the home-row keys \u00B7 <span id="kl-pf-count">0</span>/8</div>' +
       '<div class="kl-comp">' + head + grid + '</div>' +
       '<button class="kl-listen kt-int-btn kl-perform-tap" id="kl-pf-tap" onclick="klPerformTap()">\uD83D\uDC4F TAP THE BEAT</button>' +
     '</div>';
@@ -15633,7 +15633,7 @@ window.klRenderPerform = function(song) {
     if (!klPerform.active) return;
     const tag = (e.target && e.target.tagName) || '';
     if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
-    if (KL_HOMEROW.indexOf(e.code) !== -1) { e.preventDefault(); if (!e.repeat) klPerformTap(); } // any home-row key taps (per-lane mapping later)
+    if (KL_HOMEROW.indexOf(e.code) !== -1 || e.code === 'Space') { e.preventDefault(); if (!e.repeat) klPerformTap(); } // space or any home-row key taps
   };
   window.addEventListener('keydown', klPerform.keyHandler);
 };
@@ -16618,7 +16618,11 @@ function klRenderAvatarMaker() {
 }
 // Persist the avatar onto the player's record so the picker tile shows it.
 function klSetPlayerAvatar(id, avatar) {
-  if (id === 'matt' || id === 'guest') return;
+  if (id === 'guest') return;
+  // Matt is seeded in code (never in the players list), so persist his avatar to
+  // its own key — otherwise the profile TILE has no avatar to show and falls back
+  // to the 🎹 emoji on every reload.
+  if (id === 'matt') { try { localStorage.setItem('kanteon_matt_avatar', JSON.stringify(avatar)); } catch (e) {} return; }
   try {
     const list = klLoadPlayers().filter(p => p.id !== 'matt');
     const p = list.find(x => x.id === id);
@@ -16651,7 +16655,12 @@ function klLoadPlayers() {
     const list = raw ? JSON.parse(raw) : [];
     // Matt is always present and first; everything else is user-created.
     const others = list.filter(p => p.id !== 'matt');
-    return [KL_MATT, ...others];
+    // Merge Matt's separately-stored avatar onto the seeded profile so his TILE
+    // shows it (his avatar isn't in the players list — he's seeded in code).
+    let mattAv = null;
+    try { mattAv = JSON.parse(localStorage.getItem('kanteon_matt_avatar') || 'null'); } catch (e) {}
+    const matt = mattAv ? Object.assign({}, KL_MATT, { avatar: mattAv }) : KL_MATT;
+    return [matt, ...others];
   } catch (e) { return [KL_MATT]; }
 }
 function klSavePlayers(list) {
@@ -17886,7 +17895,7 @@ window.klPlayCutscene = function(key, onContinue) {
         : '<div class="kl-cut-art">' + beat.art + '</div>') +
       '<div class="kl-cut-title">' + beat.title + '</div>' +
       '<div class="kl-cut-line">' + beat.line + '</div>' +
-      '<button class="kl-listen kl-cut-go" onclick="event.stopPropagation(); window.__klCutGo && window.__klCutGo();">▶</button>' +
+      '<button class="kl-listen kl-cut-go" onclick="event.stopPropagation(); window.__klCutGo && window.__klCutGo();">CONTINUE</button>' +
       '<div class="kl-cut-skip">tap anywhere to continue</div>' +
     '</div>';
   window.__klCutGo = cont;
@@ -17912,7 +17921,7 @@ function klShowNotifyCutscene(n, onContinue) {
       '<div class="kl-cut-art">' + (n.art || '📣') + '</div>' +
       '<div class="kl-cut-title">' + n.title + '</div>' +
       '<div class="kl-cut-line">' + n.line + '</div>' +
-      '<button class="kl-listen kl-cut-go" onclick="event.stopPropagation(); window.__klCutGo && window.__klCutGo();">▶</button>' +
+      '<button class="kl-listen kl-cut-go" onclick="event.stopPropagation(); window.__klCutGo && window.__klCutGo();">CONTINUE</button>' +
       '<div class="kl-cut-skip">tap anywhere to continue</div>' +
     '</div>';
   window.__klCutGo = cont;
@@ -18614,6 +18623,7 @@ const KL_SND_CONTROLS = [
   ['melVocalVib', 'Vocals vibrato depth', 0, 0.04, 0.002],
   ['melVocalRate', 'Vocals vibrato rate (Hz)', 3, 8, 0.1],
   ['melKeysShimmer', 'Keys octave shimmer', 0, 0.6, 0.02],
+  ['volWin', 'Vol · Level Complete', 0, 2, 0.05],
   ['volKick', 'Vol · Kick', 0, 2, 0.05],
   ['volSnare', 'Vol · Snare', 0, 2, 0.05],
   ['volHat', 'Vol · Hat', 0, 2, 0.05],
@@ -18623,7 +18633,6 @@ const KL_SND_CONTROLS = [
   ['volKeys', 'Vol · Keys', 0, 2, 0.05],
   ['volVocals', 'Vol · Vocals', 0, 2, 0.05],
   ['volSynth', 'Vol · Synth', 0, 2, 0.05],
-  ['volWin', 'Vol · Win FX', 0, 2, 0.05],
 ];
 window.klToggleSoundPanel = function() {
   const old = document.getElementById('kl-sndpanel');
@@ -20961,7 +20970,7 @@ function klRenderGroovePuzzle(p) {
       '<button class="kl-listen" id="kl-groove-listen" onclick="klGroovePlay()">🔊 LISTEN<kbd class="kl-kbd">space</kbd></button>' +
       '<button class="kl-mine" id="kl-groove-record" onclick="klGrooveRecord()">🥁 PLAY IT</button>' +
     '</div>' +
-    '<button class="kl-tap-pad" id="kl-groove-pad" onpointerdown="klGrooveTapDown(\'pad\')" onpointerup="klGrooveTapUp(\'pad\')" onpointercancel="klGrooveTapUp(\'pad\')" onpointerleave="klGrooveTapUp(\'pad\')">TAP &amp; HOLD<kbd class="kl-kbd">home row (A–L)</kbd></button>' +
+    '<button class="kl-tap-pad" id="kl-groove-pad" onpointerdown="klGrooveTapDown(\'pad\')" onpointerup="klGrooveTapUp(\'pad\')" onpointercancel="klGrooveTapUp(\'pad\')" onpointerleave="klGrooveTapUp(\'pad\')">TAP &amp; HOLD<kbd class="kl-kbd">space or A–L</kbd></button>' +
     '<div class="kl-bandmate" id="kl-bandmate">&nbsp;</div>';
   // Keys (bound once): SPACE = LISTEN (reference); a home-row key = TAP the rhythm.
   // Separating them frees you to hear the example and perform without a conflict.
@@ -20970,10 +20979,11 @@ function klRenderGroovePuzzle(p) {
   if (!window.__klGrooveKeyBound) {
     window.addEventListener('keydown', (e) => {
       if (!document.getElementById('kl-groove')) return;
-      if (e.code === 'Space') { e.preventDefault(); if (!klGroove.recording) klGroovePlay(); return; }
+      if (e.code === 'Space') { e.preventDefault(); if (klGroove.recording) { if (!e.repeat) klGrooveTapDown('pad'); } else klGroovePlay(); return; }
       if (KL_HOMEROW.indexOf(e.code) !== -1) { e.preventDefault(); if (!e.repeat) klGrooveTapDown(e.code); }
     });
     window.addEventListener('keyup', (e) => {
+      if (e.code === 'Space') { klGrooveTapUp('pad'); return; }
       if (KL_HOMEROW.indexOf(e.code) !== -1) klGrooveTapUp(e.code);
     });
     window.__klGrooveKeyBound = true;
@@ -21389,7 +21399,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.05k'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.05n'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -21628,7 +21638,7 @@ const KL_SND = {
   bassH2: 0.55, bassH3: 0.22, bassH4: 0.08,
   melAttack: 15, // ms — melody/playTone attack ramp
   // Per-instrument volume mixer (1 = unchanged). Applied inside each voice fn.
-  volKick: 1, volSnare: 1, volHat: 1, volBass: 1, volMel: 1,
+  volKick: 1, volSnare: 1, volHat: 1, volBass: 1, volMel: 0.45,
   // Per-voice melody volumes (stack on top of volMel master): guitar/keys/vocals.
   volGuitar: 1, volKeys: 1, volVocals: 1,
   // Synth-lead master (drives playChorusSynth). Seeded from the CONTROL PANEL
@@ -22189,7 +22199,7 @@ function klWin() {
   const beat = klClock.active ? klClock.beat : (60 / p.bpm);
   const t0 = ctx.currentTime + 0.04;
   // One gain bus for the ENTIRE completion sting (run + peak chord + sweep +
-  // sparkles). Its level is the live "Vol · Win FX" SOUNDBANK slider, so Matt
+  // sparkles). Its level is the live "Vol · Level Complete" SOUNDBANK slider, so Matt
   // can dial the celebration loudness by ear. Routes to ctx.destination.
   const winBus = ctx.createGain();
   winBus.gain.value = (KL_SND.volWin != null ? KL_SND.volWin : 1);
