@@ -19796,6 +19796,103 @@ function klBuildTone(deg, t, dur, gain) {
   const ctx = getAudio();
   playTone(midiFreq(KL_SCALE[deg]), (t != null ? t : ctx.currentTime + 0.02), dur || 0.6, ctx, gain || 0.28, 'klKeys');
 }
+// ── STORY BUILD-BY-EAR SLIDER (Option C) ─────────────────────────────────────
+// A cents-ruler build puzzle for Story, mirroring the Lesson/Arcade builder but
+// fully self-contained: it reuses the shared grader (gradeBuildCents) + tolerance
+// + the .build-ruler/.build-marker CSS, but has its OWN state + drag + audio so it
+// never touches the Lesson build renderer or its buildState. Fires klWin on pass.
+// Routed here for 2-degree (interval) builds; chords stay on the row list for now.
+let klSB = null;
+function klSBCentsToLeft(cents) {
+  const r = klSB.range;
+  let semis = Math.max(-r, Math.min(r, cents / 100));
+  return ((semis + r) / (2 * r)) * 100;
+}
+function klSBPositionMarker() {
+  const m = document.getElementById('kl-sb-marker');
+  if (m) m.style.left = klSBCentsToLeft(klSB.placedCents) + '%';
+}
+function klSBWireDrag(ruler) {
+  if (ruler._wired) return; ruler._wired = true;
+  let dragging = false;
+  const xToCents = (clientX) => {
+    const rect = ruler.getBoundingClientRect();
+    if (!rect.width) return null;
+    let f = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    return Math.round((-klSB.range + f * 2 * klSB.range) * 100);
+  };
+  const move = (clientX) => {
+    if (!klSB || klSB.answered) return;
+    const c = xToCents(clientX); if (c == null) return;
+    klSB.placedCents = c; klSBPositionMarker(); klSBPlay('yours', true);
+  };
+  ruler.addEventListener('pointerdown', (e) => { dragging = true; try { ruler.setPointerCapture(e.pointerId); } catch (x) {} move(e.clientX); });
+  ruler.addEventListener('pointermove', (e) => { if (dragging) move(e.clientX); });
+  ruler.addEventListener('pointerup', () => { dragging = false; });
+  ruler.addEventListener('pointercancel', () => { dragging = false; });
+}
+window.klSBPlay = function(which, quiet) {
+  if (!klSB) return;
+  const ctx = getAudio(); const t = ctx.currentTime + 0.02;
+  const bus = ctx.createGain();
+  bus.gain.value = (KL_SND.volMel != null ? KL_SND.volMel : 1);
+  bus.connect(ctx.destination);
+  const root = midiFreq(klSB.rootMidi);
+  if (which === 'target') {
+    playTone(root, t, 0.5, ctx, 0.3, 'piano', bus);
+    playTone(midiFreq(klSB.rootMidi + klSB.targetSemis), t + 0.28, 0.5, ctx, 0.3, 'piano', bus);
+  } else {
+    const yours = root * Math.pow(2, klSB.placedCents / 1200);
+    if (!quiet) playTone(root, t, 0.4, ctx, 0.28, 'piano', bus);
+    playTone(yours, t + (quiet ? 0 : 0.24), quiet ? 0.18 : 0.5, ctx, quiet ? 0.22 : 0.3, 'synth', bus);
+  }
+};
+window.klSBCheck = function() {
+  if (!klSB || klSB.answered) return;
+  const ok = gradeBuildCents(klSB.placedCents, klSB.targetCents, BUILD_EAR_TOLERANCE);
+  const m = document.getElementById('kl-sb-marker');
+  if (ok) {
+    klSB.answered = true;
+    if (m) m.classList.add('correct');
+    const tgt = document.getElementById('kl-sb-target');
+    if (tgt) { tgt.style.left = klSBCentsToLeft(klSB.targetCents) + '%'; tgt.style.display = 'block'; tgt.classList.add('show'); }
+    setTimeout(() => klWin(), 700);
+  } else {
+    if (m) { m.classList.add('wrong'); setTimeout(() => { if (m) m.classList.remove('wrong'); }, 600); }
+    klSBPlay('target');
+  }
+};
+function klRenderStoryBuildSlider(p) {
+  const b = p.bdef, degs = b.degrees;
+  const rootMidi = KL_SCALE[degs[0]];
+  const targetSemis = KL_SCALE[degs[degs.length - 1]] - rootMidi;
+  const range = Math.max(4, Math.abs(targetSemis) + 2); // kid-friendly strip: tight around the interval
+  klSB = { rootMidi, targetSemis, targetCents: targetSemis * 100, placedCents: 0, range, answered: false };
+  const wrap = document.getElementById('kl-wrap');
+  wrap.innerHTML =
+    (klPuzzleBuilding() ? '<div class="kl-room-bg kt-bg-' + klPuzzleBuilding() + '">' + klSceneArt(klPuzzleBuilding()) + '</div>' : '') +
+    '<div class="kl-puzzle-top">' +
+      '<button class="kl-back" onclick="klExit()">←</button>' + klPuzzleClockChip() +
+      '<button class="kl-mute" id="kl-mute-btn" onclick="klToggleMute()" title="Mute backing">' + (klClock.muted ? '🔇' : '🔊') + '</button>' +
+    '</div>' +
+    '<div class="kl-drumtitle">🎚️ Build a ' + b.name + '</div>' +
+    '<div class="kl-build-hint">Drag the dot up by ear until it matches the TARGET — then CHECK.</div>' +
+    '<div class="kl-listen-row">' +
+      '<button class="kl-listen" id="kl-sb-target-btn" onclick="klSBPlay(\'target\')">🔊 TARGET<kbd class="kl-kbd">space</kbd></button>' +
+      '<button class="kl-mine" id="kl-sb-yours-btn" onclick="klSBPlay(\'yours\')">🎧 YOURS<kbd class="kl-kbd">⌘ space</kbd></button>' +
+    '</div>' +
+    '<div class="build-ruler" id="kl-sb-ruler">' +
+      '<div class="build-ruler-rail"></div>' +
+      '<div class="build-target-marker" id="kl-sb-target"></div>' +
+      '<div class="build-marker" id="kl-sb-marker"></div>' +
+    '</div>' +
+    '<div class="kl-bandmate" id="kl-bandmate">&nbsp;</div>' +
+    '<button class="kl-check" id="kl-check-btn" onclick="klSBCheck()">CHECK ✓</button>';
+  const ruler = document.getElementById('kl-sb-ruler');
+  ruler._range = range;
+  klSBPositionMarker();
+  klSBWireDrag(ruler);
+}
 function klRenderBuildPuzzle(p) {
   document.getElementById('kidlab').classList.add('kl-playing');
   klStopClock(); klStopBeatBar();
@@ -21038,7 +21135,10 @@ function klRenderPuzzle() {
   // Drum puzzles use their own renderer (rows = drum voices, not pitches).
   if (p.type === 'drums') { klRenderDrumPuzzle(p); return; }
   // Build Mode: constructive interval/chord stacking (no CHECK, A/B switch).
-  if (p.type === 'build') { klRenderBuildPuzzle(p); return; }
+  if (p.type === 'build') {
+    if (p.bdef && p.bdef.degrees && p.bdef.degrees.length === 2) { klRenderStoryBuildSlider(p); return; }
+    klRenderBuildPuzzle(p); return;
+  }
   // Rhythm Tap: hear a rhythm, tap it back in time (no CHECK, auto-evaluates).
   if (p.type === 'tap') { klRenderTapPuzzle(p); return; }
   // Ear ID: hear an interval/chord, pick which it is (no CHECK, instant).
@@ -21399,7 +21499,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.05n'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.05o'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -22462,18 +22562,21 @@ window.klExit = function() {
 document.addEventListener('keydown', (e) => {
   const klActive = document.getElementById('kidlab')?.classList.contains('active');
   if (!klActive) return;
-  if (!document.getElementById('kl-grid') && !document.getElementById('kl-build-grid')) return; // only in a puzzle
+  if (!document.getElementById('kl-grid') && !document.getElementById('kl-build-grid') && !document.getElementById('kl-sb-ruler')) return; // only in a puzzle
 
   // Route to the right engine: build puzzles use the A/B chord playback, drum
   // puzzles use the drum functions, everything else the melodic ones.
   const p = KL_PUZZLES[klState.puzzleIdx];
+  const isSlider = !!document.getElementById('kl-sb-ruler');
   const isBuild = p && p.type === 'build';
   const isTap = p && p.type === 'tap';
   // During a rhythm-tap recording window, Space IS the tap (most natural key).
   if (isTap && klState.tapRecording && e.code === 'Space') { e.preventDefault(); window.klTapHit(); return; }
   const isDrum = p && p.type === 'drums';
   const isEar = p && p.type === 'ear';
-  const fns = isBuild
+  const fns = isSlider
+    ? { target: () => window.klSBPlay('target'), mine: () => window.klSBPlay('yours'), check: () => window.klSBCheck() }
+    : isBuild
     ? { target: () => window.klBuildPlay('target'), mine: () => window.klBuildPlay('yours'), check: null }
     : isTap
     ? { target: () => window.klTapPlay('target'), mine: () => window.klTapPlay('yours'), check: null }
