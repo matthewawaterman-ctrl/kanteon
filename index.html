@@ -785,6 +785,9 @@
     border-radius: 18px; padding: 32px 24px; text-align: center; cursor: pointer; min-height: 160px;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
     user-select: none; transition: background 0.12s, border-color 0.12s, transform 0.06s;
+    /* iOS: without touch-action:none Safari holds every touch ~300ms waiting for a
+       double-tap-to-zoom gesture — that delay WAS the "not tight" tapping on iPad. */
+    touch-action: none; -webkit-tap-highlight-color: transparent; -webkit-user-select: none;
   }
   .tap-zone.armed { border-color: var(--gold); }
   .tap-zone.tapped { background: rgba(124,111,247,0.18); transform: scale(0.99); }
@@ -5093,6 +5096,7 @@
   }
   .kl-tap-record:hover { filter: brightness(1.08); }
   .kl-tap-pad {
+    touch-action: none; -webkit-tap-highlight-color: transparent;
     display: block; margin: 6px auto; width: min(260px, 70vw); height: 120px; border-radius: 22px; cursor: pointer;
     font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 30px; letter-spacing: 3px;
     color: #cbd5e1; border: 3px dashed rgba(255,255,255,0.25); background: rgba(255,255,255,0.06);
@@ -7426,6 +7430,24 @@ function getAudio() {
       o.connect(g); g.connect(audioCtx.destination);
       o.start(); o.stop(audioCtx.currentTime + 0.02);
     } catch (e) {}
+  }
+  // ── MASTER OUTPUT GAIN (iPad is quiet) ──────────────────────────────────────
+  // Every voice connects to ctx.destination. Rather than re-gain each one, we
+  // shadow `destination` with a master GainNode the first time the ctx is used,
+  // so all existing connect(ctx.destination) calls route through it. Live-tunable
+  // via the SOUNDBANK "Master volume" slider (KL_SND.volMaster).
+  if (!audioCtx._klMaster) {
+    try {
+      const mg = audioCtx.createGain();
+      const realDest = audioCtx.destination;
+      mg.gain.value = (typeof KL_SND !== 'undefined' && KL_SND.volMaster != null) ? KL_SND.volMaster : 1.6;
+      mg.connect(realDest);
+      audioCtx._klMaster = mg;
+      Object.defineProperty(audioCtx, 'destination', { get() { return mg; }, configurable: true });
+    } catch (e) {}
+  }
+  if (audioCtx._klMaster && typeof KL_SND !== 'undefined' && KL_SND.volMaster != null) {
+    audioCtx._klMaster.gain.value = KL_SND.volMaster;   // live slider response
   }
   if (audioCtx.state === 'suspended') audioCtx.resume();
   return audioCtx;
@@ -14293,7 +14315,7 @@ function klRenderPauseScreen() {
   el.id = 'kt-pause';
   el.style.cssText = 'position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(8,6,24,0.86);backdrop-filter:blur(4px);';
   el.innerHTML =
-    '<div style="width:min(384px,92vw);transform:scale(1.15);transform-origin:center center;background:linear-gradient(180deg,#1b1640,#15102e);border:1px solid rgba(140,120,255,0.4);border-radius:20px;padding:20px;box-shadow:0 18px 40px rgba(0,0,0,0.5);font-family:\'Barlow\',sans-serif;color:#fff;max-height:92vh;overflow-y:auto;">' +
+    '<div style="width:min(384px,80vw);transform:scale(1.15);transform-origin:center center;background:linear-gradient(180deg,#1b1640,#15102e);border:1px solid rgba(140,120,255,0.4);border-radius:20px;padding:20px;box-shadow:0 18px 40px rgba(0,0,0,0.5);font-family:\'Barlow\',sans-serif;color:#fff;max-height:80vh;overflow-y:auto;">' +
       '<div style="font-family:\'Barlow Condensed\',sans-serif;font-weight:900;font-size:26px;letter-spacing:1px;text-align:center;">\u23F8 PAUSED</div>' +
       '<div style="text-align:center;opacity:0.7;font-size:13.5px;margin-bottom:16px;">' + klSeasonLabel() + ' \u00B7 ' + klDayName() + ' \u00B7 Day ' + klState.day + ' \u00B7 ' + klTimeLabel(klState.hour) + '</div>' +
       bar('\uD83D\uDD25 Hype', '\u00D7' + hype.toFixed(2), hypePct, 'linear-gradient(90deg,#f59e0b,#ef4444)') +
@@ -18655,6 +18677,7 @@ const KL_SND_CONTROLS = [
   ['guitarCutoff', 'Guitar brightness (Hz)', 1500, 8000, 100],
   ['guitarDrive', 'Guitar distortion', 10, 200, 5],
   ['guitarAttack', 'Guitar pick attack (ms)', 1, 30, 1],
+  ['volMaster', 'Vol · MASTER (all audio)', 0.2, 4, 0.1],
   ['volWin', 'Vol · Level Complete', 0, 2, 0.05],
   ['volKick', 'Vol · Kick', 0, 2, 0.05],
   ['volSnare', 'Vol · Snare', 0, 2, 0.05],
@@ -21566,7 +21589,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.07.05v'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.07.05x'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -21805,6 +21828,7 @@ const KL_SND = {
   bassH2: 0.55, bassH3: 0.22, bassH4: 0.08,
   melAttack: 15, // ms — melody/playTone attack ramp
   // Per-instrument volume mixer (1 = unchanged). Applied inside each voice fn.
+  volMaster: 1.6,       // master output lift — iPad speakers are quiet
   volKick: 1, volSnare: 1, volHat: 1, volBass: 1, volMel: 0.45,
   // Per-voice melody volumes (stack on top of volMel master): guitar/keys/vocals.
   volGuitar: 1, volKeys: 1, volVocals: 1,
@@ -22649,10 +22673,8 @@ document.addEventListener('keydown', (e) => {
   if (isTap && klState.tapRecording && e.code === 'Space') { e.preventDefault(); window.klTapHit(); return; }
   const isDrum = p && p.type === 'drums';
   const isEar = p && p.type === 'ear';
-  const fns = isSlider
+  const fns = (isSlider || isBuild)
     ? { target: () => window.klSBPlay('target'), mine: () => window.klSBPlay('yours'), check: () => window.klSBCheck() }
-    : isBuild
-    ? { target: () => window.klBuildPlay('target'), mine: () => window.klBuildPlay('yours'), check: null }
     : isTap
     ? { target: () => window.klTapPlay('target'), mine: () => window.klTapPlay('yours'), check: null }
     : isEar
@@ -23655,7 +23677,10 @@ function renderRhythmQ(q, body) {
     // We subtract that from `now` so scoring treats the tap as it would have been
     // without the user's habitual lag (or lead).
     const calibrationOffsetSec = (getInputLatencyMs() || 0) / 1000;
-    const adjustedNow = now - calibrationOffsetSec;
+    // iPad/iOS has real hardware output+input latency (often 20-60ms) that made
+    // taps read as consistently LATE. Subtract what the browser reports.
+    const hwLatencySec = (ctx.outputLatency || ctx.baseLatency || 0);
+    const adjustedNow = now - calibrationOffsetSec - hwLatencySec;
     let safeBeat, expected;
     if (expectedTimes) {
       // Notation mode: snap to the nearest real note onset.
@@ -29163,7 +29188,8 @@ function renderMtRhythmRound(r) {
   // blip is wrong).
   const onTapDown = () => {
     if (!armed || tapResults.length >= beats) return;
-    const ctxNow = ctx.currentTime;
+    // Compensate real iOS hardware latency so iPad taps don't read as late.
+    const ctxNow = ctx.currentTime - (ctx.outputLatency || ctx.baseLatency || 0);
     const idx = tapResults.length;
     const expectedT = firstTapBeatTime + (rOnsetBeats[idx] || 0) * beatInterval;
     const delta = (ctxNow - expectedT) * 1000;
