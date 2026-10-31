@@ -3681,6 +3681,7 @@
   .mt-prog-slot { width: 92px; min-height: 86px; border-radius: 10px; border: 2px solid var(--border);
     background: var(--bg2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
   .mt-prog-slot.given { border-color: rgba(240,192,64,0.6); }
+  .mt-prog-slot:not(.given) { cursor: pointer; }
   .mt-prog-slot.active { border-color: #9b8fff; box-shadow: 0 0 14px rgba(124,111,247,0.6); }
   .mt-prog-slot.sounding { background: rgba(124,111,247,0.28); }
   .mt-prog-slot.correct { border-color: var(--green); }
@@ -3698,6 +3699,13 @@
   .mt-spacekey { display: inline-block; margin-left: 8px; padding: 4px 26px 6px; border: 2px solid var(--gold);
     border-bottom-width: 5px; border-radius: 8px; color: var(--gold); background: rgba(240,192,64,0.08);
     font-size: 0.85em; letter-spacing: 3px; vertical-align: middle; }
+  /* Arcade chord builder: movable dots ride lanes under the rail, no YOU label */
+  #mt-chord-ruler .build-marker.mt-lane-dot::after { content: ''; }
+  #mt-chord-ruler .build-marker.mt-lane-dot.correct::after { content: '\2713'; color: var(--green); }
+  #mt-chord-ruler .build-marker.mt-lane-dot.wrong[data-off]::after { content: attr(data-off); color: #ef4444; top: 6px; left: calc(100% + 6px); transform: none; white-space: nowrap; }
+  #mt-chord-ruler .build-marker.mt-lane-dot::before { content: ''; position: absolute; left: 50%; bottom: 100%;
+    width: 2px; height: calc(var(--lane) - 14px); background: rgba(155,143,255,0.35); transform: translateX(-50%); }
+  #mt-chord-ruler .build-target-marker::after { top: -16px; }
   .mt-why { position: fixed; left: 50%; bottom: 86px; transform: translateX(-50%); z-index: 9000;
     width: min(760px, calc(100% - 160px)); padding: 12px 18px; border-radius: 10px;
     background: rgba(29,26,63,0.96); border: 1px solid rgba(239,68,68,0.55); color: var(--text);
@@ -21697,7 +21705,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.10.31e'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.10.31k'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -23704,7 +23712,7 @@ function renderRhythmQ(q, body) {
 
     // Schedule visual beat flashes in sync with audio clicks
     for (let i = 0; i < countBeats; i++) {
-      const beatNum = i + 1;
+      const beatNum = countBeats - i;   // count DOWN to GO!
       const wallDelay = Math.max(0, (startT + i * interval - ctx.currentTime) * 1000);
       setTimeout(() => {
         if (!beatEl) return;
@@ -27919,10 +27927,10 @@ function mtBuildPool(maxLevel) {
   if (typeof kanteon !== 'undefined' && kanteon.loaded) {
     try {
       const rPool = kanteon._pool('rhythm_comprehension');
-      const beg = rPool.beginner || [];
-      beg.slice(0, Math.min(8, maxLevel * 2)).forEach((q, idx) => {
-        pool.push({ kind: 'rhythm', id: q.id, lvl: Math.min(maxLevel, Math.ceil((idx + 1) / 2)), source: q });
-      });
+      // More patterns per level (it used to be 2 at L1, 4 at L2 — the same few repeated).
+      const beg = rPool.beginner || [], mid = rPool.intermediate || [];
+      const pats = maxLevel <= 1 ? beg.slice(0, 6) : maxLevel === 2 ? beg.slice() : beg.concat(mid.slice(0, maxLevel >= 4 ? mid.length : 6));
+      pats.forEach(q => pool.push({ kind: 'rhythm', id: q.id, lvl: maxLevel, source: q }));
     } catch (e) { /* rhythm unavailable */ }
   }
 
@@ -28604,6 +28612,9 @@ function buildMtRound(pick) {
 
 function renderMtRound(r) {
   mtClearHold();
+  if (window._activeSpaceHandler) { document.removeEventListener('keydown', window._activeSpaceHandler); window._activeSpaceHandler = null; }
+  if (window._mtRhythmKeyUp) { document.removeEventListener('keyup', window._mtRhythmKeyUp); window._mtRhythmKeyUp = null; }
+  if (typeof klRhyTapStop === 'function') { try { klRhyTapStop(); } catch (e) {} }
   mtState.revealHook = null;
   const banner = document.getElementById('mt-banner');
   banner.className = 'mt-banner ' + r.moduleClass;
@@ -28978,6 +28989,20 @@ function mtOffWords(c) {
   c = Math.round(c); const dir = c < 0 ? 'low' : 'high';
   return Math.abs(c) < 100 ? Math.abs(c) + '\u00A2 too ' + dir : 'about ' + mtSteps(Math.round(c / 100)) + ' too ' + dir;
 }
+// What did the player actually build? Name the interval / chord nearest their dots.
+function mtNameInterval(cents) {
+  const semis = Math.round(Math.abs(cents) / 100);
+  const def = EAR_INTERVALS.find(d => d.semis === semis);
+  const name = def ? def.label : semis + ' half steps';
+  const dev = Math.abs(cents) - semis * 100;   // + = sharp, - = flat
+  const tune = Math.abs(dev) > 20 ? (dev > 0 ? 'a slightly wide ' : 'a slightly narrow ') : 'a ';
+  return semis === 0 ? (Math.abs(cents) > 20 ? 'a slightly off unison' : 'a unison') : tune + name + (cents < 0 ? ' below' : '');
+}
+function mtNameChord(centsArr) {
+  const set = Array.from(new Set([0].concat(centsArr.map(c => ((Math.round(c / 100) % 12) + 12) % 12)))).sort((a, b) => a - b);
+  const def = EAR_CHORDS.find(d => d.ints.length === set.length && d.ints.every((v, i) => v % 12 === set[i]));
+  return def ? 'a ' + def.label + ' chord' : null;
+}
 function mtSteps(n) { n = Math.abs(n); return n === 1 ? '1 half step' : n + ' half steps'; }
 const MT_TONE_NAME = { 1: 'flat 2nd', 2: '2nd', 3: 'minor 3rd', 4: 'major 3rd', 5: '4th', 6: 'flat 5th', 7: '5th', 8: 'sharp 5th', 9: '6th', 10: 'flat 7th', 11: 'major 7th', 12: 'octave' };
 function mtNoteNameOnly(m) { return midiToNoteName(m).replace(/-?\d+$/, ''); }
@@ -29255,7 +29280,8 @@ function renderMtBuildRound(r) {
       playTone(midiFreq(q.rootMidi) * Math.pow(2, (cents / 100) / 12), t, 1.0, ctx, 0.2, 'piano');
     };
     const _off = Math.round(userCents - targetCents);
-    mtWrong({ replayMs: 2600, why: 'Your note was ' + mtOffWords(_off) + '. Listen: yours, then the target.', replay: () => {
+    mtWrong({ replayMs: 2600, why: 'You built ' + mtNameInterval(userCents) + ' \u2014 the target was a ' + q.def.label + (q.targetSemis < 0 ? ' below' : '') +
+      '. Your note was ' + mtOffWords(_off) + '. Listen: yours, then the target.', replay: () => {
       const ctx = getAudio(); const t = ctx.currentTime + 0.05;
       dyad(userCents, t, ctx); dyad(targetCents, t + 1.3, ctx);
     } });
@@ -29339,12 +29365,19 @@ function renderMtProgressionRound(r) {
       '<button type="button" class="mt-hear-btn" id="mt-prog-hear">▶ HEAR AGAIN</button>' +
       '<div class="mt-prog-ask" id="mt-prog-ask">Chord 2 is…</div>' +
       '<div class="mt-prog-btns">' + btns + '</div>' +
+      '<button type="button" class="build-submit-btn" id="mt-prog-submit" style="width:100%;max-width:640px;" disabled>SUBMIT</button>' +
     '</div>';
   const slotEl = i => host.querySelector('.mt-prog-slot[data-i="' + i + '"]');
+  const labelOf = id => (q.set.find(c => c.id === id) || {}).label || id;
+  const submitBtn = document.getElementById('mt-prog-submit');
   const paint = () => {
-    for (let i = 0; i < n; i++) slotEl(i).classList.toggle('active', i === active && !mtState.isAnswered);
+    for (let i = 0; i < n; i++) {
+      slotEl(i).classList.toggle('active', i === active && !mtState.isAnswered);
+      if (i > 0) slotEl(i).querySelector('.mt-prog-val').textContent = picked[i] ? labelOf(picked[i]) : '?';
+    }
     const ask = document.getElementById('mt-prog-ask');
-    if (ask) ask.textContent = mtState.isAnswered ? '' : 'Chord ' + (active + 1) + ' is…';
+    if (ask) ask.textContent = mtState.isAnswered ? '' : (active < n ? 'Chord ' + (active + 1) + ' is…' : 'Tap a box to change it, then SUBMIT');
+    submitBtn.disabled = mtState.isAnswered || picked.some(p => !p);
   };
   function play() {
     const ctx = getAudio(); const t0 = ctx.currentTime + 0.08;
@@ -29354,47 +29387,45 @@ function renderMtProgressionRound(r) {
     });
     return (n * q.beat + 0.3) * 1000;
   }
-  const hear = document.getElementById('mt-prog-hear');
-  hear.onclick = () => { if (!mtState.isAnswered) play(); };
+  document.getElementById('mt-prog-hear').onclick = () => { if (!mtState.isAnswered) play(); };
 
-  function finish(ok, timedOut) {
+  // tap a box (2..n) to pick which chord you're answering / changing
+  for (let i = 1; i < n; i++) slotEl(i).addEventListener('click', () => { if (mtState.isAnswered) return; active = i; paint(); });
+
+  function finish(timedOut) {
+    if (mtState.isAnswered) return;
     mtState.isAnswered = true;
     mtState.revealHook = null;
     stopMtTimer();
     host.querySelectorAll('.mt-prog-btn').forEach(b => b.disabled = true);
-    if (ok) { paint(); mtCorrect(); return; }
-    // reveal every chord's real name
+    const wrong = [];
     for (let i = 1; i < n; i++) {
       const el = slotEl(i);
-      if (picked[i] === q.prog[i].id) continue;
+      if (picked[i] === q.prog[i].id) { el.classList.add('correct'); continue; }
       el.classList.add(picked[i] ? 'wrong' : 'missed');
       el.querySelector('.mt-prog-ans').textContent = q.prog[i].label;
+      wrong.push(i);
     }
     paint();
-    let _why = '';
-    for (let i = 1; i < n; i++) if (picked[i] && picked[i] !== q.prog[i].id) {
-      const pl = (q.set.find(c => c.id === picked[i]) || {}).label || picked[i];
-      _why = 'Chord ' + (i + 1) + ' was ' + q.prog[i].label + ', not ' + pl + '.' + (q.prog[i].mnemonic ? ' ' + q.prog[i].mnemonic : '');
-      break;
-    }
-    mtWrong({ replayMs: n * q.beat * 1000 + 400, why: _why || 'The full progression is shown above.', replay: play });
+    if (!wrong.length && !timedOut) { mtCorrect(); return; }
+    const parts = wrong.map(i => 'chord ' + (i + 1) + ' was ' + q.prog[i].label + (picked[i] ? ' (you said ' + labelOf(picked[i]) + ')' : ''));
+    let why = parts.slice(0, 3).join('; ').replace(/^c/, 'C') + (parts.length > 3 ? '; and ' + (parts.length - 3) + ' more' : '') + '.';
+    if (wrong.length === 1 && q.prog[wrong[0]].mnemonic) why += ' ' + q.prog[wrong[0]].mnemonic;
+    mtWrong({ replayMs: n * q.beat * 1000 + 400, why, replay: play });
   }
   host.querySelectorAll('.mt-prog-btn').forEach(b => b.addEventListener('click', () => {
-    if (mtState.isAnswered) return;
-    const id = b.dataset.id, want = q.prog[active].id;
-    picked[active] = id;
-    const el = slotEl(active);
-    el.querySelector('.mt-prog-val').textContent = b.textContent;
-    if (id !== want) { finish(false); return; }
-    el.classList.add('correct');
-    // quick confirm: re-strike that chord
-    const ctx = getAudio(); const c = q.prog[active];
-    c.ints.forEach(s => playTone(midiFreq(q.keyRoot + c.degree + s), ctx.currentTime + 0.02, 0.35, ctx, 0.12, 'piano'));
-    active++;
-    if (active >= n) { finish(true); return; }
+    if (mtState.isAnswered || active >= n) return;
+    picked[active] = b.dataset.id;
+    // quick confirm: strike the chord you picked (in this key) so you can compare by ear
+    const ctx = getAudio(); const c = q.set.find(x => x.id === b.dataset.id);
+    if (c) c.ints.forEach(s => playTone(midiFreq(q.keyRoot + c.degree + s), ctx.currentTime + 0.02, 0.35, ctx, 0.12, 'piano'));
+    // jump to the next empty box (or past the end once all are filled)
+    let next = picked.findIndex((p, i) => i > 0 && !p);
+    active = next === -1 ? n : next;
     paint();
   }));
-  mtState.revealHook = (timedOut) => finish(false, timedOut);
+  submitBtn.addEventListener('click', () => finish(false));
+  mtState.revealHook = (timedOut) => finish(timedOut);
   paint();
   const ms = play();
   setTimeout(() => { if (!mtState.isAnswered) startMtTimer(); }, ms);
@@ -29584,9 +29615,18 @@ function renderMtChordRound(r) {
   const centsToPct0 = c => { let s = c / 100; s = Math.max(-range, Math.min(range, s)); return (s + range) / (range * 2) * 100; };
   if (isScale) { const oct = document.getElementById('mt-chord-oct'); oct.dataset.label = q.rootName; oct.style.left = centsToPct0(1200) + '%'; }
 
-  // Start each dot BELOW the root, spread out (-300, -600, -900¢): every dot is visible
-  // (none hidden under the root) and none can sit on a chord tone by accident.
-  const cents = q.targets.map((_, i) => -(i + 1) * 300);
+  // Every dot starts in the middle (on the root's pitch). Each dot rides its own lane
+  // under the rail, so stacked dots stay visible and you grab the one you touch.
+  const cents = q.targets.map(() => 0);
+  const MT_LANE0 = 40, MT_LANE = 30;   // rail centre y, lane spacing (px)
+  ruler.style.height = (MT_LANE0 + MT_LANE * nTargets + 38) + 'px';
+  for (let i = 0; i < nTargets; i++) {
+    const mk = document.getElementById('mt-chord-mk-' + i);
+    const laneY = MT_LANE0 + MT_LANE * (i + 1);
+    mk.classList.add('mt-lane-dot');
+    mk.style.top = (laneY - 14) + 'px';
+    mk.style.setProperty('--lane', (laneY - MT_LANE0) + 'px');
+  }
   const centsToPct = c => { let s = c / 100; s = Math.max(-range, Math.min(range, s)); return (s + range) / (range * 2) * 100; };
   function placeAll() { for (let i = 0; i < nTargets; i++) document.getElementById('mt-chord-mk-' + i).style.left = centsToPct(cents[i]) + '%'; }
   for (let i = 0; i < nTargets; i++) { const mk = document.getElementById('mt-chord-mk-' + i); if (mk) mk.style.transition = 'none'; }  // 1:1 tracking (kill the laggy shared left-transition)
@@ -29630,7 +29670,10 @@ function renderMtChordRound(r) {
     if (mtState.isAnswered) return;
     const x = e.touches ? e.touches[0].clientX : e.clientX;
     const c = xToCents(x);
-    activeMk = nearestMarker(c);
+    // touching a lane grabs THAT lane's dot; touching the rail grabs the nearest dot
+    const yy = e.touches ? e.touches[0].clientY : e.clientY;
+    const lane = Math.round((yy - ruler.getBoundingClientRect().top - MT_LANE0) / MT_LANE) - 1;
+    activeMk = (lane >= 0 && lane < nTargets) ? lane : nearestMarker(c);
     cents[activeMk] = c; placeAll();
     mtChordLiveStart(midiFreq(q.rootMidi), cents, isScale ? [midiFreq(q.rootMidi) * 2] : []);  // start the live chord drone
     e.preventDefault();
@@ -29699,7 +29742,9 @@ function renderMtChordRound(r) {
       const mi = _badM[k];
       return mi == null ? nm + ' was missing' : nm + ': your dot was ' + mtOffWords(cents[mi] - targetCents[ti]);
     });
-    const _why = _bad.length ? (_bad.join('; ').replace(/^t/, 'T') + '. Anything within 50\u00A2 counts.') : '';
+    const _built = mtNameChord(cents);
+    const _why = (_built ? 'You built ' + _built + ' \u2014 the target was a ' + q.label + ' chord. ' : '') +
+      (_bad.length ? (_bad.join('; ').replace(/^t/, 'T') + '. Anything within 50\u00A2 counts.') : '');
     mtWrong({ replayMs: 3200, why: _why, replay: () => {
       playChord(cents, 1.3, 0.2);
       setTimeout(() => { if (mtState._hold) playChord(targetCents, 1.3, 0.2); }, 1600);
@@ -29860,7 +29905,9 @@ function renderMtRhythmRound(r) {
   const rTsParts = (q.meter || '4/4').split('/');
   const rMeterBeats = parseInt(rTsParts[0]) || 4;
   const rTs = [rMeterBeats, parseInt(rTsParts[1]) || 4];
-  const rSeed = klRhySeed((q.patternDescription || '') + '|' + (q.meter || '') + '|' + (rVisual || ''));
+  // Fresh seed every round so the same rhythm gets a new melody each time (the old seed
+  // came only from the pattern text, so a pattern always sounded identical).
+  const rSeed = klRhySeed((q.patternDescription || '') + '|' + (q.meter || '') + '|' + (rVisual || '') + '|' + Math.random());
   const rNotation = klRhythmNotation(rVisual, rMeterBeats, rTs, 'beginner', rSeed);
   const mtMelodyFreqs = (rNotation && rNotation.pitches && rNotation.pitches.length)
     ? rNotation.pitches.map(m => 440 * Math.pow(2, (m - 69) / 12))
@@ -29916,7 +29963,7 @@ function renderMtRhythmRound(r) {
   const startT = ctx.currentTime + 0.15;
 
   for (let i = 0; i < countBeats; i++) {
-    const beatNum = i + 1;
+    const beatNum = countBeats - i;   // count DOWN: 4, 3, 2, 1, GO!
     const wallDelay = Math.max(0, (startT + i * interval - ctx.currentTime) * 1000);
     mtSchedule(() => {
       if (!mtState.rhythmActive) return;
@@ -29983,8 +30030,10 @@ function renderMtRhythmRound(r) {
   zone.addEventListener('touchend',   (e) => { e.preventDefault(); onTapUp(); }, { passive: false });
   zone.addEventListener('touchcancel', onTapUp);
 
+  const myRound = mtState.currentRound;
   const onSpace = (e) => {
     if (e.code !== 'Space') return;
+    if (mtState.currentRound !== myRound || !mtState.rhythmActive) return;   // stale handler from an earlier rhythm round
     if (e.repeat) return;   // auto-repeat fires keydown many times while held — one tap per press
     const tag = document.activeElement?.tagName;
     const type = document.activeElement?.type;
@@ -29995,6 +30044,7 @@ function renderMtRhythmRound(r) {
   };
   const onSpaceUp = (e) => {
     if (e.code !== 'Space') return;
+    if (mtState.currentRound !== myRound) return;
     e.preventDefault();
     onTapUp();    // release on key-up → sustain length = how long Space was held
   };
