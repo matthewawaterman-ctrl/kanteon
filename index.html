@@ -3698,6 +3698,11 @@
   .mt-spacekey { display: inline-block; margin-left: 8px; padding: 4px 26px 6px; border: 2px solid var(--gold);
     border-bottom-width: 5px; border-radius: 8px; color: var(--gold); background: rgba(240,192,64,0.08);
     font-size: 0.85em; letter-spacing: 3px; vertical-align: middle; }
+  .mt-why { position: fixed; left: 50%; bottom: 86px; transform: translateX(-50%); z-index: 9000;
+    width: min(760px, calc(100% - 160px)); padding: 12px 18px; border-radius: 10px;
+    background: rgba(29,26,63,0.96); border: 1px solid rgba(239,68,68,0.55); color: var(--text);
+    font-family: var(--font-display); font-weight: 700; font-size: 19px; line-height: 1.3; text-align: center;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.5); }
   .mt-next-btn {
     position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
     width: min(520px, calc(100% - 220px)); min-width: 220px; height: 52px;
@@ -7372,7 +7377,7 @@ const db = getFirestore(fbApp);
    ═══════════════════════════════════════════════════════════════════════════ */
 const KANTEON_CONFIG = {
   // ——— Arcade Mode ———
-  arcadeWrongHoldSeconds: 3,
+  arcadeWrongHoldSeconds: 5,
   // Arcade: seconds per BUILD / TRANSCRIPTION question at levels 1-5. These take real
   // time to tune by ear, so they stay roomy and only get tight at the top level.
   arcadeBuildSeconds: {
@@ -21692,7 +21697,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.10.31b'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.10.31e'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -27778,7 +27783,7 @@ const MT_TUNE = {
   MIN_TIMER:    5,    // s — floor the window tightens toward
   TIMER_STEP: 1.4,    // s shaved off the window per level reached
   MAX_LEVEL:    5,    // pool ceiling (matches mtBuildPool levels 1–5)
-  LEVEL_MOMENTUM: 4,  // momentum needed to advance one level
+  LEVEL_MOMENTUM: 8,  // momentum needed to advance one level (was 4 — L5 arrived after ~10 answers)
   BASE_PTS:    10,    // per-level base; points = level × BASE_PTS × speed × streak
   SPEED_BONUS: 1.0,   // max EXTRA multiplier at an instant answer → score 1×…2× on speed
 };
@@ -27795,7 +27800,7 @@ function mtBuildPool(maxLevel) {
       if (lvl >= 2) (EAR_PRESETS.scales?.[lvl] || []).forEach(id => pool.push({ kind: 'ear-scale', id, lvl }));
     }
   }
-  // ToneDear-style functional ear training (see MT_PROG / MT_DEG below). One pool
+  // Toned Ear-style functional ear training (see MT_PROG / MT_DEG below). One pool
   // entry each — the round reads the current level for its chord/degree set.
   if (maxLevel >= 2) {
     pool.push({ kind: 'ear-progression', id: 'prog', lvl: maxLevel });
@@ -27834,13 +27839,14 @@ function mtBuildPool(maxLevel) {
   };
 
   const MT_INSTRUMENT_QUESTIONS_ON = false;   // off until real instrument recordings land
+  const MT_ARTICULATION_QUESTIONS_ON = false; // off until real audio examples land
   for (let lvl = 1; lvl <= maxLevel; lvl++) {
     if (MT_INSTRUMENT_QUESTIONS_ON) (instSets[lvl] || []).forEach(id => {
       if (!pool.find(p => p.kind === 'al-instrument' && p.id === id)) {
         pool.push({ kind: 'al-instrument', id, lvl });
       }
     });
-    (artSets[lvl] || []).forEach(id => {
+    if (MT_ARTICULATION_QUESTIONS_ON) (artSets[lvl] || []).forEach(id => {
       if (!pool.find(p => p.kind === 'al-articulation' && p.id === id)) {
         pool.push({ kind: 'al-articulation', id, lvl });
       }
@@ -27862,7 +27868,15 @@ function mtBuildPool(maxLevel) {
 
   // Build Mode — construct CHORDS by ear (multi-marker). Introduced at level 2+
   // so the first level stays interval-only. Harder chords unlock with level.
-  const buildChordSets = KANTEON_LADDER.chords;   // unified ladder (re-tiered: 7ths mid-game, exotic at L5)
+  // Arcade's own BUILD-a-chord ladder — gentler than Lesson's KANTEON_LADDER.chords.
+  // Building by ear is much harder than naming, so exotic chords (aug7, dim7, half-dim,
+  // 6ths) stay out of Arcade entirely; they live in Lesson mode.
+  const buildChordSets = {
+    2: ['major', 'minor'],
+    3: ['major', 'minor', 'sus4'],
+    4: ['major', 'minor', 'sus2', 'sus4', 'dom7'],
+    5: ['major', 'minor', 'sus2', 'sus4', 'dom7', 'maj7', 'min7', 'dim', 'aug'],
+  };
   if (maxLevel >= 2) {
     const cset = buildChordSets[Math.min(maxLevel, 5)] || buildChordSets[2];
     cset.forEach(id => { if (EAR_CHORDS.find(c => c.id === id)) pool.push({ kind: 'build-chord', id, lvl: maxLevel }); });
@@ -28344,7 +28358,7 @@ function buildMtRound(pick) {
     };
   }
   if (pick.kind === 'ear-progression') {
-    // ToneDear chord-progressions: chord 1 is always I (given); chords 2..N are
+    // Toned Ear chord-progressions: chord 1 is always I (given); chords 2..N are
     // drawn from the level's set (repeats allowed); root-position block chords.
     const lvl = Math.max(2, Math.min(5, mtState.level || pick.lvl || 2));
     const set = MT_PROG.sets[lvl].map(id => EAR_PROGRESSION_CHORDS.find(c => c.id === id)).filter(Boolean);
@@ -28355,7 +28369,7 @@ function buildMtRound(pick) {
       do { c = set[Math.floor(Math.random() * set.length)]; } while (c === prog[i - 1] && guard++ < 6);   // no immediate repeat
       prog.push(c);
     }
-    const keyRoot = 55 + Math.floor(Math.random() * 9);   // G3..D#4 (ToneDear's default is D4)
+    const keyRoot = 55 + Math.floor(Math.random() * 9);   // G3..D#4 (Toned Ear's default is D4)
     return {
       module: 'EAR TRAINING', moduleClass: 'mod-ear',
       typeLabel: 'CHORD PROGRESSION',
@@ -28365,7 +28379,7 @@ function buildMtRound(pick) {
     };
   }
   if (pick.kind === 'ear-scaleDegree') {
-    // ToneDear functional scale degrees: I-IV-V-I cadence sets the key, then ONE
+    // Toned Ear functional scale degrees: I-IV-V-I cadence sets the key, then ONE
     // note. All of the level's degrees are offered, in scale order. A miss plays
     // the note walking stepwise home to do — the resolution is the lesson.
     const lvl = Math.max(2, Math.min(5, mtState.level || pick.lvl || 2));
@@ -28380,7 +28394,7 @@ function buildMtRound(pick) {
       typeLabel: 'SCALE DEGREE',
       prompt: 'Which scale degree is the last note?',
       correctId: def.id,
-      answers: answersDefs.map(d => ({ id: d.id, label: d.label })),
+      answers: answersDefs.map(d => ({ id: d.id, label: d.label, semis: d.semis, mnemonic: d.mnemonic })),
       keepOrder: true,
       audio: (ctx, t0) => mtPlayDegreeQuestion(ctx, t0, keyRoot, def.semis + oct),
       review: () => { const ctx = getAudio(); mtPlayDegreeResolve(ctx, ctx.currentTime + 0.05, keyRoot, def.semis, oct); },
@@ -28787,7 +28801,7 @@ function handleMtAnswer(pickedId, btn) {
       if (b.dataset.id === r.correctId) b.classList.add('correct');
       b.disabled = true;
     });
-    mtWrong(r.review ? { replay: r.review, replayMs: r.reviewMs } : undefined);
+    mtWrong({ replay: r.review, replayMs: r.reviewMs || 0, why: mtWhyMcq(r, pickedId) });
   }
 }
 
@@ -28806,7 +28820,7 @@ function mtTimeout() {
     if (b.dataset.id === r.correctId) b.classList.add('correct');
     b.disabled = true;
   });
-  mtWrong(r && r.review ? { replay: r.review, replayMs: r.reviewMs } : undefined);
+  mtWrong({ replay: r && r.review, replayMs: (r && r.reviewMs) || 0, why: r && r.answers ? mtWhyMcq(r, null) : '' });
 }
 
 function mtCorrect() {
@@ -28839,11 +28853,14 @@ function mtWrong(opts) {
   mtState.lives--;
   renderMtHud();
   mtFlash('×', 'wrong');
-  const holdMs = Math.max((KANTEON_CONFIG.arcadeWrongHoldSeconds || 3) * 1000, (opts.replayMs || 0) + 900);
+  let why = opts.why || '';
+  if (mtState._timedOut) why = 'Time ran out.' + (why ? ' ' + why : '');
+  // longer explanations get a little more reading time
+  const holdMs = Math.max((KANTEON_CONFIG.arcadeWrongHoldSeconds || 5) * 1000, (opts.replayMs || 0) + 900, 2500 + why.length * 45);
   mtStartReviewHold(holdMs, () => {
     if (mtState.lives <= 0) endMixtape();
     else nextMtRound();
-  });
+  }, why);
   if (typeof opts.replay === 'function') setTimeout(() => { if (mtState._hold) { try { opts.replay(); } catch (e) {} } }, 450);
 }
 
@@ -28956,6 +28973,40 @@ window.klDevQStatsCSV = function () {
   a.download = 'kanteon_question_stats.csv'; a.click();
 };
 
+// ── "Why was that wrong?" — one plain sentence shown during the review hold ──
+function mtOffWords(c) {
+  c = Math.round(c); const dir = c < 0 ? 'low' : 'high';
+  return Math.abs(c) < 100 ? Math.abs(c) + '\u00A2 too ' + dir : 'about ' + mtSteps(Math.round(c / 100)) + ' too ' + dir;
+}
+function mtSteps(n) { n = Math.abs(n); return n === 1 ? '1 half step' : n + ' half steps'; }
+const MT_TONE_NAME = { 1: 'flat 2nd', 2: '2nd', 3: 'minor 3rd', 4: 'major 3rd', 5: '4th', 6: 'flat 5th', 7: '5th', 8: 'sharp 5th', 9: '6th', 10: 'flat 7th', 11: 'major 7th', 12: 'octave' };
+function mtNoteNameOnly(m) { return midiToNoteName(m).replace(/-?\d+$/, ''); }
+function mtWhyMcq(r, pickedId) {
+  const ans = r.answers.find(a => a.id === r.correctId) || {};
+  const pick = pickedId ? r.answers.find(a => a.id === pickedId) : null;
+  const it = 'It was ' + ans.label + '.';
+  if (!pick) return it;
+  // tempo: faster / slower
+  if (/^bpm\d+$/.test(r.correctId) && /^bpm\d+$/.test(pickedId)) {
+    const a = +r.correctId.slice(3), b = +pickedId.slice(3);
+    return it + ' You picked ' + b + ' — the beat was ' + (a < b ? 'slower' : 'faster') + ' than that.';
+  }
+  // intervals / scale degrees / anything with a semitone size: bigger or smaller
+  if (typeof ans.semis === 'number' && typeof pick.semis === 'number' && ans.semis !== pick.semis) {
+    const d = ans.semis - pick.semis;
+    const what = r.typeLabel === 'SCALE DEGREE' ? 'note was ' + (d > 0 ? 'higher' : 'lower') : 'sound was ' + (d > 0 ? 'wider' : 'narrower');
+    return it + ' You picked ' + pick.label + ' — the ' + what + ' by ' + mtSteps(d) + '.';
+  }
+  // notation: use the catalog's reading tip
+  if (r.module === 'NOTATION') {
+    const cat = []; Object.values(NOTATION_META).forEach(m => m.catalog.forEach(i => cat.push(i)));
+    const item = cat.find(i => i.id === r.correctId);
+    return it + (item && item.mnemonic ? ' ' + item.mnemonic : '');
+  }
+  const tip = ans.mnemonic ? ' ' + ans.mnemonic : '';
+  return it + ' (Not ' + pick.label + '.)' + tip;
+}
+
 // ── Wrong-answer review hold ─────────────────────────────────────────────────
 // Keeps the revealed answer on screen so the kid can see WHY, then moves on.
 // A NEXT button (also Enter / Space) skips the wait. Any round change clears it.
@@ -28965,9 +29016,13 @@ function mtClearHold() {
   if (h) { clearTimeout(h.timer); document.removeEventListener('keydown', h.key, true); }
   const b = document.getElementById('mt-next-btn');
   if (b) b.remove();
+  const w = document.getElementById('mt-why');
+  if (w) w.remove();
+  mtState._why = '';
 }
-function mtStartReviewHold(ms, cont) {
+function mtStartReviewHold(ms, cont, why) {
   mtClearHold();
+  mtState._why = why || '';
   const go = () => { if (!mtState._hold) return; mtClearHold(); cont(); };
   const key = (e) => {
     if (e.code === 'Enter' || e.code === 'Space' || e.code === 'ArrowRight' && !(e.metaKey || e.ctrlKey)) {
@@ -28985,6 +29040,12 @@ function mtStartReviewHold(ms, cont) {
   btn.onclick = go;
   const screen = document.getElementById('mixtape-session');
   (screen || document.body).appendChild(btn);
+  if (mtState._why) {
+    const w = document.createElement('div');
+    w.id = 'mt-why'; w.className = 'mt-why';
+    w.textContent = mtState._why;
+    (screen || document.body).appendChild(w);
+  }
 }
 
 function mtFlash(text, kind) {
@@ -29193,7 +29254,8 @@ function renderMtBuildRound(r) {
       playTone(midiFreq(q.rootMidi), t, 1.0, ctx, 0.2, 'piano');
       playTone(midiFreq(q.rootMidi) * Math.pow(2, (cents / 100) / 12), t, 1.0, ctx, 0.2, 'piano');
     };
-    mtWrong({ replayMs: 2600, replay: () => {
+    const _off = Math.round(userCents - targetCents);
+    mtWrong({ replayMs: 2600, why: 'Your note was ' + mtOffWords(_off) + '. Listen: yours, then the target.', replay: () => {
       const ctx = getAudio(); const t = ctx.currentTime + 0.05;
       dyad(userCents, t, ctx); dyad(targetCents, t + 1.3, ctx);
     } });
@@ -29205,11 +29267,11 @@ function renderMtBuildRound(r) {
   setTimeout(() => { if (!mtState.isAnswered) startMtTimer(); }, 200);
 }
 
-// ── ToneDear-style functional ear training (Arcade) ─────────────────────────
+// ── Toned Ear-style functional ear training (Arcade) ─────────────────────────
 // Modeled on tonedear.com's chord-progression + functional scale-degree quizzes
 // (read from their source, 2026-10-31): progression chord 1 is always I, the rest
 // random from the active set; scale-degree key set by a I-IV-V-I cadence, then
-// one note; degrees unlock in ToneDear's difficulty order 1,3,5,2,7,6,4, then
+// one note; degrees unlock in Toned Ear's difficulty order 1,3,5,2,7,6,4, then
 // chromatic. Edit the sets here.
 const MT_PROG = {
   sets: {
@@ -29219,7 +29281,7 @@ const MT_PROG = {
     5: ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'Imaj7', 'iim7', 'V7', 'vim7'],
   },
   length: { 2: 3, 3: 4, 4: 4, 5: 5 },          // chords per progression (incl. the given I)
-  beat:   { 2: 0.9, 3: 0.9, 4: 0.75, 5: 0.6 },  // seconds per chord (ToneDear medium = 0.9)
+  beat:   { 2: 0.9, 3: 0.9, 4: 0.75, 5: 0.6 },  // seconds per chord (Toned Ear medium = 0.9)
 };
 const MT_DEG = {
   sets: {
@@ -29231,7 +29293,7 @@ const MT_DEG = {
 };
 const MT_TEMPO_GAP = { 3: 36, 4: 22, 5: 12 };   // BPM between the four answer choices
 
-// I-IV-V-I cadence (ToneDear voicings: I=0,4,7  IV=5,9,12  V=7,11,14), then the note.
+// I-IV-V-I cadence (Toned Ear voicings: I=0,4,7  IV=5,9,12  V=7,11,14), then the note.
 function mtPlayCadence(ctx, t0, root, step) {
   const V = [[0, 4, 7], [5, 9, 12], [7, 11, 14], [0, 4, 7]];
   V.forEach((ch, i) => ch.forEach(s => playTone(midiFreq(root + s), t0 + i * step, step * 0.95, ctx, 0.15, 'piano')));
@@ -29243,7 +29305,7 @@ function mtPlayDegreeQuestion(ctx, t0, root, semis) {
   return (cad + 0.45 + 1.4) * 1000 + 150;
 }
 // Walk the note home along the major scale (down for 1-4, up for 5-7, like
-// ToneDear's "hear descending/ascending to root").
+// Toned Ear's "hear descending/ascending to root").
 const MT_MAJOR = [0, 2, 4, 5, 7, 9, 11, 12];
 function mtDegreePath(semis) {
   if (semis === 0) return [0];
@@ -29309,7 +29371,13 @@ function renderMtProgressionRound(r) {
       el.querySelector('.mt-prog-ans').textContent = q.prog[i].label;
     }
     paint();
-    mtWrong({ replayMs: n * q.beat * 1000 + 400, replay: play });
+    let _why = '';
+    for (let i = 1; i < n; i++) if (picked[i] && picked[i] !== q.prog[i].id) {
+      const pl = (q.set.find(c => c.id === picked[i]) || {}).label || picked[i];
+      _why = 'Chord ' + (i + 1) + ' was ' + q.prog[i].label + ', not ' + pl + '.' + (q.prog[i].mnemonic ? ' ' + q.prog[i].mnemonic : '');
+      break;
+    }
+    mtWrong({ replayMs: n * q.beat * 1000 + 400, why: _why || 'The full progression is shown above.', replay: play });
   }
   host.querySelectorAll('.mt-prog-btn').forEach(b => b.addEventListener('click', () => {
     if (mtState.isAnswered) return;
@@ -29448,7 +29516,12 @@ function renderMtScaleRound(r) {
     document.getElementById('mt-scale-submit').disabled = true;
     if (allOk) { mtCorrect(); return; }
     const dur = n * STEP * 1000;
-    mtWrong({ replayMs: dur * 2 + 700, replay: () => {
+    const _bad = [];
+    for (let i = 0; i < n; i++) if (!fixed[i] && vals[i] !== full[i]) {
+      const d = vals[i] - full[i];
+      _bad.push('note ' + (i + 1) + ' was ' + mtSteps(d) + ' too ' + (d < 0 ? 'low' : 'high'));
+    }
+    mtWrong({ replayMs: dur * 2 + 700, why: _bad.join('; ').replace(/^n/, 'N') + '. Yours plays first, then the real scale.', replay: () => {
       playSeq(vals);
       setTimeout(() => { if (mtState._hold) playSeq(full); }, dur + 700);
     } });
@@ -29511,7 +29584,9 @@ function renderMtChordRound(r) {
   const centsToPct0 = c => { let s = c / 100; s = Math.max(-range, Math.min(range, s)); return (s + range) / (range * 2) * 100; };
   if (isScale) { const oct = document.getElementById('mt-chord-oct'); oct.dataset.label = q.rootName; oct.style.left = centsToPct0(1200) + '%'; }
 
-  const cents = q.targets.map(() => 0);   // each marker's cents-from-root; start on root
+  // Start each dot BELOW the root, spread out (-300, -600, -900¢): every dot is visible
+  // (none hidden under the root) and none can sit on a chord tone by accident.
+  const cents = q.targets.map((_, i) => -(i + 1) * 300);
   const centsToPct = c => { let s = c / 100; s = Math.max(-range, Math.min(range, s)); return (s + range) / (range * 2) * 100; };
   function placeAll() { for (let i = 0; i < nTargets; i++) document.getElementById('mt-chord-mk-' + i).style.left = centsToPct(cents[i]) + '%'; }
   for (let i = 0; i < nTargets; i++) { const mk = document.getElementById('mt-chord-mk-' + i); if (mk) mk.style.transition = 'none'; }  // 1:1 tracking (kill the laggy shared left-transition)
@@ -29611,7 +29686,21 @@ function renderMtChordRound(r) {
     document.getElementById('mt-chord-submit').disabled = true;
     if (allHit && !timedOut) { mtCorrect(); return; }
     // review: your chord, then the target chord
-    mtWrong({ replayMs: 3200, replay: () => {
+    // pair the dots that missed with the chord tones nobody hit (both low→high)
+    const _hitT = new Set();
+    for (let i = 0; i < nTargets; i++) if (okByMarker[i]) {
+      let best = -1; targetCents.forEach((tc, ti) => { if (!_hitT.has(ti) && (best < 0 || Math.abs(cents[i] - tc) < Math.abs(cents[i] - targetCents[best]))) best = ti; });
+      if (best >= 0) _hitT.add(best);
+    }
+    const _missT = targetCents.map((tc, ti) => ti).filter(ti => !_hitT.has(ti)).sort((a, b) => targetCents[a] - targetCents[b]);
+    const _badM = [...Array(nTargets).keys()].filter(i => !okByMarker[i]).sort((a, b) => cents[a] - cents[b]);
+    const _bad = _missT.map((ti, k) => {
+      const nm = 'the ' + (MT_TONE_NAME[Math.round(targetCents[ti] / 100)] || 'note');
+      const mi = _badM[k];
+      return mi == null ? nm + ' was missing' : nm + ': your dot was ' + mtOffWords(cents[mi] - targetCents[ti]);
+    });
+    const _why = _bad.length ? (_bad.join('; ').replace(/^t/, 'T') + '. Anything within 50\u00A2 counts.') : '';
+    mtWrong({ replayMs: 3200, why: _why, replay: () => {
       playChord(cents, 1.3, 0.2);
       setTimeout(() => { if (mtState._hold) playChord(targetCents, 1.3, 0.2); }, 1600);
     } });
@@ -29735,7 +29824,9 @@ function renderMtTranscriptionRound(r) {
     document.getElementById('mt-tx-submit').disabled = true;
     if (allHit) { mtCorrect(); return; }
     const dur = target.length * 0.42 * 1000;
-    mtWrong({ replayMs: dur * 2 + 600, replay: () => {
+    const _bad = [];
+    target.forEach((m, c) => { if (placed[c] !== m) _bad.push('note ' + (c + 1) + ' was ' + mtNoteNameOnly(m) + (placed[c] == null ? ' (you left it empty)' : ' (you put ' + mtNoteNameOnly(placed[c]) + ')')); });
+    mtWrong({ replayMs: dur * 2 + 600, why: _bad.slice(0, 3).join('; ').replace(/^n/, 'N') + (_bad.length > 3 ? '; and ' + (_bad.length - 3) + ' more' : '') + '.', replay: () => {
       playSeq(placed);
       setTimeout(() => { if (mtState._hold) playSeq(target); }, dur + 600);
     } });
@@ -29942,8 +30033,9 @@ function renderMtRhythmRound(r) {
         const upT = (tr.upT != null) ? tr.upT : scoreT;   // still holding at scoring → count up to now
         const heldBeats = (upT - tr.downT) / beatInterval;
         const expBeats = mtOnsetDurs ? (mtOnsetDurs[i] || 1) : 1;
-        if (expBeats > 1.25 && heldBeats < Math.max(expBeats * 0.6, expBeats - 1)) status = 'miss';  // didn't sustain
-      }
+        if (expBeats > 1.25 && heldBeats < Math.max(expBeats * 0.6, expBeats - 1)) { status = 'miss'; tr.why = 'short'; }  // didn't sustain
+      } else if (tr.downT == null) tr.why = 'none';
+      else if (tr.deltaMs != null) tr.why = tr.deltaMs < 0 ? 'early' : 'late';
       tr.status = status;
       const dot = indicators.children[i];
       if (dot) dot.className = 'tap-dot ' + status;
@@ -29962,7 +30054,21 @@ function renderMtRhythmRound(r) {
     klRhyTapStop();   // kill any tone still ringing if the round scored mid-hold
     mtState.rhythmActive = false;
     if (isCorrect) mtCorrect();
-    else mtWrong();
+    else {
+      const durName = b => b >= 4 ? 'whole notes ring for 4 beats' : b >= 3 ? 'dotted half notes ring for 3 beats' : b >= 2 ? 'half notes ring for 2 beats' : '';
+      const groups = { short: [], early: [], late: [], none: [] };
+      tapResults.forEach((tr, i) => { if (tr.status === 'miss' && tr.why) groups[tr.why].push(i + 1); });
+      const list = a => a.length === 1 ? 'note ' + a[0] : 'notes ' + a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
+      const parts = [];
+      if (groups.short.length) {
+        const b = mtOnsetDurs ? (mtOnsetDurs[groups.short[0] - 1] || 2) : 2;
+        parts.push('You let go too soon on ' + list(groups.short) + ' \u2014 hold SPACE down: ' + (durName(b) || 'long notes need holding') + '.');
+      }
+      if (groups.early.length) parts.push(list(groups.early).replace(/^n/, 'N') + (groups.early.length > 1 ? ' were' : ' was') + ' too early.');
+      if (groups.late.length) parts.push(list(groups.late).replace(/^n/, 'N') + (groups.late.length > 1 ? ' were' : ' was') + ' too late.');
+      if (groups.none.length) parts.push(list(groups.none).replace(/^n/, 'N') + (groups.none.length > 1 ? ' were' : ' was') + ' never tapped.');
+      mtWrong({ why: parts.join(' ') || 'Not quite in time \u2014 listen for the click.' });
+    }
   }, scoreDelay);
 }
 
