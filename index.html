@@ -3711,6 +3711,9 @@
     background: rgba(29,26,63,0.96); border: 1px solid rgba(239,68,68,0.55); color: var(--text);
     font-family: var(--font-display); font-weight: 700; font-size: 19px; line-height: 1.3; text-align: center;
     box-shadow: 0 6px 24px rgba(0,0,0,0.5); }
+  .mt-why.good { border-color: rgba(74,222,128,0.6); }
+  .build-marker.correct[data-off]::after { content: '\2713  ' attr(data-off); white-space: nowrap; }
+  #mt-chord-ruler .build-marker.mt-lane-dot.correct[data-off]::after { content: '\2713  ' attr(data-off); color: var(--green); top: 6px; left: calc(100% + 6px); transform: none; white-space: nowrap; }
   .mt-next-btn {
     position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
     width: min(520px, calc(100% - 220px)); min-width: 220px; height: 52px;
@@ -7385,7 +7388,8 @@ const db = getFirestore(fbApp);
    ═══════════════════════════════════════════════════════════════════════════ */
 const KANTEON_CONFIG = {
   // ——— Arcade Mode ———
-  arcadeWrongHoldSeconds: 5,
+  arcadeWrongHoldSeconds: 7,
+  arcadeRightBuildHoldSeconds: 3.5, // Arcade: a CORRECT build answer stays up this long so you can see how close you got
   // Arcade: seconds per BUILD / TRANSCRIPTION question at levels 1-5. These take real
   // time to tune by ear, so they stay roomy and only get tight at the top level.
   arcadeBuildSeconds: {
@@ -21705,7 +21709,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.10.31k'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.10.31l'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -27840,10 +27844,12 @@ function mtBuildPool(maxLevel) {
     4: ['adagio', 'moderato', 'allegro', 'straight', 'swung'],
     5: ['largo', 'adagio', 'andante', 'moderato', 'allegro', 'presto', 'straight', 'swung', 'time44', 'time34', 'time68'],
   };
+  // Texture only — "solo"/"ensemble" are about HOW MANY INSTRUMENTS, not texture, and
+  // overlapped with monophonic (a solo melody IS monophonic), so they're out of Arcade.
   const texSets = {
-    3: ['mono', 'solo', 'ensemble'],
-    4: ['mono', 'homo', 'solo', 'ensemble'],
-    5: ['mono', 'homo', 'poly', 'solo', 'ensemble'],
+    3: ['mono', 'homo'],
+    4: ['mono', 'homo'],
+    5: ['mono', 'homo', 'poly'],
   };
 
   const MT_INSTRUMENT_QUESTIONS_ON = false;   // off until real instrument recordings land
@@ -28472,7 +28478,7 @@ function buildMtRound(pick) {
       typeLabel: 'TEXTURE',
       prompt: 'Identify the texture',
       correctId: def.id,
-      answers: pickAnswerSet(AL_TEXTURE, def, 4),
+      answers: pickAnswerSet(AL_TEXTURE.filter(t => t.id === 'mono' || t.id === 'homo' || t.id === 'poly'), def, 3),   // texture words only
       loopAudio: true,
       audio: (ctx, t0) => playTextureDemo(ctx, t0, def.id),
     };
@@ -28834,7 +28840,7 @@ function mtTimeout() {
   mtWrong({ replay: r && r.review, replayMs: (r && r.reviewMs) || 0, why: r && r.answers ? mtWhyMcq(r, null) : '' });
 }
 
-function mtCorrect() {
+function mtCorrect(opts) {
   mtLogAnswer(true);
   mtState.rounds++;
   mtState.correctCount++;
@@ -28850,7 +28856,10 @@ function mtCorrect() {
   mtState.score += pts;
   renderMtHud();
   mtFlash('+' + pts, 'correct');
-  setTimeout(() => nextMtRound(), 700);
+  if (opts && opts.why) {
+    const ms = Math.max((KANTEON_CONFIG.arcadeRightBuildHoldSeconds || 3.5) * 1000, 2000 + opts.why.length * 40);
+    mtStartReviewHold(ms, () => nextMtRound(), opts.why, true);
+  } else setTimeout(() => nextMtRound(), 700);
 }
 
 
@@ -28867,7 +28876,7 @@ function mtWrong(opts) {
   let why = opts.why || '';
   if (mtState._timedOut) why = 'Time ran out.' + (why ? ' ' + why : '');
   // longer explanations get a little more reading time
-  const holdMs = Math.max((KANTEON_CONFIG.arcadeWrongHoldSeconds || 5) * 1000, (opts.replayMs || 0) + 900, 2500 + why.length * 45);
+  const holdMs = Math.max((KANTEON_CONFIG.arcadeWrongHoldSeconds || 5) * 1000, (opts.replayMs || 0) + 900, 3000 + why.length * 65);
   mtStartReviewHold(holdMs, () => {
     if (mtState.lives <= 0) endMixtape();
     else nextMtRound();
@@ -29045,9 +29054,10 @@ function mtClearHold() {
   if (w) w.remove();
   mtState._why = '';
 }
-function mtStartReviewHold(ms, cont, why) {
+function mtStartReviewHold(ms, cont, why, good) {
   mtClearHold();
   mtState._why = why || '';
+  mtState._whyGood = !!good;
   const go = () => { if (!mtState._hold) return; mtClearHold(); cont(); };
   const key = (e) => {
     if (e.code === 'Enter' || e.code === 'Space' || e.code === 'ArrowRight' && !(e.metaKey || e.ctrlKey)) {
@@ -29061,13 +29071,13 @@ function mtStartReviewHold(ms, cont, why) {
   btn.className = 'mt-next-btn';
   btn.type = 'button';
   btn.innerHTML = '<span class="mt-next-fill" style="animation-duration:' + ms + 'ms"></span><span class="mt-next-label">' +
-    (mtState.lives <= 0 ? 'SEE RESULTS →' : 'NEXT →') + '</span>';
+    (mtState.lives <= 0 && !good ? 'SEE RESULTS →' : 'NEXT →') + '</span>';
   btn.onclick = go;
   const screen = document.getElementById('mixtape-session');
   (screen || document.body).appendChild(btn);
   if (mtState._why) {
     const w = document.createElement('div');
-    w.id = 'mt-why'; w.className = 'mt-why';
+    w.id = 'mt-why'; w.className = 'mt-why' + (mtState._whyGood ? ' good' : '');
     w.textContent = mtState._why;
     (screen || document.body).appendChild(w);
   }
@@ -29271,7 +29281,13 @@ function renderMtBuildRound(r) {
     ghost.style.left = centsToPct(targetCents) + '%';
     ghost.classList.add('show');
     document.getElementById('mt-build-submit').disabled = true;
-    if (isCorrect) { marker.classList.add('correct'); mtCorrect(); return; }
+    if (isCorrect) {
+      const d = Math.round(userCents - targetCents);
+      marker.classList.add('correct');
+      marker.dataset.off = d === 0 ? 'spot on' : Math.abs(d) + '\u00A2 ' + (d < 0 ? 'low' : 'high');
+      mtCorrect({ why: 'Nice! ' + (Math.abs(d) <= 5 ? 'Dead on \u2014 ' : '') + (d === 0 ? 'perfectly in tune.' : 'you were ' + Math.abs(d) + '\u00A2 ' + (d < 0 ? 'low' : 'high') + ' (anything within 50\u00A2 counts).') });
+      return;
+    }
     marker.classList.add('wrong');
     marker.dataset.off = mtOffText(userCents - targetCents);
     // review: yours, then the target
@@ -29727,7 +29743,20 @@ function renderMtChordRound(r) {
       }
     }
     document.getElementById('mt-chord-submit').disabled = true;
-    if (allHit && !timedOut) { mtCorrect(); return; }
+    if (allHit && !timedOut) {
+      // show how close each tone was
+      const used = new Set(); const parts = [];
+      cents.map((c, i) => i).sort((a, b) => cents[a] - cents[b]).forEach(i => {
+        let best = -1; targetCents.forEach((tc, ti) => { if (!used.has(ti) && (best < 0 || Math.abs(cents[i] - tc) < Math.abs(cents[i] - targetCents[best]))) best = ti; });
+        used.add(best);
+        const d = Math.round(cents[i] - targetCents[best]);
+        const txt = d === 0 ? 'spot on' : Math.abs(d) + '\u00A2 ' + (d < 0 ? 'low' : 'high');
+        document.getElementById('mt-chord-mk-' + i).dataset.off = txt;
+        parts.push((MT_TONE_NAME[Math.round(targetCents[best] / 100)] || 'note') + ' ' + txt);
+      });
+      mtCorrect({ why: 'Nice! ' + parts.join(' \u00B7 ') + '.' });
+      return;
+    }
     // review: your chord, then the target chord
     // pair the dots that missed with the chord tones nobody hit (both low→high)
     const _hitT = new Set();
