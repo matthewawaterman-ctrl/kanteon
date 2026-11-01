@@ -3660,7 +3660,8 @@
      step numbers into the hint line) and the scale builder's hint. Exempt both. */
   #mt-rhythm-host > div > div.mt-tx-scroll,
   #mt-rhythm-host > div.mt-scale-wrap > div.bscale-hint ,
-  #mt-rhythm-host > div.mt-prog-wrap > div { transform: none; }
+  #mt-rhythm-host > div.mt-prog-wrap > div,
+  #mt-rhythm-host > div.mt-rw-wrap > div { transform: none; }
   .mt-answer-btn:hover:not(:disabled) { background: var(--bg3); border-color: var(--border2); }
   .mt-answer-btn:active:not(:disabled) { transform: scale(0.98); }
   .mt-answer-btn:disabled { cursor: not-allowed; opacity: 0.5; }
@@ -3706,11 +3707,32 @@
   #mt-chord-ruler .build-marker.mt-lane-dot::before { content: ''; position: absolute; left: 50%; bottom: 100%;
     width: 2px; height: calc(var(--lane) - 14px); background: rgba(155,143,255,0.35); transform: translateX(-50%); }
   #mt-chord-ruler .build-target-marker::after { top: -16px; }
+  .mt-rw-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .mt-rw-staff { width: 100%; text-align: center; color: #e9e6dc; padding: 6px 0 22px; }
+  .mt-rw-roll { width: 100%; max-width: 980px; }
+  .mt-rw-head { display: grid; margin-bottom: 4px; }
+  .mt-rw-h { font-family: var(--font-mono); font-size: 12px; color: var(--text3); padding-left: 4px; }
+  .mt-rw-h.beat { color: var(--gold); font-weight: 700; font-size: 14px; }
+  .mt-rw-grid { position: relative; display: grid; height: 64px; border: 2px solid rgba(255,255,255,0.35); border-radius: 6px;
+    background: #15123a; cursor: crosshair; touch-action: none; user-select: none; -webkit-user-select: none; overflow: hidden; }
+  .mt-rw-cell { border-left: 1px solid rgba(255,255,255,0.08); }
+  .mt-rw-cell.beat { border-left: 2px solid rgba(255,255,255,0.28); }
+  .mt-rw-cell:first-child { border-left: none; }
+  .mt-rw-notes { position: absolute; inset: 0; pointer-events: none; }
+  .mt-rw-note { position: absolute; top: 8px; bottom: 8px; border-radius: 6px; background: linear-gradient(180deg, #9b8fff, #6d5ff0);
+    border: 2px solid rgba(255,255,255,0.7); box-sizing: border-box; margin-left: 1px; }
+  .mt-rw-note.ok { background: linear-gradient(180deg, #4ade80, #16a34a); }
+  .mt-rw-note.bad { background: linear-gradient(180deg, #f87171, #dc2626); }
+  .mt-rw-note.ghost { background: transparent; border: 2px dashed var(--gold); top: 3px; bottom: 3px; }
+  .mt-rw-hint { font-family: var(--font-mono); font-size: 12px; color: var(--text3); min-height: 16px; }
+  .mt-rw-wrap .build-submit-btn:disabled { opacity: 0.5; }
   .mt-why { position: fixed; left: 50%; bottom: 86px; transform: translateX(-50%); z-index: 9000;
     width: min(760px, calc(100% - 160px)); padding: 12px 18px; border-radius: 10px;
     background: rgba(29,26,63,0.96); border: 1px solid rgba(239,68,68,0.55); color: var(--text);
     font-family: var(--font-display); font-weight: 700; font-size: 19px; line-height: 1.3; text-align: center;
     box-shadow: 0 6px 24px rgba(0,0,0,0.5); }
+  .mt-why-inline { font-family: var(--font-display); font-weight: 700; font-size: 19px; line-height: 1.3; color: var(--text);
+    text-align: center; padding: 10px 16px; border: 1px solid rgba(239,68,68,0.55); border-radius: 10px; background: rgba(29,26,63,0.96); max-width: 900px; }
   .mt-why.good { border-color: rgba(74,222,128,0.6); }
   .build-marker.correct[data-off]::after { content: '\2713  ' attr(data-off); white-space: nowrap; }
   #mt-chord-ruler .build-marker.mt-lane-dot.correct[data-off]::after { content: '\2713  ' attr(data-off); color: var(--green); top: 6px; left: calc(100% + 6px); transform: none; white-space: nowrap; }
@@ -7389,7 +7411,7 @@ const db = getFirestore(fbApp);
 const KANTEON_CONFIG = {
   // ——— Arcade Mode ———
   arcadeWrongHoldSeconds: 7,
-  arcadeRightBuildHoldSeconds: 3.5, // Arcade: a CORRECT build answer stays up this long so you can see how close you got
+  arcadeRightBuildHoldSeconds: 5, // Arcade: a CORRECT build answer stays up this long so you can see how close you got
   // Arcade: seconds per BUILD / TRANSCRIPTION question at levels 1-5. These take real
   // time to tune by ear, so they stay roomy and only get tight at the top level.
   arcadeBuildSeconds: {
@@ -7398,6 +7420,7 @@ const KANTEON_CONFIG = {
     'build-scale':    [60, 60, 55, 45, 30],
     'transcription':  [45, 45, 40, 32, 22],
     'ear-progression':[30, 30, 30, 26, 22],
+    'rhythm-write':   [40, 40, 36, 30, 24],
   },       // Arcade: how long a WRONG answer stays on screen (right answer shown) before moving on. NEXT skips it.
   arcadeStartSeconds: 12,          // seconds per question at the start (lower = harder)
   arcadeLives: 3,                  // hearts before game over
@@ -21709,7 +21732,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.10.31l'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.10.31m'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -27930,7 +27953,9 @@ function mtBuildPool(maxLevel) {
   }
 
   // Rhythm — beginner patterns from existing JSON
-  if (typeof kanteon !== 'undefined' && kanteon.loaded) {
+  // "Tap the pattern" is retired from Arcade (replaced by Write the Rhythm below).
+  if (maxLevel >= 2) pool.push({ kind: 'rhythm-write', id: 'gen', lvl: maxLevel });
+  if (false && typeof kanteon !== 'undefined' && kanteon.loaded) {
     try {
       const rPool = kanteon._pool('rhythm_comprehension');
       // More patterns per level (it used to be 2 at L1, 4 at L2 — the same few repeated).
@@ -28226,6 +28251,7 @@ function pickWeighted(pool) {
     k === 'build-chord'    ? 'build' :
     k === 'build-scale'    ? 'build' :
     k === 'rhythm'         ? 'rhythm' :
+    k === 'rhythm-write'   ? 'rhythm' :
     k === 'transcription'  ? 'transcription' :
     k === 'notation'       ? 'notation' :
     k === 'theory'         ? 'theory' : 'other';
@@ -28604,6 +28630,16 @@ function buildMtRound(pick) {
     };
   }
 
+  if (pick.kind === 'rhythm-write') {
+    const lvl = Math.max(2, Math.min(5, mtState.level || pick.lvl || 2));
+    return {
+      module: 'RHYTHM', moduleClass: 'mod-rhy',
+      typeLabel: 'WRITE THE RHYTHM',
+      prompt: 'Draw this rhythm on the grid',
+      isRhythmWrite: true,
+      rwQ: mtRwGenerate(lvl),
+    };
+  }
   if (pick.kind === 'rhythm') {
     return {
       module: 'RHYTHM', moduleClass: 'mod-rhy',
@@ -28638,7 +28674,7 @@ function renderMtRound(r) {
 
   // Non-MCQ rounds never use HEAR AGAIN — collapse it (visibility:hidden still
   // reserved ~60px, squeezing the grid/builders on short screens).
-  if (r.isRhythm || r.isBuild || r.isBuildChord || r.isBuildScale || r.isTranscription || r.isProgression) hearBtn.style.display = 'none';
+  if (r.isRhythm || r.isBuild || r.isBuildChord || r.isBuildScale || r.isTranscription || r.isProgression || r.isRhythmWrite) hearBtn.style.display = 'none';
   if (r.isRhythm) {
     return renderMtRhythmRound(r);
   }
@@ -28650,6 +28686,9 @@ function renderMtRound(r) {
   }
   if (r.isProgression) {
     return renderMtProgressionRound(r);
+  }
+  if (r.isRhythmWrite) {
+    return renderMtRhythmWriteRound(r);
   }
   if (r.isBuildChord) {
     return renderMtChordRound(r);
@@ -28880,7 +28919,7 @@ function mtWrong(opts) {
   mtStartReviewHold(holdMs, () => {
     if (mtState.lives <= 0) endMixtape();
     else nextMtRound();
-  }, why);
+  }, why, false, opts.whyEl);
   if (typeof opts.replay === 'function') setTimeout(() => { if (mtState._hold) { try { opts.replay(); } catch (e) {} } }, 450);
 }
 
@@ -29054,9 +29093,10 @@ function mtClearHold() {
   if (w) w.remove();
   mtState._why = '';
 }
-function mtStartReviewHold(ms, cont, why, good) {
+function mtStartReviewHold(ms, cont, why, good, whyEl) {
   mtClearHold();
   mtState._why = why || '';
+  mtState._whyEl = whyEl || null;
   mtState._whyGood = !!good;
   const go = () => { if (!mtState._hold) return; mtClearHold(); cont(); };
   const key = (e) => {
@@ -29075,7 +29115,10 @@ function mtStartReviewHold(ms, cont, why, good) {
   btn.onclick = go;
   const screen = document.getElementById('mixtape-session');
   (screen || document.body).appendChild(btn);
-  if (mtState._why) {
+  if (mtState._why && mtState._whyEl) {          // inline (the round has a spot for it)
+    mtState._whyEl.textContent = mtState._why;
+    mtState._whyEl.className = 'mt-why-inline';
+  } else if (mtState._why) {
     const w = document.createElement('div');
     w.id = 'mt-why'; w.className = 'mt-why' + (mtState._whyGood ? ' good' : '');
     w.textContent = mtState._why;
@@ -29445,6 +29488,154 @@ function renderMtProgressionRound(r) {
   paint();
   const ms = play();
   setTimeout(() => { if (!mtState.isAnswered) startMtTimer(); }, ms);
+}
+
+// ── WRITE THE RHYTHM (Arcade) ────────────────────────────────────────────────
+// Replaces "tap the pattern". Read the rhythm on the staff (one-shot, single
+// pitch, no audio) and draw it on a one-note piano roll: tap/click a cell to
+// place a note, drag across to set its length, drag a note to resize it, tap a
+// note without dragging to delete it. Graded exactly (start + length) on SUBMIT.
+const MT_RW = {
+  // level → generator vocabulary + grid resolution (beats per cell)
+  vocab: { 2: 'beginner', 3: 'intermediate', 4: 'intermediate', 5: 'advanced' },
+  minStep: { 2: 0.5, 3: 0.5, 4: 0.5, 5: 0.25 },
+};
+function mtRwGenerate(lvl) {
+  const meter = 4, ts = [4, 4];
+  let parsed = null, guard = 0;
+  while (!parsed && guard++ < 20) {
+    const seed = (Math.random() * 4294967295) >>> 0;
+    parsed = klRhyFinalize(klRhyGen(meter, 4, MT_RW.vocab[lvl] || 'beginner', seed), meter);
+    // beginner vocab is all quarters — mix in half / whole notes so length matters
+    if (parsed && lvl <= 2) {
+      const ev = [];
+      let left = meter;
+      while (left > 0) {
+        const r = Math.random();
+        const d = left >= 2 && r < 0.35 ? 2 : (left >= 4 && r < 0.45 ? 4 : 1);
+        const rest = d === 1 && ev.some(e => !e.rest) && Math.random() < 0.15;
+        ev.push({ d, rest }); left -= d;
+      }
+      parsed = klRhyFinalize(ev, meter);
+    }
+  }
+  if (!parsed) parsed = klRhyFinalize([{ d: 1 }, { d: 1 }, { d: 1 }, { d: 1 }].map(e => ({ d: e.d, rest: false })), meter);
+  const events = parsed.events.map(e => Object.assign({}, e, { pitch: e.rest ? null : 71 }));   // one-shot: every note on B4
+  const notes = events.filter(e => !e.rest).map(e => ({ s: e.onset, d: e.d }));
+  let step = MT_RW.minStep[lvl] || 0.5;
+  const fits = st => events.every(e => Math.abs(e.onset / st - Math.round(e.onset / st)) < 1e-6 && Math.abs(e.d / st - Math.round(e.d / st)) < 1e-6);
+  while (!fits(step) && step > 0.25) step /= 2;
+  const svg = klGrooveNotationSVG(events, meter, ts);
+  return { meter, step, notes, svg };
+}
+function mtBeatName(p) {
+  const b = Math.floor(p + 1e-6) + 1, f = Math.round((p - (b - 1)) * 4) / 4;
+  return f === 0 ? 'beat ' + b : f === 0.5 ? "the “and” of " + b : f === 0.25 ? "the “e” of " + b : "the “a” of " + b;
+}
+function mtLenName(d) {
+  const m = { 4: 'a whole note (4 beats)', 3: 'a dotted half (3 beats)', 2: 'a half note (2 beats)', 1.5: 'a dotted quarter (1½ beats)', 1: 'a quarter note (1 beat)', 0.75: 'a dotted eighth', 0.5: 'an eighth note (½ beat)', 0.25: 'a sixteenth note' };
+  return m[d] || d + ' beats';
+}
+function renderMtRhythmWriteRound(r) {
+  document.getElementById('mt-answer-grid').style.display = 'none';
+  const host = document.getElementById('mt-rhythm-host');
+  host.style.display = 'block';
+  document.getElementById('mt-status').textContent = '';
+  const q = r.rwQ, cols = Math.round(q.meter / q.step), perBeat = Math.round(1 / q.step);
+  const sub = perBeat === 4 ? ['', 'e', '&', 'a'] : perBeat === 2 ? ['', '&'] : [''];
+  let head = '', lines = '';
+  for (let c = 0; c < cols; c++) {
+    const inBeat = c % perBeat, beat = Math.floor(c / perBeat) + 1;
+    head += '<div class="mt-rw-h' + (inBeat === 0 ? ' beat' : '') + '">' + (inBeat === 0 ? beat : sub[inBeat]) + '</div>';
+    lines += '<div class="mt-rw-cell' + (inBeat === 0 ? ' beat' : '') + '"></div>';
+  }
+  host.innerHTML =
+    '<div class="mt-rw-wrap">' +
+      '<div class="mt-rw-staff"><div class="rhythm-notation" style="color:#e9e6dc;display:inline-block;">' + q.svg + '</div></div>' +
+      '<div class="mt-rw-roll">' +
+        '<div class="mt-rw-head" style="grid-template-columns:repeat(' + cols + ',1fr)">' + head + '</div>' +
+        '<div class="mt-rw-grid" id="mt-rw-grid" style="grid-template-columns:repeat(' + cols + ',1fr)">' + lines + '<div class="mt-rw-notes" id="mt-rw-notes"></div></div>' +
+      '</div>' +
+      '<div class="mt-rw-hint" id="mt-rw-hint">Tap to place a note · drag to set its length · tap a note to remove it</div>' +
+      '<div class="build-ab-row" style="display:flex;gap:10px;width:100%;">' +
+        '<button class="build-hear-btn" id="mt-rw-clear" type="button" style="flex:0 0 160px;">CLEAR</button>' +
+        '<button class="build-submit-btn" id="mt-rw-submit" type="button" style="flex:1;">SUBMIT</button>' +
+      '</div>' +
+    '</div>';
+  const grid = document.getElementById('mt-rw-grid'), layer = document.getElementById('mt-rw-notes');
+  let notes = [];   // {s, len} in cells
+  const pct = c => (c / cols * 100) + '%';
+  function paint(reveal) {
+    let h = '';
+    if (reveal) reveal.target.forEach(t => { h += '<div class="mt-rw-note ghost" style="left:' + pct(t.s) + ';width:' + pct(t.len) + '"></div>'; });
+    notes.slice().sort((a, b) => a.s - b.s).forEach(n => {
+      const cls = reveal ? (reveal.ok.has(n) ? ' ok' : ' bad') : '';
+      h += '<div class="mt-rw-note' + cls + '" style="left:' + pct(n.s) + ';width:' + pct(n.len) + '"></div>';
+    });
+    layer.innerHTML = h;
+    document.getElementById('mt-rw-submit').disabled = mtState.isAnswered || !notes.length;
+  }
+  const colAt = x => { const rc = grid.getBoundingClientRect(); return Math.max(0, Math.min(cols - 1, Math.floor((x - rc.left) / rc.width * cols))); };
+  const noteAt = c => notes.find(n => c >= n.s && c < n.s + n.len);
+  const nextStart = (from, self) => { let m = cols; notes.forEach(n => { if (n !== self && n.s > from && n.s < m) m = n.s; }); return m; };
+  let drag = null;
+  grid.addEventListener('pointerdown', e => {
+    if (mtState.isAnswered) return;
+    e.preventDefault();
+    try { grid.setPointerCapture(e.pointerId); } catch (err) {}
+    const c = colAt(e.clientX);
+    const hit = noteAt(c);
+    if (hit) drag = { n: hit, moved: false, startCol: c, existing: true };
+    else { const n = { s: c, len: 1 }; notes.push(n); drag = { n, moved: true, startCol: c, existing: false }; }
+    paint();
+  });
+  grid.addEventListener('pointermove', e => {
+    if (!drag || mtState.isAnswered) return;
+    const c = colAt(e.clientX);
+    if (c !== drag.startCol) drag.moved = true;
+    if (!drag.moved) return;
+    const end = Math.min(nextStart(drag.n.s, drag.n), Math.max(drag.n.s + 1, c + 1));
+    if (end - drag.n.s !== drag.n.len) { drag.n.len = end - drag.n.s; paint(); }
+  });
+  const up = () => {
+    if (!drag) return;
+    if (drag.existing && !drag.moved) notes = notes.filter(n => n !== drag.n);   // tap a note = delete
+    drag = null; paint();
+  };
+  grid.addEventListener('pointerup', up);
+  grid.addEventListener('pointercancel', up);
+  document.getElementById('mt-rw-clear').onclick = () => { if (!mtState.isAnswered) { notes = []; paint(); } };
+
+  const target = q.notes.map(t => ({ s: Math.round(t.s / q.step), len: Math.round(t.d / q.step) }));
+  function finish(timedOut) {
+    if (mtState.isAnswered) return;
+    mtState.isAnswered = true;
+    mtState.revealHook = null;
+    stopMtTimer();
+    const ok = new Set();
+    notes.forEach(n => { if (target.some(t => t.s === n.s && t.len === n.len)) ok.add(n); });
+    const allOk = !timedOut && ok.size === target.length && notes.length === target.length;
+    paint({ target, ok });
+    document.getElementById('mt-rw-hint').textContent = '';
+    if (allOk) { mtCorrect(); return; }
+    // explain the first few problems in beat language
+    const msgs = [];
+    target.forEach(t => {
+      if (notes.some(n => n.s === t.s && n.len === t.len)) return;
+      const mine = notes.find(n => n.s === t.s);
+      const at = mtBeatName(t.s * q.step);
+      if (mine) msgs.push('the note on ' + at + ' is ' + mtLenName(t.len * q.step) + ' — yours was ' + mtLenName(mine.len * q.step).replace(/ \(.*\)/, ''));
+      else msgs.push('you’re missing the note on ' + at);
+    });
+    notes.forEach(n => { if (!target.some(t => t.s === n.s)) msgs.push('there’s no note on ' + mtBeatName(n.s * q.step) + ' (that’s a rest or a held note)'); });
+    let why = msgs.slice(0, 2).join('; ') + (msgs.length > 2 ? '; and ' + (msgs.length - 2) + ' more' : '');
+    why = why ? why.charAt(0).toUpperCase() + why.slice(1) + '. The dashed boxes show the real rhythm.' : 'The dashed boxes show the real rhythm.';
+    mtWrong({ why, whyEl: document.getElementById('mt-rw-hint') });
+  }
+  document.getElementById('mt-rw-submit').onclick = () => finish(false);
+  mtState.revealHook = finish;
+  paint();
+  setTimeout(() => { if (!mtState.isAnswered) startMtTimer(); }, 200);
 }
 
 // Build a SCALE by ear (arcade): same format as Lesson's scale builder — one
