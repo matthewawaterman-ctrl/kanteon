@@ -3662,6 +3662,43 @@
   #mt-rhythm-host > div.mt-scale-wrap > div.bscale-hint ,
   #mt-rhythm-host > div.mt-prog-wrap > div,
   #mt-rhythm-host > div.mt-rw-wrap > div { transform: none; }
+  /* Readability: helper/instruction lines app-wide (Lesson + Arcade share these) */
+  .build-drag-hint { font-size: clamp(14px, min(1.5vw, 2.6vh), 20px) !important; letter-spacing: 1.5px; }
+  .bscale-hint { font-size: clamp(14px, min(1.5vw, 2.6vh), 20px) !important; }
+  .rhythm-meta { font-size: clamp(13px, 1.3vw, 17px) !important; }
+  .tap-zone-sub { font-size: clamp(16px, 1.6vw, 22px) !important; }
+  .mt-tx-hint { font-family: var(--font-display); font-weight: 700; font-size: clamp(16px, min(1.8vw, 3vh), 24px); color: var(--text2); text-align: center; letter-spacing: 0.5px; }
+  /* ── Arcade readability pass: bigger type everywhere, bigger staff ──
+     Sizes use min(vw, vh) so they grow on big screens but still fit a short laptop window. */
+  #mixtape-session .mt-banner { padding: 10px 16px 12px; }
+  #mixtape-session .mt-banner .module-tag { font-size: clamp(13px, min(1.4vw, 2.4vh), 19px); letter-spacing: 3px; }
+  #mixtape-session .mt-banner .type-tag { font-size: clamp(24px, min(3.4vw, 5.4vh), 48px); letter-spacing: 3px; line-height: 1.1; }
+  #mixtape-session .mt-body { gap: clamp(10px, 2vh, 20px); padding: clamp(12px, 2.2vh, 24px) 24px; }
+  #mixtape-session .mt-prompt { font-size: clamp(24px, min(3.2vw, 5vh), 46px); min-height: 0; line-height: 1.15; }
+  #mixtape-session .mt-answer-btn { font-size: clamp(24px, min(3.2vw, 5.4vh), 48px); padding: clamp(12px, min(2vw, 3vh), 34px) 12px; }
+  #mixtape-session .mt-answer-grid { gap: 12px; }
+  #mixtape-session .mt-answer-grid.mt-grid-many .mt-answer-btn { font-size: clamp(20px, min(2.4vw, 4vh), 34px); padding: clamp(10px, 1.8vh, 18px) 8px; }
+  #mixtape-session .mt-hear-btn { font-size: clamp(15px, min(1.6vw, 2.8vh), 22px); padding: clamp(10px, 2vh, 18px); letter-spacing: 4px; }
+  #mixtape-session .build-hear-btn, #mixtape-session .build-submit-btn { font-size: clamp(15px, min(1.6vw, 2.8vh), 22px); padding: clamp(12px, 2.4vh, 22px) 12px; letter-spacing: 4px; }
+  #mixtape-session .mt-rw-hint { font-family: var(--font-display); font-weight: 700; font-size: clamp(16px, min(1.8vw, 3vh), 24px); color: var(--text2); letter-spacing: 0.5px; text-align: center; }
+  #mixtape-session .build-marker::after, #mixtape-session .build-root-marker::after, #mixtape-session .build-target-marker::after { font-size: 13px; }
+  #mixtape-session .mt-why, #mixtape-session .mt-why-inline { font-size: clamp(18px, min(1.9vw, 3.4vh), 26px); }
+  #mixtape-session .mt-next-btn { font-size: clamp(17px, 1.8vw, 24px); height: clamp(48px, 8vh, 62px); }
+  #mixtape-session .mt-prog-slot { width: clamp(84px, min(9vw, 15vh), 130px); min-height: clamp(70px, min(8vw, 13vh), 120px); }
+  #mixtape-session .mt-prog-val { font-size: clamp(26px, min(3vw, 5vh), 44px); }
+  #mixtape-session .mt-prog-btns { grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); }
+  #mixtape-session .mt-prog-btn { font-size: clamp(22px, min(2.6vw, 4.4vh), 38px); padding: clamp(10px, 2vh, 18px) 4px; }
+  #mixtape-session .mt-prog-ask { font-size: clamp(16px, min(1.8vw, 3vh), 26px); }
+  #mixtape-session .mt-prog-wrap { gap: clamp(8px, 1.6vh, 14px); }
+  #mixtape-session .mt-rw-staff { padding: 0 0 clamp(8px, 3vh, 26px); }
+  #mixtape-session .mt-rw-h { font-size: clamp(13px, 1.3vw, 18px); }
+  #mixtape-session .mt-rw-h.beat { font-size: clamp(16px, 1.6vw, 22px); }
+  #mixtape-session .mt-rw-grid { height: clamp(56px, min(7vw, 10vh), 96px); }
+  #mixtape-session .mt-rw-wrap { gap: clamp(6px, 1.2vh, 10px); }
+  #mixtape-session .bscale-num { font-size: clamp(13px, 1.3vw, 18px); }
+  /* Read-the-Staff: the staff is the question — make it large */
+  #mt-rhythm-host .mt-staff-box { text-align: center; padding: 0; }
+  #mt-rhythm-host .mt-staff-box svg { transform: none; width: min(760px, 70vw); height: auto; max-height: 36vh; }
   .mt-answer-btn:hover:not(:disabled) { background: var(--bg3); border-color: var(--border2); }
   .mt-answer-btn:active:not(:disabled) { transform: scale(0.98); }
   .mt-answer-btn:disabled { cursor: not-allowed; opacity: 0.5; }
@@ -3721,16 +3758,29 @@
   .mt-rw-notes { position: absolute; inset: 0; pointer-events: none; }
   .mt-rw-note { position: absolute; top: 8px; bottom: 8px; border-radius: 6px; background: linear-gradient(180deg, #9b8fff, #6d5ff0);
     border: 2px solid rgba(255,255,255,0.7); box-sizing: border-box; margin-left: 1px; }
+  .mt-rw-grip { position: absolute; right: 3px; top: 22%; bottom: 22%; width: 5px; border-radius: 3px; background: rgba(255,255,255,0.75); }
+  .mt-rw-note.ghost .mt-rw-grip { display: none; }
   .mt-rw-note.ok { background: linear-gradient(180deg, #4ade80, #16a34a); }
   .mt-rw-note.bad { background: linear-gradient(180deg, #f87171, #dc2626); }
   .mt-rw-note.ghost { background: transparent; border: 2px dashed var(--gold); top: 3px; bottom: 3px; }
   .mt-rw-hint { font-family: var(--font-mono); font-size: 12px; color: var(--text3); min-height: 16px; }
   .mt-rw-wrap .build-submit-btn:disabled { opacity: 0.5; }
+  .mt-levelup { position: fixed; inset: 0; z-index: 9500; display: flex; align-items: center; justify-content: center;
+    background: rgba(8,6,24,0.72); cursor: pointer; animation: mtLuIn 0.25s ease-out; }
+  .mt-lu-card { text-align: center; padding: 34px 60px; border-radius: 18px; border: 3px solid var(--gold);
+    background: linear-gradient(180deg, #241d5a, #120e33); box-shadow: 0 0 60px rgba(240,192,64,0.35); animation: mtLuPop 0.45s cubic-bezier(.2,1.6,.4,1); }
+  .mt-lu-kicker { font-family: var(--font-display); font-weight: 900; font-size: clamp(22px, 2.6vw, 34px); letter-spacing: 6px; color: var(--gold); }
+  .mt-lu-num { font-family: var(--font-display); font-weight: 900; font-size: clamp(64px, 9vw, 120px); line-height: 1; color: #fff; letter-spacing: 4px; margin: 6px 0 10px; }
+  .mt-lu-new { font-family: var(--font-display); font-weight: 700; font-size: clamp(18px, 2vw, 26px); color: #c4b5fd; max-width: 70vw; }
+  .mt-lu-tap { font-family: var(--font-display); font-size: 15px; color: var(--text3); letter-spacing: 2px; margin-top: 16px; text-transform: uppercase; }
+  @keyframes mtLuIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes mtLuPop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
   .mt-why { position: fixed; left: 50%; bottom: 86px; transform: translateX(-50%); z-index: 9000;
     width: min(760px, calc(100% - 160px)); padding: 12px 18px; border-radius: 10px;
     background: rgba(29,26,63,0.96); border: 1px solid rgba(239,68,68,0.55); color: var(--text);
     font-family: var(--font-display); font-weight: 700; font-size: 19px; line-height: 1.3; text-align: center;
     box-shadow: 0 6px 24px rgba(0,0,0,0.5); }
+  #mt-build-ruler .build-marker:not(.correct):not(.wrong)::after { content: ''; }
   .mt-why-inline { font-family: var(--font-display); font-weight: 700; font-size: 19px; line-height: 1.3; color: var(--text);
     text-align: center; padding: 10px 16px; border: 1px solid rgba(239,68,68,0.55); border-radius: 10px; background: rgba(29,26,63,0.96); max-width: 900px; }
   .mt-why.good { border-color: rgba(74,222,128,0.6); }
@@ -7411,7 +7461,8 @@ const db = getFirestore(fbApp);
 const KANTEON_CONFIG = {
   // ——— Arcade Mode ———
   arcadeWrongHoldSeconds: 7,
-  arcadeRightBuildHoldSeconds: 5, // Arcade: a CORRECT build answer stays up this long so you can see how close you got
+  arcadeRightBuildHoldSeconds: 5,
+  arcadeLevelUpSeconds: 3.5,        // Arcade: how long the LEVEL UP card stays up (click / SPACE skips) // Arcade: a CORRECT build answer stays up this long so you can see how close you got
   // Arcade: seconds per BUILD / TRANSCRIPTION question at levels 1-5. These take real
   // time to tune by ear, so they stay roomy and only get tight at the top level.
   arcadeBuildSeconds: {
@@ -21732,7 +21783,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.10.31m'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.08b'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -27837,10 +27888,8 @@ function mtBuildPool(maxLevel) {
   }
   // Toned Ear-style functional ear training (see MT_PROG / MT_DEG below). One pool
   // entry each — the round reads the current level for its chord/degree set.
-  if (maxLevel >= 2) {
-    pool.push({ kind: 'ear-progression', id: 'prog', lvl: maxLevel });
-    pool.push({ kind: 'ear-scaleDegree', id: 'deg', lvl: maxLevel });
-  }
+  if (maxLevel >= 2) pool.push({ kind: 'ear-progression', id: 'prog', lvl: maxLevel });
+  if (maxLevel >= 4) pool.push({ kind: 'ear-scaleDegree', id: 'deg', lvl: maxLevel });   // upper levels only
 
   // Active Listening — gradient sets per category
   const instSets = {
@@ -28294,10 +28343,14 @@ window.nextMtRound = function() {
   // Level is driven by MOMENTUM (fast answers accumulate it faster → reach hard puzzles sooner).
   const newLevel = Math.min(MT_TUNE.MAX_LEVEL, 1 + Math.floor(mtState.momentum / MT_TUNE.LEVEL_MOMENTUM));
   if (newLevel > mtState.level) {
+    const oldKinds = new Set((mtState.pool || []).map(p => p.kind));
     mtState.level = newLevel;
     mtState.currentPoolLevel = newLevel;
     mtState.pool = mtBuildPool(newLevel);
-    mtFlash('LEVEL ' + newLevel, 'levelup');
+    const fresh = [...new Set(mtState.pool.map(p => p.kind))].filter(k => !oldKinds.has(k)).map(k => MT_KIND_NAMES[k]).filter(Boolean);
+    // Pause the run for a proper LEVEL UP card, then start the next question.
+    mtShowLevelUp(newLevel, fresh, () => nextMtRound());
+    return;
   }
   // Answer window is lenient early, tightens as the level climbs.
   mtState.currentTimer = Math.max(MT_TUNE.MIN_TIMER, MT_TUNE.START_TIMER - (mtState.level - 1) * MT_TUNE.TIMER_STEP);
@@ -28654,6 +28707,8 @@ function buildMtRound(pick) {
 
 function renderMtRound(r) {
   mtClearHold();
+  { const _h = document.getElementById('mt-rhythm-host'), _g = document.getElementById('mt-answer-grid');
+    if (_h) { _h.style.order = ''; _h.style.flex = '1'; } if (_g) _g.style.order = ''; }
   if (window._activeSpaceHandler) { document.removeEventListener('keydown', window._activeSpaceHandler); window._activeSpaceHandler = null; }
   if (window._mtRhythmKeyUp) { document.removeEventListener('keyup', window._mtRhythmKeyUp); window._mtRhythmKeyUp = null; }
   if (typeof klRhyTapStop === 'function') { try { klRhyTapStop(); } catch (e) {} }
@@ -28707,11 +28762,19 @@ function renderMtRound(r) {
   if (r.visual) {
     vhost.style.display = 'block';
     vhost.innerHTML = '';
-    if (typeof r.visual === 'string') vhost.innerHTML = '<div style="text-align:center;padding:6px 0 4px;">' + r.visual + '</div>';
-    else { const box = document.createElement('div'); box.style.textAlign = 'center'; box.style.padding = '6px 0 4px'; box.appendChild(r.visual); vhost.appendChild(box); }
+    // staff goes ABOVE the answers (read it, then pick) and renders big
+    vhost.style.order = '1'; vhost.style.flex = '0 0 auto'; grid.style.order = '2';
+    if (typeof r.visual === 'string') vhost.innerHTML = '<div class="mt-staff-box">' + r.visual + '</div>';
+    else { const box = document.createElement('div'); box.className = 'mt-staff-box'; box.appendChild(r.visual); vhost.appendChild(box); }
+    // crop the SVG to its drawing so the staff fills the space instead of its padding
+    try {
+      const sv = vhost.querySelector('svg'); const bb = sv && sv.getBBox();
+      if (bb && bb.width > 0) { const pad = 10; sv.setAttribute('viewBox', (bb.x - pad) + ' ' + (bb.y - pad) + ' ' + (bb.width + pad * 2) + ' ' + (bb.height + pad * 2)); sv.removeAttribute('width'); sv.removeAttribute('height'); }
+    } catch (e) {}
   } else {
     vhost.style.display = 'none';
     vhost.innerHTML = '';
+    vhost.style.order = ''; vhost.style.flex = ''; grid.style.order = '';
   }
   r.answers.forEach(ans => {
     const btn = document.createElement('button');
@@ -29080,6 +29143,31 @@ function mtWhyMcq(r, pickedId) {
   return it + ' (Not ' + pick.label + '.)' + tip;
 }
 
+// ── Arcade LEVEL UP card ─────────────────────────────────────────────────────
+const MT_KIND_NAMES = {
+  'ear-interval': 'Name the Interval', 'ear-chord': 'Chord Quality', 'ear-progression': 'Chord Progressions',
+  'ear-scaleDegree': 'Scale Degrees', 'build-interval': 'Build the Interval', 'build-chord': 'Build the Chord',
+  'build-scale': 'Build the Scale', 'transcription': 'Write What You Hear', 'rhythm-write': 'Write the Rhythm',
+  'notation': 'Read the Staff', 'al-tempo': 'Tempo', 'al-texture': 'Texture', 'al-dynamics': 'Dynamics',
+};
+function mtShowLevelUp(level, fresh, cont) {
+  stopMtTimer();
+  const old = document.getElementById('mt-levelup'); if (old) old.remove();
+  const el = document.createElement('div');
+  el.id = 'mt-levelup'; el.className = 'mt-levelup';
+  el.innerHTML = '<div class="mt-lu-card"><div class="mt-lu-kicker">LEVEL UP!</div><div class="mt-lu-num">LEVEL ' + level + '</div>' +
+    (fresh.length ? '<div class="mt-lu-new">NEW: ' + fresh.join(' · ') + '</div>' : '<div class="mt-lu-new">Harder questions, less time.</div>') +
+    '<div class="mt-lu-tap">click or press SPACE to keep going</div></div>';
+  (document.getElementById('mixtape-session') || document.body).appendChild(el);
+  try { const ctx = getAudio(), t = ctx.currentTime + 0.02; [0, 4, 7, 12].forEach((s, i) => playTone(midiFreq(72 + s), t + i * 0.09, 0.35, ctx, 0.14, 'piano')); } catch (e) {}
+  let done = false;
+  const go = () => { if (done) return; done = true; clearTimeout(tm); document.removeEventListener('keydown', key, true); el.remove();
+    const scr = document.getElementById('mixtape-session'); if (scr && scr.classList.contains('active')) cont(); };   // quit mid-card = don't resume
+  const key = e => { if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); e.stopPropagation(); go(); } };
+  const tm = setTimeout(go, KANTEON_CONFIG.arcadeLevelUpSeconds * 1000 || 3500);
+  setTimeout(() => { el.addEventListener('click', go); document.addEventListener('keydown', key, true); }, 600);   // ignore stray clicks right away
+}
+
 // ── Wrong-answer review hold ─────────────────────────────────────────────────
 // Keeps the revealed answer on screen so the kid can see WHY, then moves on.
 // A NEXT button (also Enter / Space) skips the wait. Any round change clears it.
@@ -29370,10 +29458,11 @@ const MT_PROG = {
 };
 const MT_DEG = {
   sets: {
+    // Scale degrees only appear from L4 (upper levels).
     2: ['1', '3', '5'],
-    3: ['1', '2', '3', '5', '7'],
-    4: ['1', '2', '3', '4', '5', '6', '7'],
-    5: ['1', '2', '3', '4', 'r4', '5', '6', 'r6', '7'],
+    3: ['1', '3', '5'],
+    4: ['1', '2', '3', '5', '7'],
+    5: ['1', '2', '3', '4', '5', '6', '7'],
   },
 };
 const MT_TEMPO_GAP = { 3: 36, 4: 22, 5: 12 };   // BPM between the four answer choices
@@ -29556,7 +29645,7 @@ function renderMtRhythmWriteRound(r) {
         '<div class="mt-rw-head" style="grid-template-columns:repeat(' + cols + ',1fr)">' + head + '</div>' +
         '<div class="mt-rw-grid" id="mt-rw-grid" style="grid-template-columns:repeat(' + cols + ',1fr)">' + lines + '<div class="mt-rw-notes" id="mt-rw-notes"></div></div>' +
       '</div>' +
-      '<div class="mt-rw-hint" id="mt-rw-hint">Tap to place a note · drag to set its length · tap a note to remove it</div>' +
+      '<div class="mt-rw-hint" id="mt-rw-hint">Click to add a note · drag its right edge to change the length · drag the note to move it · click a note to remove it</div>' +
       '<div class="build-ab-row" style="display:flex;gap:10px;width:100%;">' +
         '<button class="build-hear-btn" id="mt-rw-clear" type="button" style="flex:0 0 160px;">CLEAR</button>' +
         '<button class="build-submit-btn" id="mt-rw-submit" type="button" style="flex:1;">SUBMIT</button>' +
@@ -29570,40 +29659,69 @@ function renderMtRhythmWriteRound(r) {
     if (reveal) reveal.target.forEach(t => { h += '<div class="mt-rw-note ghost" style="left:' + pct(t.s) + ';width:' + pct(t.len) + '"></div>'; });
     notes.slice().sort((a, b) => a.s - b.s).forEach(n => {
       const cls = reveal ? (reveal.ok.has(n) ? ' ok' : ' bad') : '';
-      h += '<div class="mt-rw-note' + cls + '" style="left:' + pct(n.s) + ';width:' + pct(n.len) + '"></div>';
+      h += '<div class="mt-rw-note' + cls + '" style="left:' + pct(n.s) + ';width:' + pct(n.len) + '"><span class="mt-rw-grip"></span></div>';
     });
     layer.innerHTML = h;
     document.getElementById('mt-rw-submit').disabled = mtState.isAnswered || !notes.length;
   }
   const colAt = x => { const rc = grid.getBoundingClientRect(); return Math.max(0, Math.min(cols - 1, Math.floor((x - rc.left) / rc.width * cols))); };
+  const fracAt = x => { const rc = grid.getBoundingClientRect(); return (x - rc.left) / rc.width * cols; };
   const noteAt = c => notes.find(n => c >= n.s && c < n.s + n.len);
   const nextStart = (from, self) => { let m = cols; notes.forEach(n => { if (n !== self && n.s > from && n.s < m) m = n.s; }); return m; };
+  // DAW-style: drag on empty grid = draw a note out to the length you want;
+  // drag a note's right edge = resize; drag a note's body = move it;
+  // click a note without dragging = delete it.
+  const EDGE = 0.35;   // right 35% of a note's last cell is its resize handle
   let drag = null;
+  function onMove(e) {
+    if (!drag || mtState.isAnswered) return;
+    const x = e.clientX, c = colAt(x);
+    if (Math.abs(x - drag.x0) > 4) drag.moved = true;
+    if (!drag.moved) return;
+    const n = drag.n;
+    if (drag.mode === 'resize') {
+      const end = Math.min(nextStart(n.s, n), Math.max(n.s + 1, c + 1));
+      n.len = end - n.s;
+    } else {   // move: keep length, never overlap a neighbour
+      let s0 = Math.round(fracAt(x) - drag.grab);
+      s0 = Math.max(0, Math.min(cols - n.len, s0));
+      const clash = notes.some(o => o !== n && s0 < o.s + o.len && o.s < s0 + n.len);
+      if (!clash) n.s = s0;
+    }
+    paint();
+  }
+  function onUp() {
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
+    window.removeEventListener('pointercancel', onUp);
+    if (!drag) return;
+    if (drag.existing && !drag.moved) notes = notes.filter(n => n !== drag.n);   // click a note = delete
+    drag = null; paint();
+  }
   grid.addEventListener('pointerdown', e => {
     if (mtState.isAnswered) return;
     e.preventDefault();
-    try { grid.setPointerCapture(e.pointerId); } catch (err) {}
-    const c = colAt(e.clientX);
+    const c = colAt(e.clientX), f = fracAt(e.clientX);
     const hit = noteAt(c);
-    if (hit) drag = { n: hit, moved: false, startCol: c, existing: true };
-    else { const n = { s: c, len: 1 }; notes.push(n); drag = { n, moved: true, startCol: c, existing: false }; }
+    if (hit) {
+      const onEdge = f >= hit.s + hit.len - EDGE;
+      drag = { n: hit, existing: true, moved: false, x0: e.clientX, mode: onEdge ? 'resize' : 'move', grab: f - hit.s };
+    } else {
+      const n = { s: c, len: 1 }; notes.push(n);
+      drag = { n, existing: false, moved: true, x0: e.clientX, mode: 'resize' };
+    }
+    // listen on window so the drag keeps working even if the pointer leaves the grid
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
     paint();
   });
+  // cursor feedback: resize arrows on a note's right edge, grab hand on its body
   grid.addEventListener('pointermove', e => {
-    if (!drag || mtState.isAnswered) return;
-    const c = colAt(e.clientX);
-    if (c !== drag.startCol) drag.moved = true;
-    if (!drag.moved) return;
-    const end = Math.min(nextStart(drag.n.s, drag.n), Math.max(drag.n.s + 1, c + 1));
-    if (end - drag.n.s !== drag.n.len) { drag.n.len = end - drag.n.s; paint(); }
+    if (drag) return;
+    const c = colAt(e.clientX), f = fracAt(e.clientX), hit = noteAt(c);
+    grid.style.cursor = !hit ? 'crosshair' : (f >= hit.s + hit.len - EDGE ? 'ew-resize' : 'grab');
   });
-  const up = () => {
-    if (!drag) return;
-    if (drag.existing && !drag.moved) notes = notes.filter(n => n !== drag.n);   // tap a note = delete
-    drag = null; paint();
-  };
-  grid.addEventListener('pointerup', up);
-  grid.addEventListener('pointercancel', up);
   document.getElementById('mt-rw-clear').onclick = () => { if (!mtState.isAnswered) { notes = []; paint(); } };
 
   const target = q.notes.map(t => ({ s: Math.round(t.s / q.step), len: Math.round(t.d / q.step) }));
@@ -29730,6 +29848,12 @@ function renderMtScaleRound(r) {
     rail.addEventListener('pointercancel', () => { dragging = false; });
   });
 
+  // gold root + octave: click to hear them (a reference to tune against)
+  wrap.querySelectorAll('.bscale-rail.fixed').forEach(rail => {
+    const i = +rail.dataset.i;
+    rail.style.cursor = 'pointer';
+    rail.addEventListener('pointerdown', e => { e.preventDefault(); blip(vals[i]); flash(i); });
+  });
   document.getElementById('mt-scale-hear-target').addEventListener('click', () => playSeq(full));
   document.getElementById('mt-scale-hear-yours').addEventListener('click', () => playSeq(vals));
 
@@ -30001,21 +30125,23 @@ function renderMtTranscriptionRound(r) {
   // arcade HUD/title sit above it), not window.innerHeight — measuring the window
   // over-estimated the room and pushed SUBMIT off the bottom on iPad.
   const _hostTop = (host.getBoundingClientRect && host.getBoundingClientRect().top) || 180;
-  const _chrome = 190;   // hint line + gap + HEAR row + SUBMIT + padding
+  const _chrome = 215;   // hint line + gap + HEAR row + SUBMIT + padding (bigger type since 2026.11.08a)
   const _avail = Math.max(160, window.innerHeight - _hostTop - _chrome);
-  const _txFit = Math.floor((_avail - 24) / rowsMidi.length) - 5;   // -24 = step-number header row, -5 = per-row gap
+  const _txFit = Math.floor((_avail - 28) / rowsMidi.length) - 5;   // -28 = step-number header row, -5 = per-row gap
   const cellPx = Math.max(18, Math.min(KANTEON_CONFIG.transcriptionCellSize || 40, _txFit));
 
   // Build grid: a left label column + nCols step columns.
-  let gridHtml = '<div class="mt-tx-grid" style="display:inline-grid;grid-template-columns:auto repeat(' + nCols + ',' + cellPx + 'px);gap:4px;justify-content:center;">';
+  // cells can be wider than tall — easier to hit, and fills the empty width
+  const cellW = Math.max(cellPx, Math.min(120, Math.floor((window.innerWidth * 0.62) / nCols)));
+  let gridHtml = '<div class="mt-tx-grid" style="display:inline-grid;grid-template-columns:auto repeat(' + nCols + ',' + cellW + 'px);gap:5px;justify-content:center;">';
   // header row (step numbers)
   gridHtml += '<div></div>';
-  for (let c = 0; c < nCols; c++) gridHtml += '<div class="mt-tx-colhead" data-c="' + c + '" style="text-align:center;font-family:var(--font-mono);font-size:10px;line-height:16px;height:16px;color:var(--text3);">' + (c + 1) + '</div>';
+  for (let c = 0; c < nCols; c++) gridHtml += '<div class="mt-tx-colhead" data-c="' + c + '" style="text-align:center;font-family:var(--font-display);font-weight:800;font-size:19px;line-height:22px;height:22px;color:var(--text3);">' + (c + 1) + '</div>';
   // pitch rows
   rowsMidi.forEach((m) => {
-    gridHtml += '<div class="mt-tx-rowlbl" data-m="' + m + '" style="display:flex;align-items:center;justify-content:flex-end;padding-right:6px;font-family:var(--font-display);font-weight:800;font-size:13px;color:var(--text2);cursor:pointer;">' + noteLabel(m) + '</div>';
+    gridHtml += '<div class="mt-tx-rowlbl" data-m="' + m + '" style="display:flex;align-items:center;justify-content:flex-end;padding-right:12px;font-family:var(--font-display);font-weight:800;font-size:' + Math.max(15, Math.min(26, cellPx)) + 'px;line-height:1;color:var(--text2);cursor:pointer;">' + noteLabel(m) + '</div>';
     for (let c = 0; c < nCols; c++) {
-      gridHtml += '<div class="mt-tx-cell" data-c="' + c + '" data-m="' + m + '" style="width:' + cellPx + 'px;height:' + cellPx + 'px;border-radius:8px;background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.1);cursor:pointer;"></div>';
+      gridHtml += '<div class="mt-tx-cell" data-c="' + c + '" data-m="' + m + '" style="width:' + cellW + 'px;height:' + cellPx + 'px;border-radius:8px;background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.1);cursor:pointer;"></div>';
     }
   });
   gridHtml += '</div>';
@@ -30023,7 +30149,7 @@ function renderMtTranscriptionRound(r) {
   host.style.overflowY = 'hidden';  // inner grid scrolls; buttons stay on screen
   host.innerHTML =
     '<div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px 8px 12px;max-height:calc(100vh - ' + Math.round(_hostTop) + 'px);box-sizing:border-box;">' +
-      '<div style="font-family:var(--font-mono);font-size:12px;color:var(--text3);flex-shrink:0;margin-bottom:4px;">Tap a cell to place each note — left to right</div>' +
+      '<div class="mt-tx-hint" style="flex-shrink:0;margin-bottom:4px;">Tap a cell to place each note — left to right</div>' +
       '<div class="mt-tx-scroll" style="overflow:auto;max-width:100%;min-height:0;flex:1 1 auto;padding-top:2px;">' + gridHtml + '</div>' +
       '<div class="build-ab-row" style="display:flex;gap:10px;width:100%;flex-shrink:0;">' +
         '<button class="build-hear-btn" id="mt-tx-hear-target" type="button" style="flex:1;">\u25B6 HEAR MELODY</button>' +
