@@ -3661,7 +3661,8 @@
   #mt-rhythm-host > div > div.mt-tx-scroll,
   #mt-rhythm-host > div.mt-scale-wrap > div.bscale-hint ,
   #mt-rhythm-host > div.mt-prog-wrap > div,
-  #mt-rhythm-host > div.mt-rw-wrap > div { transform: none; }
+  #mt-rhythm-host > div.mt-rw-wrap > div,
+  #mt-rhythm-host > div.mt-sg-wrap > div { transform: none; }
   /* Readability: helper/instruction lines app-wide (Lesson + Arcade share these) */
   .build-drag-hint { font-size: clamp(14px, min(1.5vw, 2.6vh), 20px) !important; letter-spacing: 1.5px; }
   .bscale-hint { font-size: clamp(14px, min(1.5vw, 2.6vh), 20px) !important; }
@@ -3775,6 +3776,21 @@
   .mt-lu-tap { font-family: var(--font-display); font-size: 15px; color: var(--text3); letter-spacing: 2px; margin-top: 16px; text-transform: uppercase; }
   @keyframes mtLuIn { from { opacity: 0; } to { opacity: 1; } }
   @keyframes mtLuPop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .mt-sg-wrap { display: flex; flex-direction: column; align-items: center; gap: clamp(6px, 1.4vh, 12px); }
+  .mt-sg-head { text-align: center; font-family: var(--font-display); font-weight: 800; font-size: 18px; color: var(--text3); height: 24px; }
+  .mt-sg-head.fixed { color: var(--gold); font-size: 15px; letter-spacing: 1px; }
+  .mt-sg-row { display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; font-family: var(--font-display); font-weight: 800; color: var(--text2); line-height: 1; }
+  .mt-sg-cell { border-radius: 6px; background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,255,255,0.1); cursor: pointer; box-sizing: border-box; }
+  .mt-sg-cell:hover { background: rgba(155,143,255,0.18); }
+  .mt-sg-cell.lock { background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.05); }
+  .mt-sg-cell.lock.on { background: linear-gradient(180deg, #ffd66b, #e0a82e); border-color: #fff3c4; cursor: pointer; }
+  .mt-sg-cell.on { background: linear-gradient(180deg, #9b8fff, #6d5ff0); border-color: rgba(255,255,255,0.8); }
+  .mt-sg-cell.warn { box-shadow: 0 0 0 2px #ef4444; }
+  .mt-sg-cell.playing { filter: brightness(1.5); }
+  .mt-sg-cell.ok { background: linear-gradient(180deg, #4ade80, #16a34a); }
+  .mt-sg-cell.bad { background: linear-gradient(180deg, #f87171, #dc2626); }
+  .mt-sg-cell.ghost { border: 2px dashed var(--gold); }
+  .mt-sg-wrap .build-submit-btn:disabled { opacity: 0.5; }
   .mt-why { position: fixed; left: 50%; bottom: 86px; transform: translateX(-50%); z-index: 9000;
     width: min(760px, calc(100% - 160px)); padding: 12px 18px; border-radius: 10px;
     background: rgba(29,26,63,0.96); border: 1px solid rgba(239,68,68,0.55); color: var(--text);
@@ -7468,7 +7484,7 @@ const KANTEON_CONFIG = {
   arcadeBuildSeconds: {
     'build-interval': [25, 25, 22, 18, 12],
     'build-chord':    [45, 45, 40, 32, 20],
-    'build-scale':    [60, 60, 55, 45, 30],
+    'build-scale':    [90, 90, 80, 70, 55],   // grid version (2026.11.08d) — clicking is faster than tuning sliders
     'transcription':  [45, 45, 40, 32, 22],
     'ear-progression':[30, 30, 30, 26, 22],
     'rhythm-write':   [40, 40, 36, 30, 24],
@@ -21783,7 +21799,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.08b'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.08d'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -28737,7 +28753,7 @@ function renderMtRound(r) {
     return renderMtBuildRound(r);
   }
   if (r.isBuildScale) {
-    return renderMtScaleRound(r);
+    return MT_SCALE_GRID ? renderMtScaleGridRound(r) : renderMtScaleRound(r);
   }
   if (r.isProgression) {
     return renderMtProgressionRound(r);
@@ -29751,6 +29767,100 @@ function renderMtRhythmWriteRound(r) {
     mtWrong({ why, whyEl: document.getElementById('mt-rw-hint') });
   }
   document.getElementById('mt-rw-submit').onclick = () => finish(false);
+  mtState.revealHook = finish;
+  paint();
+  setTimeout(() => { if (!mtState.isAnswered) startMtTimer(); }, 200);
+}
+
+// Build a SCALE on a grid (arcade): one column per scale step, one row per half
+// step (root → octave, high at top). Root (col 1) and octave (last col) are
+// fixed gold cells — click them to hear. Click one cell per middle column to set
+// that step; every click plays the note. Graded exactly. (The slider version,
+// renderMtScaleRound, is shelved — set MT_SCALE_GRID = false to bring it back.)
+const MT_SCALE_GRID = true;
+function renderMtScaleGridRound(r) {
+  document.getElementById('mt-answer-grid').style.display = 'none';
+  const host = document.getElementById('mt-rhythm-host');
+  host.style.display = 'block';
+  document.getElementById('mt-status').textContent = '';
+  const q = r.buildChordQ;
+  const full = [0].concat(q.targets, [12]);
+  const n = full.length;
+  const fixed = full.map((_, i) => i === 0 || i === n - 1);
+  const picks = full.map((v, i) => fixed[i] ? v : null);
+  const rows = []; for (let k = 12; k >= 0; k--) rows.push(k);
+  const name = k => midiToNoteName(q.rootMidi + k).replace(/-?\d+$/, '');
+
+  const hostTop = (host.getBoundingClientRect && host.getBoundingClientRect().top) || 200;
+  const avail = Math.max(200, window.innerHeight - hostTop - 175);   // one button row below
+  const cellH = Math.max(16, Math.min(40, Math.floor((avail - 28) / rows.length) - 4));
+  const cellW = Math.max(48, Math.min(120, Math.floor((window.innerWidth * 0.6) / n)));
+
+  let g = '<div class="mt-sg-grid" style="display:inline-grid;grid-template-columns:auto repeat(' + n + ',' + cellW + 'px);gap:4px;">';
+  g += '<div></div>';
+  for (let c = 0; c < n; c++) g += '<div class="mt-sg-head' + (fixed[c] ? ' fixed' : '') + '">' + (c === 0 ? 'ROOT' : c === n - 1 ? 'OCT' : (c + 1)) + '</div>';
+  rows.forEach(k => {
+    g += '<div class="mt-sg-row" style="font-size:' + Math.max(14, Math.min(22, cellH)) + 'px">' + name(k) + '</div>';
+    for (let c = 0; c < n; c++) g += '<div class="mt-sg-cell' + (fixed[c] ? ' lock' : '') + '" data-c="' + c + '" data-k="' + k + '" style="height:' + cellH + 'px"></div>';
+  });
+  g += '</div>';
+  host.innerHTML =
+    '<div class="mt-sg-wrap">' +
+      '<div class="mt-tx-hint">Click one note in each column — low to high. Click the gold notes to hear the root.</div>' +
+      '<div style="text-align:center;overflow:auto;">' + g + '</div>' +
+      '<div class="build-ab-row" style="display:flex;gap:10px;width:100%;">' +
+        '<button class="build-hear-btn" id="mt-sg-hear-target" type="button" style="flex:1;">▶ HEAR TARGET</button>' +
+        '<button class="build-hear-btn" id="mt-sg-hear-yours" type="button" style="flex:1;">▶ HEAR YOURS</button>' +
+        '<button class="build-submit-btn" id="mt-sg-submit" type="button" style="flex:1.3;margin:0;">SUBMIT</button>' +
+      '</div>' +
+    '</div>';
+  const cellEl = (c, k) => host.querySelector('.mt-sg-cell[data-c="' + c + '"][data-k="' + k + '"]');
+  const STEP = 0.32;
+  const tone = (k, t, d, ctx) => playTone(midiFreq(q.rootMidi + k), t, d, ctx, 0.2, 'piano');
+  function paint() {
+    host.querySelectorAll('.mt-sg-cell').forEach(el => { el.classList.remove('on', 'warn'); });
+    picks.forEach((k, c) => { if (k == null) return; const el = cellEl(c, k); if (el) el.classList.add('on'); });
+    // flag a step that isn't higher than the one before it
+    for (let c = 1; c < n; c++) if (!fixed[c] && picks[c] != null && picks[c - 1] != null && picks[c] <= picks[c - 1]) cellEl(c, picks[c]).classList.add('warn');
+    document.getElementById('mt-sg-submit').disabled = mtState.isAnswered || picks.some(p => p == null);
+  }
+  function flashCol(c) { host.querySelectorAll('.mt-sg-cell[data-c="' + c + '"]').forEach(el => { el.classList.add('playing'); setTimeout(() => el.classList.remove('playing'), 240); }); }
+  function playSeq(seq) {
+    const ctx = getAudio(); const t0 = ctx.currentTime + 0.06;
+    seq.forEach((k, i) => { if (k == null) return; tone(k, t0 + i * STEP, STEP * 0.95, ctx); setTimeout(() => flashCol(i), Math.max(0, (t0 + i * STEP - ctx.currentTime) * 1000)); });
+  }
+  host.querySelectorAll('.mt-sg-cell').forEach(el => el.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    const c = +el.dataset.c, k = +el.dataset.k;
+    const ctx = getAudio();
+    if (fixed[c]) { tone(full[c], ctx.currentTime + 0.01, 0.4, ctx); flashCol(c); return; }   // gold column = hear the root/octave
+    if (mtState.isAnswered) { tone(k, ctx.currentTime + 0.01, 0.35, ctx); return; }
+    picks[c] = picks[c] === k ? null : k;   // click again to clear
+    if (picks[c] != null) tone(k, ctx.currentTime + 0.01, 0.35, ctx);
+    paint();
+  }));
+  host.querySelectorAll('.mt-sg-head.fixed').forEach((el, j) => { el.style.cursor = 'pointer'; el.addEventListener('click', () => { const c = j === 0 ? 0 : n - 1; const ctx = getAudio(); tone(full[c], ctx.currentTime + 0.01, 0.4, ctx); flashCol(c); }); });
+  document.getElementById('mt-sg-hear-target').onclick = () => playSeq(full);
+  document.getElementById('mt-sg-hear-yours').onclick = () => playSeq(picks);
+
+  function finish(timedOut) {
+    if (mtState.isAnswered) return;
+    mtState.isAnswered = true; mtState.revealHook = null; stopMtTimer();
+    const bad = [];
+    for (let c = 0; c < n; c++) {
+      if (fixed[c]) continue;
+      const ok = picks[c] === full[c];
+      if (picks[c] != null) cellEl(c, picks[c]).classList.add(ok ? 'ok' : 'bad');
+      if (!ok) { cellEl(c, full[c]).classList.add('ghost'); bad.push(c); }
+    }
+    document.getElementById('mt-sg-submit').disabled = true;
+    if (!bad.length && !timedOut) { mtCorrect(); return; }
+    const parts = bad.map(c => 'note ' + (c + 1) + ' is ' + name(full[c]) + (picks[c] != null ? ' (you picked ' + name(picks[c]) + ')' : ''));
+    const why = parts.slice(0, 3).join('; ').replace(/^n/, 'N') + (parts.length > 3 ? '; and ' + (parts.length - 3) + ' more' : '') + '. Yours plays first, then the real scale.';
+    const dur = n * STEP * 1000;
+    mtWrong({ why, replayMs: dur * 2 + 700, replay: () => { playSeq(picks); setTimeout(() => { if (mtState._hold) playSeq(full); }, dur + 700); } });
+  }
+  document.getElementById('mt-sg-submit').onclick = () => finish(false);
   mtState.revealHook = finish;
   paint();
   setTimeout(() => { if (!mtState.isAnswered) startMtTimer(); }, 200);
