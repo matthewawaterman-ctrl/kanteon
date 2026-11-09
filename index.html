@@ -3815,6 +3815,24 @@
   .mt-sg-cell.bad { background: linear-gradient(180deg, #f87171, #dc2626); }
   .mt-sg-cell.ghost { border: 2px dashed var(--gold); }
   .mt-sg-wrap .build-submit-btn:disabled { opacity: 0.5; }
+  .mt-start-links { margin-top: 14px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .mt-tut-open { font-family: var(--font-display); font-weight: 900; font-size: clamp(18px, 2vw, 26px); letter-spacing: 3px;
+    padding: 14px 34px; border-radius: 12px; border: 2px solid #9b8fff; background: rgba(124,111,247,0.18); color: #fff; cursor: pointer; }
+  .mt-tut-open:hover { background: rgba(124,111,247,0.32); }
+  .mt-tut-panel { width: min(1100px, 94vw); max-height: 88vh; overflow: auto; background: #120e33; border: 2px solid #9b8fff; border-radius: 16px; padding: 18px 22px 24px; }
+  .mt-tut-intro { font-family: var(--font-display); font-size: clamp(16px, 1.6vw, 20px); color: var(--text2); margin: 4px 0 16px; }
+  .mt-tut-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+  .mt-tut-card { background: #1b1648; border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .mt-tut-top { display: flex; align-items: center; gap: 10px; }
+  .mt-tut-icon { font-size: 26px; }
+  .mt-tut-name { font-family: var(--font-display); font-weight: 900; font-size: 24px; color: #fff; letter-spacing: 1px; flex: 1; }
+  .mt-tut-lvl { font-family: var(--font-display); font-weight: 800; font-size: 13px; letter-spacing: 2px; color: var(--gold); border: 1px solid rgba(240,192,64,0.5); border-radius: 6px; padding: 2px 8px; }
+  .mt-tut-what { font-family: var(--font-display); font-weight: 700; font-size: 18px; color: var(--text); }
+  .mt-tut-how { margin: 0; padding-left: 22px; font-size: 16px; color: var(--text2); line-height: 1.45; }
+  .mt-tut-tip { font-size: 15px; color: #c4b5fd; line-height: 1.4; }
+  .mt-tut-try { margin-top: auto; align-self: flex-start; font-family: var(--font-display); font-weight: 900; font-size: 17px; letter-spacing: 3px;
+    padding: 10px 22px; border-radius: 10px; border: none; background: var(--gold); color: #1a1440; cursor: pointer; }
+  #mixtape-session.mt-practice .mt-score::after { content: '  · PRACTICE'; color: #9b8fff; }
   .mt-why { position: fixed; left: 50%; bottom: 86px; transform: translateX(-50%); z-index: 9000;
     width: min(760px, calc(100% - 160px)); padding: 12px 18px; border-radius: 10px;
     background: rgba(29,26,63,0.96); border: 1px solid rgba(239,68,68,0.55); color: var(--text);
@@ -7137,7 +7155,10 @@
       <div class="mt-hero-title">ARCADE MODE</div>
       <div class="mt-hero-sub">Rapid-fire arcade · All modules</div>
       <div class="mt-world-best" id="mt-world-best">🌍 WORLD BEST · —</div>
-      <button class="mt-board-open" onclick="mtOpenBoard()">🏆 View all-time leaderboard</button>
+      <div class="mt-start-links">
+        <button class="mt-tut-open" onclick="mtOpenTutorials()">📘 HOW TO PLAY · TUTORIALS</button>
+        <button class="mt-board-open" onclick="mtOpenBoard()">🏆 View all-time leaderboard</button>
+      </div>
     </div>
 
     <div class="mt-personal-best">
@@ -7148,6 +7169,18 @@
 
   <div class="ear-start-bar">
     <button class="mt-start-go" id="mt-start-go-btn" onclick="startMixtape()">▶ START</button>
+  </div>
+
+  <!-- TUTORIALS MODAL -->
+  <div class="mt-board-modal mt-tut-modal" id="mt-tut-modal" onclick="if(event.target===this)mtCloseTutorials()">
+    <div class="mt-tut-panel">
+      <div class="mt-board-head">
+        <span>📘 HOW TO PLAY</span>
+        <button class="mt-board-close" onclick="mtCloseTutorials()">✕</button>
+      </div>
+      <div class="mt-tut-intro">Every question type in Arcade, in the order they unlock. Press TRY ONE to practice it — no timer, no lives, no score.</div>
+      <div class="mt-tut-list" id="mt-tut-list"></div>
+    </div>
   </div>
 
   <!-- ALL-TIME LEADERBOARD MODAL -->
@@ -8075,7 +8108,7 @@ function playIntervalSequence(audio, gapSec = 2.3) {
 // ── Catalog ────────────────────────────────────────────────────────────────
 // Unison through Major 9th (15 items, up to double octave)
 const EAR_INTERVALS = [
-  { id: 'unison', label: 'Unison',     semis: 0,  mnemonic: 'Same note repeated.' },
+  { id: 'unison', label: 'Perfect Unison', semis: 0, mnemonic: 'The same note twice — no distance at all.' },
   { id: 'm2',     label: 'Minor 2nd',  semis: 1,  mnemonic: 'Opening of the Jaws theme.' },
   { id: 'M2',     label: 'Major 2nd',  semis: 2,  mnemonic: 'First two notes of Happy Birthday.' },
   { id: 'm3',     label: 'Minor 3rd',  semis: 3,  mnemonic: 'Opening of Smoke on the Water.' },
@@ -10797,6 +10830,7 @@ const AL_TEXTURE = [
   { id: 'mono',      label: 'Monophonic',     mnemonic: 'One melodic line, no harmony.' },
   { id: 'homo',      label: 'Homophonic',     mnemonic: 'Melody with chord accompaniment.' },
   { id: 'poly',      label: 'Polyphonic',     mnemonic: 'Multiple independent melodies at once.' },
+  { id: 'hetero',    label: 'Heterophonic',   mnemonic: 'One melody played by two parts at once, each with its own small variations.' },
   { id: 'solo',      label: 'Solo (single instrument)', mnemonic: 'One instrument playing alone.' },
   { id: 'ensemble',  label: 'Ensemble (multiple instruments)', mnemonic: 'Several instruments playing together.' },
 ];
@@ -11498,6 +11532,20 @@ function playTextureDemo(ctx, t0, textureId) {
     const highPhrase = buildPhrase(root + 7, scale, 8);
     playPhrase(ctx, t0, lowPhrase, 'bass', { beat, gain: 0.25 });
     playPhrase(ctx, t0 + beat * 0.5, highPhrase, 'guitar', { beat, gain: 0.18 });
+    return 8 * beat * 1000 + 400;
+  }
+  if (textureId === 'hetero') {
+    // Heterophony: ONE melody, two parts at once — the second plays the same tune
+    // an octave down but ornaments it (extra neighbour notes) so they rub slightly.
+    const phrase = buildPhrase(root, scale, 8);
+    playPhrase(ctx, t0, phrase, 'guitar', { beat, gain: 0.2 });
+    phrase.forEach((m, i) => {
+      const t = t0 + i * beat, low = m - 12;
+      if (i % 2 === 1) {   // ornament: quick upper neighbour, then the melody note
+        playTone(midiFreq(low + 2), t, beat * 0.45, ctx, 0.16, 'piano');
+        playTone(midiFreq(low), t + beat * 0.5, beat * 0.45, ctx, 0.16, 'piano');
+      } else playTone(midiFreq(low), t, beat * 0.9, ctx, 0.16, 'piano');
+    });
     return 8 * beat * 1000 + 400;
   }
   if (textureId === 'solo') {
@@ -21829,7 +21877,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.08m'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.08o'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -27967,7 +28015,7 @@ function mtBuildPool(maxLevel) {
   const texSets = {
     3: ['mono', 'homo'],
     4: ['mono', 'homo'],
-    5: ['mono', 'homo', 'poly'],
+    5: ['mono', 'homo', 'poly', 'hetero'],
   };
 
   const MT_INSTRUMENT_QUESTIONS_ON = false;   // off until real instrument recordings land
@@ -28224,6 +28272,110 @@ window.mtCloseBoard = function () {
   if (m) m.classList.remove('open');
 };
 
+// ── ARCADE TUTORIALS ─────────────────────────────────────────────────────────
+// One card per Arcade question type, in the order they unlock. "TRY ONE" plays a
+// single practice question of that type: no timer, no lives lost, no score, and
+// nothing logged to Question Stats. Edit the copy here.
+const MT_TUTORIALS = [
+  { kind: 'notation', lvl: 1, name: 'Read the Staff', icon: '🎼',
+    what: 'A note is written on the staff. Name it.',
+    how: ['Look at which line or space the note sits on.', 'Tap the matching note name.'],
+    tip: 'Lines on the treble staff from the bottom: E G B D F — "Every Good Boy Does Fine."' },
+  { kind: 'ear-interval', lvl: 1, name: 'Name the Interval', icon: '👂',
+    what: 'Two notes play. Name the distance between them.',
+    how: ['Listen to both notes (tap HEAR AGAIN as much as you like).', 'Tap the interval name.'],
+    tip: 'Match intervals to songs you know: a perfect 5th sounds like the Star Wars theme opening.' },
+  { kind: 'build-interval', lvl: 1, name: 'Build the Interval', icon: '🎚️',
+    what: 'You get a starting note (gold). Make the second note by ear.',
+    how: ['Drag the purple dot left (lower) or right (higher) — you hear it as you drag.', 'Use HEAR TARGET and HEAR YOURS to compare.', 'Press SUBMIT when it sounds right.'],
+    tip: 'Anything within 50 cents (half a half step) counts.' },
+  { kind: 'transcription', lvl: 1, name: 'Write What You Hear', icon: '✍️',
+    what: 'A short melody plays. Write it down on the note grid.',
+    how: ['Listen with HEAR MELODY.', 'Tap one cell per column — left to right, one column per note.', 'Check it with HEAR YOURS, then SUBMIT.'],
+    tip: 'Find the first note, then ask: does the next one go up, down, or stay?' },
+  { kind: 'ear-chord', lvl: 2, name: 'Chord Quality', icon: '🎹',
+    what: 'A chord plays. Is it major, minor, or something else?',
+    how: ['Listen to the chord.', 'Tap the chord type.'],
+    tip: 'Major usually sounds bright; minor sounds darker or sadder.' },
+  { kind: 'ear-scale', lvl: 2, name: 'Name the Scale', icon: '🪜',
+    what: 'A scale plays up from its root. Name the scale.',
+    how: ['Listen to the whole scale.', 'Tap the scale name.'],
+    tip: 'Listen for the 3rd note: high (major) or low (minor)?' },
+  { kind: 'ear-progression', lvl: 2, name: 'Chord Progressions', icon: '🎶',
+    what: 'A few chords play in a row. Chord 1 is always I. Name the rest.',
+    how: ['Tap a chord button to fill the highlighted box — you hear that chord.', 'Tap any box to hear it or change it.', 'Fill every box, then SUBMIT.'],
+    tip: 'Compare each chord to the I chord: does it sound like home, or like it wants to go somewhere?' },
+  { kind: 'build-chord', lvl: 2, name: 'Build the Chord', icon: '🧱',
+    what: 'You get the root (gold). Tune the other notes of the chord by ear.',
+    how: ['Each dot has its own row — drag it left or right.', 'Compare with HEAR TARGET / HEAR YOURS.', 'SUBMIT when every note sounds right.'],
+    tip: 'Do one note at a time: get the 5th first, then the 3rd.' },
+  { kind: 'rhythm-write', lvl: 2, name: 'Write the Rhythm', icon: '🥁',
+    what: 'A rhythm is written on the staff. Draw it on the grid. (No sound until you submit.)',
+    how: ['Click an empty spot to add a note; drag to make it longer.', 'Drag a note’s right edge to change its length, drag the middle to move it.', 'Click a note to delete it. SUBMIT to see and hear your rhythm under the written one.'],
+    tip: 'Count "1 & 2 & 3 & 4 &" — every grid line is one count.' },
+  { kind: 'al-tempo', lvl: 3, name: 'Tempo', icon: '⏱️',
+    what: 'A beat plays. How fast is it?',
+    how: ['Listen to the beat.', 'Tap the BPM (beats per minute) that matches.'],
+    tip: '60 BPM is one beat per second. Higher levels put the answers closer together.' },
+  { kind: 'al-texture', lvl: 3, name: 'Texture', icon: '🧵',
+    what: 'Music plays. How are the musical lines put together?',
+    how: ['Listen.', 'Tap Monophonic, Homophonic, Polyphonic, or Heterophonic.'],
+    tip: 'Mono = one line. Homo = melody + chords. Poly = different melodies weaving together. Hetero = the SAME melody played two slightly different ways at once.' },
+  { kind: 'build-scale', lvl: 3, name: 'Build the Scale', icon: '🏗️',
+    what: 'Build the named scale on the grid. The root and octave are given (gold).',
+    how: ['Click one note in each column, low to high — you hear each one.', 'Click the gold notes to hear the root.', 'HEAR TARGET to check by ear, then SUBMIT.'],
+    tip: 'Major scale steps: whole, whole, half, whole, whole, whole, half.' },
+  { kind: 'ear-scaleDegree', lvl: 4, name: 'Scale Degrees', icon: '🎯',
+    what: 'Chords set the key, then one note plays. Which note of the scale is it?',
+    how: ['Listen to the chords, then the last note.', 'Tap its number (and solfège name).'],
+    tip: 'Sing the note back down to "do" — count how many steps it takes.' },
+  { kind: 'theory', lvl: 5, name: 'Modes & Keys', icon: '📐',
+    what: 'A music-theory question about modes and keys.',
+    how: ['Read the question.', 'Tap the answer.'],
+    tip: 'Modes in order from the 1st note: Ionian, Dorian, Phrygian, Lydian, Mixolydian, Aeolian, Locrian.' },
+];
+window.mtOpenTutorials = function () {
+  const m = document.getElementById('mt-tut-modal'); if (!m) return;
+  let h = '';
+  MT_TUTORIALS.forEach((t, i) => {
+    h += '<div class="mt-tut-card">' +
+      '<div class="mt-tut-top"><span class="mt-tut-icon">' + t.icon + '</span><span class="mt-tut-name">' + t.name + '</span>' +
+      '<span class="mt-tut-lvl">LEVEL ' + t.lvl + '+</span></div>' +
+      '<div class="mt-tut-what">' + t.what + '</div>' +
+      '<ol class="mt-tut-how">' + t.how.map(x => '<li>' + x + '</li>').join('') + '</ol>' +
+      '<div class="mt-tut-tip">💡 ' + t.tip + '</div>' +
+      '<button type="button" class="mt-tut-try" onclick="mtTryTutorial(' + i + ')">▶ TRY ONE</button>' +
+    '</div>';
+  });
+  document.getElementById('mt-tut-list').innerHTML = h;
+  m.classList.add('open');
+};
+window.mtCloseTutorials = function () { const m = document.getElementById('mt-tut-modal'); if (m) m.classList.remove('open'); };
+// Practice: one untimed question of the chosen type, then back to the tutorials.
+window.mtTryTutorial = function (i) {
+  const t = MT_TUTORIALS[i]; if (!t) return;
+  mtCloseTutorials();
+  getAudio();
+  Object.assign(mtState, { practice: true, _practiceDone: false, level: t.lvl, momentum: 0, currentPoolLevel: t.lvl,
+    lives: KANTEON_CONFIG.arcadeLives, streak: 0, bestStreak: 0, score: 0, rounds: 0, correctCount: 0,
+    lastSpeedFrac: 0.5, difficulty: 'practice', recentKinds: [], history: [], histPos: -1 });
+  mtState.pool = mtBuildPool(t.lvl).filter(p => p.kind === t.kind);
+  if (!mtState.pool.length) mtState.pool = [{ kind: t.kind, id: 'gen', lvl: t.lvl }];
+  renderMtHud();
+  showScreen('mixtape-session');
+  document.getElementById('mixtape-session').classList.add('mt-practice');
+  nextMtRound();
+};
+function mtExitPractice() {
+  mtClearHold(); stopMtTimer(); if (typeof mtClearTimers === 'function') mtClearTimers();
+  try { stopAllAudio(); } catch (e) {}
+  mtState.practice = false; mtState._practiceDone = false;
+  document.getElementById('mixtape-session').classList.remove('mt-practice');
+  buildMtStartScreen();
+  showScreen('mixtape-start');
+  mtOpenTutorials();
+}
+
 // ── Session control ──────────────────────────────────────────────────────
 window.startMixtape = function() {
   getAudio();
@@ -28377,6 +28529,7 @@ function pickWeighted(pool) {
 }
 
 window.nextMtRound = function() {
+  if (mtState.practice && mtState._practiceDone) { mtExitPractice(); return; }
   // Hard cut: kill anything still sounding from the puzzle we're leaving — the
   // looping sample, scheduled clips, and any live drone/tap tone — so nothing
   // bleeds into the next puzzle.
@@ -28388,7 +28541,7 @@ window.nextMtRound = function() {
   klMarkDailyActivity();  // tick the daily streak on real Arcade practice (once/day)
   // Level is driven by MOMENTUM (fast answers accumulate it faster → reach hard puzzles sooner).
   const newLevel = Math.min(MT_TUNE.MAX_LEVEL, 1 + Math.floor(mtState.momentum / MT_TUNE.LEVEL_MOMENTUM));
-  if (newLevel > mtState.level) {
+  if (newLevel > mtState.level && !mtState.practice) {
     const oldKinds = new Set((mtState.pool || []).map(p => p.kind));
     mtState.level = newLevel;
     mtState.currentPoolLevel = newLevel;
@@ -28610,7 +28763,7 @@ function buildMtRound(pick) {
       typeLabel: 'TEXTURE',
       prompt: 'Identify the texture',
       correctId: def.id,
-      answers: pickAnswerSet(AL_TEXTURE.filter(t => t.id === 'mono' || t.id === 'homo' || t.id === 'poly'), def, 3),   // texture words only
+      answers: pickAnswerSet(AL_TEXTURE.filter(t => ['mono', 'homo', 'poly', 'hetero'].includes(t.id)), def, 4),   // the four textures
       loopAudio: true,
       audio: (ctx, t0) => playTextureDemo(ctx, t0, def.id),
     };
@@ -28623,7 +28776,10 @@ function buildMtRound(pick) {
     return {
       module: 'BUILD', moduleClass: 'mod-build',
       typeLabel: 'BUILD THE INTERVAL',
-      prompt: 'Build a ' + def.label + ' ' + direction + ' ' + midiToNoteName(rootMidi).replace(/-?\d+$/, ''),
+      // A unison has no direction (0 half steps), so it's built ON the note, not above/below it.
+      prompt: def.semis === 0
+        ? 'Build a ' + def.label + ' on ' + midiToNoteName(rootMidi).replace(/-?\d+$/, '') + ' (match the note)'
+        : 'Build ' + (/^[AEIOU]/i.test(def.label) ? 'an ' : 'a ') + def.label + ' ' + direction + ' ' + midiToNoteName(rootMidi).replace(/-?\d+$/, ''),
       isBuild: true,
       buildQ: { def, rootMidi, direction, targetSemis: direction === 'above' ? def.semis : -def.semis },
     };
@@ -28887,6 +29043,7 @@ window.replayMtAudio = function() {
 };
 
 function startMtTimer() {
+  if (mtState.practice) { const f = document.getElementById('mt-timer-fill'); if (f) f.style.width = '0%'; return; }   // practice: no clock
   const dur = mtState.currentTimer * 1000;
   mtState.timerDur = dur;
   mtState.timerStartTime = performance.now();
@@ -28999,6 +29156,7 @@ function mtTimeout() {
 }
 
 function mtCorrect(opts) {
+  if (mtState.practice) mtState._practiceDone = true;
   mtLogAnswer(true);
   mtState.rounds++;
   mtState.correctCount++;
@@ -29025,6 +29183,7 @@ function mtCorrect(opts) {
 // opts.replayMs: how long it runs, so the hold covers it.
 function mtWrong(opts) {
   opts = opts || {};
+  if (mtState.practice) { mtState._practiceDone = true; mtState.lives++; }   // practice never costs a life
   mtLogAnswer(false);
   mtState.rounds++;
   mtState.streak = 0;
@@ -29062,7 +29221,8 @@ function mtLogAnswer(correct) {
   try {
     const r = mtState.currentRound;
     if (!r || !r._statKey || mtState.histPos !== -1) return;   // skip dev history replays
-    if (mtState._pausedThisRound) return;                         // timer was paused (dev) — answer time is meaningless
+    if (mtState._pausedThisRound) return;
+    if (mtState.practice) return;                                 // tutorial practice isn't real play                         // timer was paused (dev) — answer time is meaningless
     const timedOut = !!mtState._timedOut;
     const limit = r._limitMs || 0;
     // time from the question appearing to the answer (the countdown can start
@@ -29258,7 +29418,7 @@ function mtStartReviewHold(ms, cont, why, good, whyEl) {
   btn.className = 'mt-next-btn';
   btn.type = 'button';
   btn.innerHTML = '<span class="mt-next-fill" style="animation-duration:' + ms + 'ms"></span><span class="mt-next-label">' +
-    (mtState.lives <= 0 && !good ? 'SEE RESULTS →' : 'NEXT →') + '</span>';
+    (mtState.practice ? 'BACK TO TUTORIALS →' : mtState.lives <= 0 && !good ? 'SEE RESULTS →' : 'NEXT →') + '</span>';
   btn.onclick = go;
   const screen = document.getElementById('mixtape-session');
   (screen || document.body).appendChild(btn);
@@ -30783,6 +30943,7 @@ function refreshMixtapeHiScore() {
 }
 
 window.quitMixtape = function() {
+  if (mtState.practice) { mtExitPractice(); return; }
   // Don't show confirm if they haven't even scored anything yet — just exit clean to home
   if (mtState.score === 0 && mtState.rounds === 0) {
     stopMtTimer();
