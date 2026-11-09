@@ -6028,6 +6028,7 @@
   #studio .studio-view-head { display: flex; justify-content: space-between; align-items: center; margin: 6px 0 3px; font-family: var(--font-display);
     font-weight: 900; font-size: 12px; letter-spacing: 1.5px; color: var(--text); flex: 0 0 auto; }
   #studio .studio-view-hint { font-family: var(--font-body); font-weight: 600; font-size: 11px; letter-spacing: 0; color: var(--text3); margin-left: 6px; }
+  #studio .studio-view-guitar, #studio .studio-view-bass { cursor: pointer; }
   #studio .studio-view { flex: 0 0 auto; height: clamp(78px, 17vh, 150px); border-radius: 6px; background: #0b0920; border: 1px solid rgba(255,255,255,0.1); overflow: hidden;
     --lc: #7c6ff7; touch-action: none; }
   #studio .studio-view.studio-l-bass { --lc: #a78bfa; } #studio .studio-view.studio-l-guitar { --lc: #ff7a59; }
@@ -6059,6 +6060,15 @@
   .studio-view .sv-pos.used .sv-plbl { fill: #fff; opacity: 0.8; }
   .studio-view .sv-pos.lit circle { fill: var(--lc); stroke: #fff; stroke-width: 2; filter: drop-shadow(0 0 4px var(--lc)); }
   .studio-view .sv-pos.lit .sv-plbl { fill: #0d0a22; }
+  /* beat ruler */
+  #studio .studio-beat-ruler { display: grid; gap: 2px; flex: 0 0 auto !important; min-height: 0 !important; margin-bottom: 2px; }
+  #studio .studio-pianoroll.many .studio-beat-ruler { gap: 1px; }
+  #studio .studio-beat-lbl { font-family: var(--font-display); font-weight: 800; font-size: 9px; letter-spacing: 1px; color: var(--text3); text-align: right; padding-right: 6px; align-self: center; }
+  #studio .studio-beat { font-family: var(--font-display); font-weight: 700; font-size: 10px; color: var(--text3); text-align: center; line-height: 16px; height: 16px;
+    border-radius: 3px; min-width: 0; overflow: hidden; }
+  #studio .studio-beat.on { font-weight: 900; font-size: 12px; color: var(--text); background: rgba(255,255,255,0.06); }
+  #studio .studio-beat.one { color: var(--gold); }
+  #studio .studio-beat.playhead { background: #fff; color: #0d0a22; }
 </style>
 </head>
 <body>
@@ -22251,7 +22261,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.08al'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.08ao'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -27231,6 +27241,22 @@ window.studioBarClear = function (bar) {
   studioRows(tr).forEach(r => { for (let i = 0; i < spb; i++) r[bar * spb + i] = false; });
   studioRenderTracks();
 };
+// Beat ruler under the bar strip: 1 2 3 4 (¼) · 1 & 2 & (⅛) · 1 e & a (16ths)
+function studioBeatRuler(labelW) {
+  const spb = studioState.stepsPerBar, total = studioState.bars * spb, cpb = studioColsPerBeat();
+  const sub = cpb === 4 ? ['', 'e', '&', 'a'] : cpb === 2 ? ['', '&'] : cpb === 3 ? ['', '&', 'a'] : [''];
+  const row = document.createElement('div');
+  row.className = 'studio-beat-ruler';
+  row.style.gridTemplateColumns = labelW + ' repeat(' + total + ', minmax(0, 1fr))';
+  let h = '<div class="studio-beat-lbl">BEAT</div>';
+  for (let i = 0; i < total; i++) {
+    const inBar = i % spb, k = inBar % cpb, beat = Math.floor(inBar / cpb) + 1;
+    const txt = k === 0 ? String(beat) : (total > 32 ? '' : sub[k] || '');
+    h += '<div class="studio-beat' + (k === 0 ? ' on' : '') + (inBar === 0 ? ' one' : '') + '" data-step="' + i + '">' + txt + '</div>';
+  }
+  row.innerHTML = h;
+  return row;
+}
 function studioBarHeader(labelW) {
   const spb = studioState.stepsPerBar, bars = studioState.bars, clip = studioState.barClip;
   const row = document.createElement('div');
@@ -27368,6 +27394,7 @@ function studioBuildDrumTrack(tr) {
   grid.className = 'studio-pianoroll studio-drumroll' + (total > 32 ? ' many' : '');
   const gridCols = '78px repeat(' + total + ', minmax(0, 1fr))';
   grid.appendChild(studioBarHeader('78px'));
+  grid.appendChild(studioBeatRuler('78px'));
   STUDIO_DRUMS.forEach(([v, label]) => {
     const arr = tr.pattern[v] || (tr.pattern[v] = new Array(total).fill(false));
     const rowDiv = document.createElement('div');
@@ -27475,6 +27502,7 @@ function studioBuildPitchedTrack(tr) {
   const grid = document.createElement('div');
   grid.className = 'studio-pianoroll' + (total > 32 ? ' many' : '');
   grid.appendChild(studioBarHeader('44px'));
+  grid.appendChild(studioBeatRuler('44px'));
   const rows = studioRowSemis(tr).slice().reverse();   // high notes on top
   rows.forEach(semi => {
     if (!tr.notes[semi]) tr.notes[semi] = new Array(total).fill(false);
@@ -27617,6 +27645,7 @@ function studioBuildInstrumentView(tr) {
     const T = STUDIO_TUNINGS[kind], nS = T.open.length, F = T.frets;
     const L = 46, fw = 38, W = L + F * fw + 8, sg = kind === 'bass' ? 24 : 17, top = 12, H = top * 2 + sg * (nS - 1) + 12;
     const svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet', class: 'studio-view-svg' }, box);
+    box._geo = { svg, L, fw, top, sg, nS, F };                        // for "tap anywhere" hit-testing
     const fx = f => f === 0 ? L - 12 : L + (f - 0.5) * fw;           // dot x for a fret (0 = open, left of the nut)
     el('rect', { x: L, y: top - 6, width: F * fw, height: sg * (nS - 1) + 12, class: 'sv-board', rx: 3 }, svg);
     [3, 5, 7, 9, 15].forEach(f => el('circle', { cx: L + (f - 0.5) * fw, cy: top + sg * (nS - 1) / 2, r: 4, class: 'sv-inlay' }, svg));
@@ -27636,7 +27665,22 @@ function studioBuildInstrumentView(tr) {
   }
   // tap: hear it; on guitar/bass also choose this string for that pitch
   box.onpointerdown = e => {
-    const g = e.target.closest('[data-midi]'); if (!g) return;
+    let g = e.target.closest('[data-midi]');
+    if (box._geo) {
+      // fretboard: ANY spot counts — nearest string, and whichever fret space you're in
+      const G = box._geo, pt = G.svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+      const ctm = G.svg.getScreenCTM(); if (!ctm) return;
+      const p = pt.matrixTransform(ctm.inverse());
+      const st = Math.max(0, Math.min(G.nS - 1, Math.round((p.y - G.top) / G.sg)));
+      const f = p.x < G.L ? 0 : Math.max(1, Math.min(G.F, Math.floor((p.x - G.L) / G.fw) + 1));
+      g = box.querySelector('.sv-pos[data-s="' + st + '"][data-f="' + f + '"]');
+      if (g && !g.classList.contains('lit') && !g.classList.contains('used')) {
+        // a fresh spot: play it and make it this pitch's spot so it lights right there
+        studioState.fretChoice = studioState.fretChoice || {};
+        (studioState.fretChoice[kind] = studioState.fretChoice[kind] || {})[+g.dataset.midi] = st;
+      }
+    }
+    if (!g) return;
     const m = +g.dataset.midi;
     studioPlayNote(tr, m, (audioCtx || getAudio()).currentTime + 0.005, 0.5, 0.22);
     if (kind !== 'piano' && (g.classList.contains('lit') || g.classList.contains('used'))) {
@@ -28037,9 +28081,9 @@ window.klOpenStudio = function () {
 
 // ── PLAYHEAD ───────────────────────────────────────────────────────────────
 // Screens take a frame or two to show a change, so the lights fire a little EARLY
-// to land with the sound. Default 70 ms; DEV can fine-tune it (saved on this device).
+// to land with the sound. Default 90 ms; DEV can fine-tune it (saved on this device).
 function studioLightLeadMs() {
-  if (studioState.lightLead == null) { const v = parseFloat(localStorage.getItem('kanteon_studio_lightlead')); studioState.lightLead = isNaN(v) ? 70 : v; }
+  if (studioState.lightLead == null) { const v = parseFloat(localStorage.getItem('kanteon_studio_lightlead')); studioState.lightLead = isNaN(v) ? 90 : v; }   // 90 ms = tuned by Matt 2026-11-08
   return studioState.lightLead;
 }
 window.studioSetLightLead = function (v) {
