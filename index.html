@@ -3683,6 +3683,9 @@
   #mixtape-session .build-hear-btn, #mixtape-session .build-submit-btn { font-size: clamp(15px, min(1.6vw, 2.8vh), 22px); padding: clamp(12px, 2.4vh, 22px) 12px; letter-spacing: 4px; }
   #mixtape-session .mt-rw-hint { font-family: var(--font-display); font-weight: 700; font-size: clamp(16px, min(1.8vw, 3vh), 24px); color: var(--text2); letter-spacing: 0.5px; text-align: center; }
   #mixtape-session .build-marker::after, #mixtape-session .build-root-marker::after, #mixtape-session .build-target-marker::after { font-size: 13px; }
+  /* root note name sits clear above the draggable dot (which starts on top of the root) */
+  #mixtape-session .build-root-marker { z-index: 6; }
+  #mixtape-session .build-root-marker::after { top: -26px; font-size: 17px; padding: 0 4px; border-radius: 4px; background: rgba(13,10,38,0.85); }
   #mixtape-session .mt-why, #mixtape-session .mt-why-inline { font-size: clamp(18px, min(1.9vw, 3.4vh), 26px); }
   #mixtape-session .mt-next-btn { font-size: clamp(17px, 1.8vw, 24px); height: clamp(48px, 8vh, 62px); }
   #mixtape-session .mt-prog-slot { width: clamp(84px, min(9vw, 15vh), 130px); min-height: clamp(70px, min(8vw, 13vh), 120px); }
@@ -3773,6 +3776,9 @@
   .mt-lu-kicker { font-family: var(--font-display); font-weight: 900; font-size: clamp(22px, 2.6vw, 34px); letter-spacing: 6px; color: var(--gold); }
   .mt-lu-num { font-family: var(--font-display); font-weight: 900; font-size: clamp(64px, 9vw, 120px); line-height: 1; color: #fff; letter-spacing: 4px; margin: 6px 0 10px; }
   .mt-lu-new { font-family: var(--font-display); font-weight: 700; font-size: clamp(18px, 2vw, 26px); color: #c4b5fd; max-width: 70vw; }
+  .mt-lu-go { margin-top: 22px; padding: 14px 44px; border: 2px solid var(--gold); border-radius: 10px; background: var(--gold); color: #1a1440;
+    font-family: var(--font-display); font-weight: 900; font-size: clamp(18px, 2vw, 26px); letter-spacing: 4px; cursor: pointer; }
+  .mt-lu-go:hover { filter: brightness(1.1); }
   .mt-lu-tap { font-family: var(--font-display); font-size: 15px; color: var(--text3); letter-spacing: 2px; margin-top: 16px; text-transform: uppercase; }
   @keyframes mtLuIn { from { opacity: 0; } to { opacity: 1; } }
   @keyframes mtLuPop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
@@ -7477,8 +7483,7 @@ const db = getFirestore(fbApp);
 const KANTEON_CONFIG = {
   // ——— Arcade Mode ———
   arcadeWrongHoldSeconds: 7,
-  arcadeRightBuildHoldSeconds: 5,
-  arcadeLevelUpSeconds: 3.5,        // Arcade: how long the LEVEL UP card stays up (click / SPACE skips) // Arcade: a CORRECT build answer stays up this long so you can see how close you got
+  arcadeRightBuildHoldSeconds: 5,   // Arcade: a CORRECT build answer stays up this long so you can see how close you got
   // Arcade: seconds per BUILD / TRANSCRIPTION question at levels 1-5. These take real
   // time to tune by ear, so they stay roomy and only get tight at the top level.
   arcadeBuildSeconds: {
@@ -21799,7 +21804,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.08d'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.08f'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -29173,14 +29178,14 @@ function mtShowLevelUp(level, fresh, cont) {
   el.id = 'mt-levelup'; el.className = 'mt-levelup';
   el.innerHTML = '<div class="mt-lu-card"><div class="mt-lu-kicker">LEVEL UP!</div><div class="mt-lu-num">LEVEL ' + level + '</div>' +
     (fresh.length ? '<div class="mt-lu-new">NEW: ' + fresh.join(' · ') + '</div>' : '<div class="mt-lu-new">Harder questions, less time.</div>') +
-    '<div class="mt-lu-tap">click or press SPACE to keep going</div></div>';
+    '<button type="button" class="mt-lu-go">KEEP GOING \u2192</button><div class="mt-lu-tap">or press SPACE</div></div>';
   (document.getElementById('mixtape-session') || document.body).appendChild(el);
   try { const ctx = getAudio(), t = ctx.currentTime + 0.02; [0, 4, 7, 12].forEach((s, i) => playTone(midiFreq(72 + s), t + i * 0.09, 0.35, ctx, 0.14, 'piano')); } catch (e) {}
   let done = false;
   const go = () => { if (done) return; done = true; clearTimeout(tm); document.removeEventListener('keydown', key, true); el.remove();
     const scr = document.getElementById('mixtape-session'); if (scr && scr.classList.contains('active')) cont(); };   // quit mid-card = don't resume
   const key = e => { if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); e.stopPropagation(); go(); } };
-  const tm = setTimeout(go, KANTEON_CONFIG.arcadeLevelUpSeconds * 1000 || 3500);
+  const tm = null;   // no auto-advance: the player clicks (or presses SPACE) to continue
   setTimeout(() => { el.addEventListener('click', go); document.addEventListener('keydown', key, true); }, 600);   // ignore stray clicks right away
 }
 
