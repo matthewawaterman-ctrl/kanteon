@@ -3815,6 +3815,16 @@
   .mt-sg-cell.bad { background: linear-gradient(180deg, #f87171, #dc2626); }
   .mt-sg-cell.ghost { border: 2px dashed var(--gold); }
   .mt-sg-wrap .build-submit-btn:disabled { opacity: 0.5; }
+  /* Lesson landing: same cards as the Arcade tutorials */
+  .lm-intro { font-family: var(--font-display); font-weight: 700; font-size: clamp(16px, 1.6vw, 21px); color: var(--text2); text-align: center; margin: 4px 0 14px; }
+  #bok-list { display: block; }
+  .lm-list { padding: 0 4px; display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+  .lm-list .mt-tut-card { margin: 0; }
+  .lm-card { text-align: left; cursor: pointer; color: inherit; font: inherit; }
+  .lm-card:hover { border-color: #9b8fff; background: #221b58; }
+  .lm-more-h { font-family: var(--font-display); font-weight: 900; font-size: 18px; letter-spacing: 4px; color: var(--text3); margin: 26px 4px 12px; }
+  .lm-more { background: #15123a; }
+  .bok-screen { max-width: 1180px; margin: 0 auto; width: 100%; }
   .mt-start-links { margin-top: 14px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
   .mt-tut-open { font-family: var(--font-display); font-weight: 900; font-size: clamp(18px, 2vw, 26px); letter-spacing: 3px;
     padding: 14px 34px; border-radius: 12px; border: 2px solid #9b8fff; background: rgba(124,111,247,0.18); color: #fff; cursor: pointer; }
@@ -13719,24 +13729,70 @@ const carouselState = {
 
 // BOOK OF KNOWLEDGE — flat list. Every module is one button; click launches it.
 // No carousel, no submenus. (Kept the name buildCarousel so existing callers work.)
+// ── LESSON MODE LANDING — same categories as the Arcade tutorials ────────────
+// Each card opens the EXISTING Lesson exercise for that skill (same config
+// screens, untimed, XP + progress as before), pre-focused on just that skill.
+const LESSON_FOCUS = {
+  'notation':        { mod: 'notation',            meta: 'NOTATION_META',   st: 'notationState', modes: ['treble', 'bass'], tab: 'setNotationTab', ui: 'refreshNotationConfigUI' },
+  'ear-interval':    { mod: 'ear_training',        meta: 'EAR_MODE_META',   st: 'earState',      modes: ['intervals'],      tab: 'setEarTab',      ui: 'refreshEarConfigUI' },
+  'build-interval':  { mod: 'build_mode',          meta: 'BUILD_MODE_META', st: 'buildState',    modes: ['intervals'],      tab: 'setBuildTab',    ui: 'refreshBuildConfigUI' },
+  'transcription':   { mod: 'transcription_lab' },
+  'ear-chord':       { mod: 'ear_training',        meta: 'EAR_MODE_META',   st: 'earState',      modes: ['chords'],         tab: 'setEarTab',      ui: 'refreshEarConfigUI' },
+  'ear-scale':       { mod: 'ear_training',        meta: 'EAR_MODE_META',   st: 'earState',      modes: ['scales'],         tab: 'setEarTab',      ui: 'refreshEarConfigUI' },
+  'ear-progression': { mod: 'ear_training',        meta: 'EAR_MODE_META',   st: 'earState',      modes: ['progressions'],   tab: 'setEarTab',      ui: 'refreshEarConfigUI' },
+  'build-chord':     { mod: 'build_mode',          meta: 'BUILD_MODE_META', st: 'buildState',    modes: ['chords'],         tab: 'setBuildTab',    ui: 'refreshBuildConfigUI' },
+  'rhythm-write':    { mod: 'rhythm_comprehension' },
+  'al-tempo':        { mod: 'active_listening',    meta: 'AL_MODE_META',    st: 'alState',       modes: ['tempo'],          tab: 'setAlTab',       ui: 'refreshAlConfigUI' },
+  'al-texture':      { mod: 'active_listening',    meta: 'AL_MODE_META',    st: 'alState',       modes: ['texture'],        tab: 'setAlTab',       ui: 'refreshAlConfigUI' },
+  'build-scale':     { mod: 'build_mode',          meta: 'BUILD_MODE_META', st: 'buildState',    modes: ['scales'],         tab: 'setBuildTab',    ui: 'refreshBuildConfigUI' },
+  'ear-scaleDegree': { mod: 'ear_training',        meta: 'EAR_MODE_META',   st: 'earState',      modes: ['scaleDegrees'],   tab: 'setEarTab',      ui: 'refreshEarConfigUI' },
+  'theory':          { mod: 'theory' },
+};
+// Lesson-only extras that have no Arcade question type
+const LESSON_MORE = [
+  { icon: '🔊', name: 'Active Listening — everything', what: 'Dynamics, articulation, tempo, texture and instruments in one session.', go: "selectModule('active_listening')" },
+  { icon: '🥁', name: 'Drum Notation & Guitar Tab', what: 'Read drum parts and guitar tab.', go: "lessonOpenFocus('_drumtab')" },
+  { icon: '🎸', name: 'Instrument Anatomy', what: 'Learn the parts of guitars, basses, amps, keys, drums and more.', go: "selectModule('instrument_anatomy')" },
+  { icon: '🎚️', name: 'Studio', what: 'Sandbox sequencer with a built-in metronome.', go: "selectModule('studio')" },
+];
+LESSON_FOCUS._drumtab = { mod: 'notation', meta: 'NOTATION_META', st: 'notationState', modes: ['drum', 'tab'], tab: 'setNotationTab', ui: 'refreshNotationConfigUI' };
+window.lessonOpenFocus = function (kind) {
+  const f = LESSON_FOCUS[kind]; if (!f) return;
+  selectModule(f.mod);                       // the normal Lesson entry (inits + shows its screen)
+  if (!f.meta) return;
+  try {
+    const META = eval(f.meta), ST = eval(f.st);  // module-scope consts
+    Object.keys(META).forEach(m => {
+      const meta = META[m]; if (!meta || !meta.includeKey) return;
+      ST[meta.includeKey] = f.modes.includes(m);
+      const tog = meta.includeTogId && document.getElementById(meta.includeTogId);
+      if (tog) tog.classList.toggle('on', ST[meta.includeKey]);
+    });
+    if (typeof window[f.tab] === 'function') window[f.tab](f.modes[0]);
+    const ui = eval(f.ui); if (typeof ui === 'function') ui();
+  } catch (e) { console.warn('lesson focus', kind, e); }
+};
 function buildCarousel() {
   const list = document.getElementById('bok-list');
   if (!list) return;
-  const flat = []
-    .concat(CAROUSEL_DATA.play, CAROUSEL_DATA.read, CAROUSEL_DATA.study, CAROUSEL_DATA.tools);
-  list.innerHTML = flat.map(function(item) {
-    const isMix = item.action === 'mixtape';
-    const key = item.action.indexOf('mod:') === 0 ? item.action.split(':')[1] : '';
-    const onclick = isMix ? 'openMixtape()' : ("selectModule('" + key + "')");
-    return '<button class="bok-row ' + item.cls + (isMix ? ' bok-row-mix' : '') + '" onclick="' + onclick + '">' +
-        '<span class="bok-row-icon">' + item.icon + '</span>' +
-        '<span class="bok-row-text">' +
-          '<span class="bok-row-name">' + item.name + '</span>' +
-          '<span class="bok-row-desc">' + item.sub + '</span>' +
-        '</span>' +
-        '<span class="bok-row-go">▶</span>' +
-      '</button>';
-  }).join('');
+  let h = '<div class="lm-intro">Pick a skill to practice — no timer, earn XP.</div><div class="mt-tut-list lm-list">';
+  const LESSON_TEXT = { 'rhythm-write': { name: 'Rhythm Reading', icon: '🥁', what: 'A rhythm is written on the staff. Tap it back in time.' } };
+  MT_TUTORIALS.forEach(t0 => {
+    if (!LESSON_FOCUS[t0.kind]) return;
+    const t = Object.assign({}, t0, LESSON_TEXT[t0.kind] || {});
+    h += '<button type="button" class="mt-tut-card lm-card" onclick="lessonOpenFocus(\'' + t.kind + '\')">' +
+      '<div class="mt-tut-top"><span class="mt-tut-icon">' + t.icon + '</span><span class="mt-tut-name">' + t.name + '</span></div>' +
+      '<div class="mt-tut-what">' + t.what + '</div>' +
+      '<span class="mt-tut-try lm-go">▶ START</span></button>';
+  });
+  h += '</div><div class="lm-more-h">MORE IN LESSON MODE</div><div class="mt-tut-list lm-list">';
+  LESSON_MORE.forEach(m => {
+    h += '<button type="button" class="mt-tut-card lm-card lm-more" onclick="' + m.go + '">' +
+      '<div class="mt-tut-top"><span class="mt-tut-icon">' + m.icon + '</span><span class="mt-tut-name">' + m.name + '</span></div>' +
+      '<div class="mt-tut-what">' + m.what + '</div>' +
+      '<span class="mt-tut-try lm-go">▶ START</span></button>';
+  });
+  list.innerHTML = h + '</div>';
 }
 // Carousel nav is retired — these no-op now that the Book is a flat list. (Kept so
 // the old keyboard/swipe/Enter handlers can call them harmlessly.)
@@ -21877,7 +21933,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.08o'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.08q'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -28044,7 +28100,11 @@ function mtBuildPool(maxLevel) {
   // Use a curated set of common intervals by level
   const buildIntervalSets = KANTEON_LADDER.intervals;   // unified ladder
   const buildSet = buildIntervalSets[Math.min(maxLevel, 5)] || buildIntervalSets[1];
-  buildSet.forEach(id => pool.push({ kind: 'build-interval', id, lvl: maxLevel }));
+  // No unison here: the draggable dot STARTS on the root, so a unison was a free answer —
+  // and with only 3 intervals at L1 it came up 1 time in 3. Keep at least 3 choices.
+  let _bi = buildSet.filter(id => id !== 'unison');
+  if (_bi.length < 3) _bi = _bi.concat(['P4', 'M3'].filter(id => !_bi.includes(id))).slice(0, 3);
+  _bi.forEach(id => pool.push({ kind: 'build-interval', id, lvl: maxLevel }));
 
   // Build Mode — construct CHORDS by ear (multi-marker). Introduced at level 2+
   // so the first level stays interval-only. Harder chords unlock with level.
