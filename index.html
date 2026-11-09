@@ -6052,6 +6052,7 @@
   .studio-view .sv-inlay { fill: #d8c9a6; opacity: 0.55; }
   .studio-view .sv-sname { font: 800 11px var(--font-display); fill: var(--text2); }
   .studio-view .sv-fnum { font: 700 9px var(--font-mono); fill: var(--text3); text-anchor: middle; }
+  .studio-view .sv-fnum.mark { fill: var(--text2); font-weight: 900; }
   .studio-view .sv-pos { cursor: pointer; }
   .studio-view .sv-pos circle { fill: transparent; }
   .studio-view .sv-pos .sv-plbl { font: 800 8px var(--font-display); text-anchor: middle; fill: transparent; pointer-events: none; }
@@ -6069,6 +6070,9 @@
   #studio .studio-beat.on { font-weight: 900; font-size: 12px; color: var(--text); background: rgba(255,255,255,0.06); }
   #studio .studio-beat.one { color: var(--gold); }
   #studio .studio-beat.playhead { background: #fff; color: #0d0a22; }
+  @media (max-width: 1200px) { #studio .studio-view-hint { display: none; } }
+  #studio .studio-view-head > span:last-child { white-space: nowrap; display: flex; align-items: center; gap: 3px; }
+  #studio .studio-view-head .studio-chip { padding: 3px 6px; font-size: 10px; }
 </style>
 </head>
 <body>
@@ -22261,7 +22265,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.08ao'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.08ap'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -27543,7 +27547,10 @@ function studioBuildPitchedTrack(tr) {
     vh.className = 'studio-view-head';
     vh.innerHTML = '<span>' + (kind === 'piano' ? '🎹 KEYBOARD' : kind === 'guitar' ? '🎸 GUITAR NECK' : '🎸 BASS NECK') +
       ' <span class="studio-view-hint">' + (kind === 'piano' ? 'tap a key to hear it' : (studioState.allSpots ? 'tap a spot to make it your spot' : 'tap a lit note to move it to another string')) + '</span></span>' +
-      (kind === 'piano' ? '' : '<span><button class="studio-chip' + (!studioState.allSpots ? ' active' : '') + '" onclick="studioSetAllSpots(false)">ONE SPOT</button>' +
+      (kind === 'piano' ? '' : '<span><span class="studio-row-label">FRETS</span>' +
+        STUDIO_FRET_RANGES.map((r, i) => { const w = studioFretWin(kind); return '<button class="studio-chip' + (w[0] === r[0] && w[1] === r[1] ? ' active' : '') +
+          '" onclick="studioSetFretWin(\'' + kind + '\',' + i + ')">' + r[0] + '–' + r[1] + '</button>'; }).join('') +
+        '<span style="display:inline-block;width:8px"></span><button class="studio-chip' + (!studioState.allSpots ? ' active' : '') + '" onclick="studioSetAllSpots(false)">ONE SPOT</button>' +
         '<button class="studio-chip' + (studioState.allSpots ? ' active' : '') + '" onclick="studioSetAllSpots(true)">EVERY SPOT</button></span>');
     wrap.appendChild(vh);
     wrap.appendChild(studioBuildInstrumentView(tr));
@@ -27557,14 +27564,20 @@ function studioBuildPitchedTrack(tr) {
 // lit dot to move it to the next string that has that note); EVERY SPOT shows
 // every string + fret where the note can be played.
 const STUDIO_TUNINGS = {
-  guitar: { names: ['E', 'B', 'G', 'D', 'A', 'E'], open: [64, 59, 55, 50, 45, 40], frets: 15 },   // high E on top (like tab)
-  bass:   { names: ['G', 'D', 'A', 'E'], open: [43, 38, 33, 28], frets: 15 },
+  guitar: { names: ['E', 'B', 'G', 'D', 'A', 'E'], open: [64, 59, 55, 50, 45, 40], frets: 24 },   // high E on top (like tab)
+  bass:   { names: ['G', 'D', 'A', 'E'], open: [43, 38, 33, 28], frets: 24 },
 };
 function studioViewKind(tr) { return (tr.id === 'guitar' || tr.id === 'bass') ? tr.id : 'piano'; }
 function studioMidiName(m) { return STUDIO_KEYS[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1); }
+// Visible fret window per instrument (default 0–15, the neck goes to 24).
+const STUDIO_FRET_RANGES = [[0, 12], [0, 15], [0, 24], [5, 17], [12, 24]];
+function studioFretWin(kind) { const r = (studioState.fretWin || {})[kind]; return r || [0, 15]; }
+window.studioSetFretWin = function (kind, i) {
+  studioState.fretWin = studioState.fretWin || {}; studioState.fretWin[kind] = STUDIO_FRET_RANGES[i]; studioRenderTracks();
+};
 function studioFretPositions(kind, m) {
-  const t = STUDIO_TUNINGS[kind], out = [];
-  t.open.forEach((o, s) => { const f = m - o; if (f >= 0 && f <= t.frets) out.push([s, f]); });
+  const t = STUDIO_TUNINGS[kind], [lo, hi] = studioFretWin(kind), out = [];
+  t.open.forEach((o, s) => { const f = m - o; if (f >= 0 && f <= hi && (f >= lo || f === 0 && lo === 0)) out.push([s, f]); });
   return out;
 }
 // chosen spot for a pitch: kid's pick, else the lowest fret
@@ -27593,9 +27606,10 @@ function studioVoice(kind, midis) {
       if (sc < bestScore) { bestScore = sc; best = pick.map(p => p.slice()); }
       return;
     }
+    const [wLo, wHi] = studioFretWin(kind);
     for (let st = maxIdx - 1; st >= 0; st--) {                       // higher note → higher (smaller index) string
       const f = notes[i] - T.open[st];
-      if (f < 0 || f > F) continue;
+      if (f < 0 || f > wHi || f < wLo) continue;                      // stay inside the visible fret window
       pick.push([st, f]); dfs(i + 1, st); pick.pop();
     }
   };
@@ -27642,25 +27656,32 @@ function studioBuildInstrumentView(tr) {
       el('circle', { class: 'sv-dot', cx: i * 24 + 24, cy: H * 0.6 - 12, r: 6.5 }, g);
     });
   } else {
-    const T = STUDIO_TUNINGS[kind], nS = T.open.length, F = T.frets;
-    const L = 46, fw = 38, W = L + F * fw + 8, sg = kind === 'bass' ? 24 : 17, top = 12, H = top * 2 + sg * (nS - 1) + 12;
+    const T = STUDIO_TUNINGS[kind], nS = T.open.length;
+    const [lo, hi] = studioFretWin(kind);
+    const first = lo === 0 ? 1 : lo, cols = hi - first + 1;            // fret columns drawn
+    const L = 46, fw = Math.min(40, 600 / cols), W = L + cols * fw + 8, sg = kind === 'bass' ? 24 : 17, top = 12, H = top * 2 + sg * (nS - 1) + 12;
     const svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet', class: 'studio-view-svg' }, box);
-    box._geo = { svg, L, fw, top, sg, nS, F };                        // for "tap anywhere" hit-testing
-    const fx = f => f === 0 ? L - 12 : L + (f - 0.5) * fw;           // dot x for a fret (0 = open, left of the nut)
-    el('rect', { x: L, y: top - 6, width: F * fw, height: sg * (nS - 1) + 12, class: 'sv-board', rx: 3 }, svg);
-    [3, 5, 7, 9, 15].forEach(f => el('circle', { cx: L + (f - 0.5) * fw, cy: top + sg * (nS - 1) / 2, r: 4, class: 'sv-inlay' }, svg));
-    [12].forEach(f => { el('circle', { cx: L + (f - 0.5) * fw, cy: top + sg * 0.75, r: 4, class: 'sv-inlay' }, svg); el('circle', { cx: L + (f - 0.5) * fw, cy: top + sg * (nS - 1.75), r: 4, class: 'sv-inlay' }, svg); });
-    for (let f = 0; f <= F; f++) el('line', { x1: L + f * fw, y1: top - 6, x2: L + f * fw, y2: top + sg * (nS - 1) + 6, class: f === 0 ? 'sv-nut' : 'sv-fret' }, svg);
-    for (let s = 0; s < nS; s++) {
-      el('line', { x1: L - 20, y1: top + s * sg, x2: L + F * fw, y2: top + s * sg, class: 'sv-string', 'stroke-width': 1 + s * (kind === 'bass' ? 0.6 : 0.35) }, svg);
-      const t = el('text', { x: 8, y: top + s * sg + 4, class: 'sv-sname' }, svg); t.textContent = T.names[s];
+    box._geo = { svg, L, fw, top, sg, nS, lo, hi, first };             // for "tap anywhere" hit-testing
+    const cx = f => L + (f - first + 0.5) * fw;
+    const fx = f => f === 0 ? L - 12 : cx(f);                          // open strings sit left of the nut
+    const r = Math.min(kind === 'bass' ? 9 : 7.5, fw * 0.36);
+    el('rect', { x: L, y: top - 6, width: cols * fw, height: sg * (nS - 1) + 12, class: 'sv-board', rx: 3 }, svg);
+    [3, 5, 7, 9, 15, 17, 19, 21].filter(f => f >= first && f <= hi).forEach(f => el('circle', { cx: cx(f), cy: top + sg * (nS - 1) / 2, r: Math.min(4, fw * 0.18), class: 'sv-inlay' }, svg));
+    [12, 24].filter(f => f >= first && f <= hi).forEach(f => { el('circle', { cx: cx(f), cy: top + sg * 0.75, r: Math.min(4, fw * 0.18), class: 'sv-inlay' }, svg); el('circle', { cx: cx(f), cy: top + sg * (nS - 1.75), r: Math.min(4, fw * 0.18), class: 'sv-inlay' }, svg); });
+    for (let k = 0; k <= cols; k++) el('line', { x1: L + k * fw, y1: top - 6, x2: L + k * fw, y2: top + sg * (nS - 1) + 6, class: (k === 0 && lo === 0) ? 'sv-nut' : 'sv-fret' }, svg);
+    for (let s2 = 0; s2 < nS; s2++) {
+      el('line', { x1: L - (lo === 0 ? 20 : 0), y1: top + s2 * sg, x2: L + cols * fw, y2: top + s2 * sg, class: 'sv-string', 'stroke-width': 1 + s2 * (kind === 'bass' ? 0.6 : 0.35) }, svg);
+      const t = el('text', { x: 8, y: top + s2 * sg + 4, class: 'sv-sname' }, svg); t.textContent = T.names[s2];
     }
-    for (let f = 1; f <= F; f++) { const t = el('text', { x: L + (f - 0.5) * fw, y: H - 2, class: 'sv-fnum' }, svg); t.textContent = f; }
-    for (let s = 0; s < nS; s++) for (let f = 0; f <= F; f++) {
-      const m = T.open[s] + f;
-      const g = el('g', { class: 'sv-pos', 'data-midi': m, 'data-s': s, 'data-f': f }, svg);
-      el('circle', { cx: fx(f), cy: top + s * sg, r: kind === 'bass' ? 9 : 7.5 }, g);
-      const t = el('text', { x: fx(f), y: top + s * sg + 3.5, class: 'sv-plbl' }, g); t.textContent = STUDIO_KEYS[m % 12];
+    for (let f = first; f <= hi; f++) { const t = el('text', { x: cx(f), y: H - 2, class: 'sv-fnum' + ([3,5,7,9,12,15,17,19,21,24].includes(f) ? ' mark' : '') }, svg); t.textContent = f; }
+    for (let s2 = 0; s2 < nS; s2++) {
+      const fr = lo === 0 ? [0] : []; for (let f = first; f <= hi; f++) fr.push(f);
+      fr.forEach(f => {
+        const m = T.open[s2] + f;
+        const g = el('g', { class: 'sv-pos', 'data-midi': m, 'data-s': s2, 'data-f': f }, svg);
+        el('circle', { cx: fx(f), cy: top + s2 * sg, r }, g);
+        const t = el('text', { x: fx(f), y: top + s2 * sg + 3.5, class: 'sv-plbl' }, g); t.textContent = STUDIO_KEYS[m % 12];
+      });
     }
   }
   // tap: hear it; on guitar/bass also choose this string for that pitch
@@ -27672,7 +27693,7 @@ function studioBuildInstrumentView(tr) {
       const ctm = G.svg.getScreenCTM(); if (!ctm) return;
       const p = pt.matrixTransform(ctm.inverse());
       const st = Math.max(0, Math.min(G.nS - 1, Math.round((p.y - G.top) / G.sg)));
-      const f = p.x < G.L ? 0 : Math.max(1, Math.min(G.F, Math.floor((p.x - G.L) / G.fw) + 1));
+      const f = (p.x < G.L && G.lo === 0) ? 0 : Math.max(G.first, Math.min(G.hi, G.first + Math.floor((p.x - G.L) / G.fw)));
       g = box.querySelector('.sv-pos[data-s="' + st + '"][data-f="' + f + '"]');
       if (g && !g.classList.contains('lit') && !g.classList.contains('used')) {
         // a fresh spot: play it and make it this pitch's spot so it lights right there
