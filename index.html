@@ -3538,7 +3538,7 @@
 
   #mixtape-session { background: var(--space-bg); }
   .mt-hud {
-    display: flex; align-items: center; gap: 12px;
+    display: flex; align-items: center; gap: 12px; flex-shrink: 0;
     padding: 10px 16px;
     border-bottom: 1px solid var(--border);
     background: var(--bg2);
@@ -3577,7 +3577,7 @@
   }
   .mt-score .v { color: var(--gold); font-size: 18px; }
   .mt-timer-bar {
-    height: 6px; background: var(--bg3);
+    height: 8px; flex-shrink: 0; background: var(--bg3);   /* never let tall rounds squash it to 0px */
     position: relative; overflow: hidden;
   }
   .mt-timer-fill {
@@ -3671,7 +3671,7 @@
   .mt-tx-hint { font-family: var(--font-display); font-weight: 700; font-size: clamp(16px, min(1.8vw, 3vh), 24px); color: var(--text2); text-align: center; letter-spacing: 0.5px; }
   /* ── Arcade readability pass: bigger type everywhere, bigger staff ──
      Sizes use min(vw, vh) so they grow on big screens but still fit a short laptop window. */
-  #mixtape-session .mt-banner { padding: 10px 16px 12px; }
+  #mixtape-session .mt-banner { padding: 10px 16px 12px; flex-shrink: 0; }
   #mixtape-session .mt-banner .module-tag { font-size: clamp(13px, min(1.4vw, 2.4vh), 19px); letter-spacing: 3px; }
   #mixtape-session .mt-banner .type-tag { font-size: clamp(24px, min(3.4vw, 5.4vh), 48px); letter-spacing: 3px; line-height: 1.1; }
   #mixtape-session .mt-body { gap: clamp(10px, 2vh, 20px); padding: clamp(12px, 2.2vh, 24px) 24px; }
@@ -3767,6 +3767,7 @@
   .mt-rw-note.ok { background: linear-gradient(180deg, #4ade80, #16a34a); }
   .mt-rw-note.bad { background: linear-gradient(180deg, #f87171, #dc2626); }
   .mt-rw-note.ghost { background: transparent; border: 2px dashed var(--gold); top: 3px; bottom: 3px; }
+  .mt-rw-legend { font-family: var(--font-display); font-weight: 700; font-size: clamp(14px, 1.4vw, 18px); margin-top: 2px; }
   .mt-rw-hint { font-family: var(--font-mono); font-size: 12px; color: var(--text3); min-height: 16px; }
   .mt-rw-wrap .build-submit-btn:disabled { opacity: 0.5; }
   .mt-levelup { position: fixed; inset: 0; z-index: 9500; display: flex; align-items: center; justify-content: center;
@@ -3792,7 +3793,9 @@
   .mt-sg-cell.lock.on { background: linear-gradient(180deg, #ffd66b, #e0a82e); border-color: #fff3c4; cursor: pointer; }
   .mt-sg-cell.on { background: linear-gradient(180deg, #9b8fff, #6d5ff0); border-color: rgba(255,255,255,0.8); }
   .mt-sg-cell.warn { box-shadow: 0 0 0 2px #ef4444; }
-  .mt-sg-cell.playing { filter: brightness(1.5); }
+  .mt-sg-cell.playing { background: rgba(155,143,255,0.38); border-color: rgba(200,192,255,0.75); }
+  .mt-sg-cell.on.playing, .mt-sg-cell.lock.on.playing { filter: brightness(1.35); box-shadow: 0 0 12px rgba(200,192,255,0.9); }
+  .mt-sg-head.playing { color: #fff; }
   .mt-sg-cell.ok { background: linear-gradient(180deg, #4ade80, #16a34a); }
   .mt-sg-cell.bad { background: linear-gradient(180deg, #f87171, #dc2626); }
   .mt-sg-cell.ghost { border: 2px dashed var(--gold); }
@@ -3805,6 +3808,8 @@
   #mt-build-ruler .build-marker:not(.correct):not(.wrong)::after { content: ''; }
   .mt-why-inline { font-family: var(--font-display); font-weight: 700; font-size: 19px; line-height: 1.3; color: var(--text);
     text-align: center; padding: 10px 16px; border: 1px solid rgba(239,68,68,0.55); border-radius: 10px; background: rgba(29,26,63,0.96); max-width: 900px; }
+  .mt-rw-staff .mt-why-inline { margin: 4px auto 0; }
+  .mt-why-inline.good { border-color: rgba(74,222,128,0.6); }
   .mt-why.good { border-color: rgba(74,222,128,0.6); }
   .build-marker.correct[data-off]::after { content: '\2713  ' attr(data-off); white-space: nowrap; }
   #mt-chord-ruler .build-marker.mt-lane-dot.correct[data-off]::after { content: '\2713  ' attr(data-off); color: var(--green); top: 6px; left: calc(100% + 6px); transform: none; white-space: nowrap; }
@@ -19442,7 +19447,10 @@ function klDevBarMarkup() {
   s += lbl('nav', '🎨 STYLE LAB');
   s += btn("klStyleLab()", '🎨 Open Style Lab', 'Click an element, resize/move it live, copy the CSS');
   s += btn("klHotkeysOpen()", '⌨️ Hotkeys', 'Searchable hotkey list — view & reassign dev keys (hotkey: Shift+K)');
-  s += btn("klDevQStats()", '📊 Question Stats', 'Arcade answer analytics — accuracy, answer time vs. timer, easiest→hardest');
+
+  // ── DATA — Arcade answer analytics ──
+  s += lbl('nav', '📊 QUESTION DATA');
+  s += btn("klDevQStats()", '📊 Question Stats', 'Arcade answer analytics — accuracy, answer time vs. timer, easiest→hardest (⬇ CSV inside)');
 
   // ── GO TO — real screens / station-select menus ──
   s += lbl('nav', '📍 GO TO');
@@ -21804,7 +21812,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.08f'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.08k'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -28477,12 +28485,19 @@ function buildMtRound(pick) {
     const lvl = Math.max(2, Math.min(5, mtState.level || pick.lvl || 2));
     const set = MT_PROG.sets[lvl].map(id => EAR_PROGRESSION_CHORDS.find(c => c.id === id)).filter(Boolean);
     const len = MT_PROG.length[lvl];
-    const prog = [EAR_PROGRESSION_CHORDS.find(c => c.id === 'I')];
-    for (let i = 1; i < len; i++) {
-      let c; let guard = 0;
-      do { c = set[Math.floor(Math.random() * set.length)]; } while (c === prog[i - 1] && guard++ < 6);   // no immediate repeat
-      prog.push(c);
-    }
+    // Draw a progression that wasn't used in the last few rounds.
+    mtState._recentProgs = mtState._recentProgs || [];
+    let prog, key, tries = 0;
+    do {
+      prog = [EAR_PROGRESSION_CHORDS.find(c => c.id === 'I')];
+      for (let i = 1; i < len; i++) {
+        let c; let guard = 0;
+        do { c = set[Math.floor(Math.random() * set.length)]; } while (c === prog[i - 1] && guard++ < 6);   // no immediate repeat
+        prog.push(c);
+      }
+      key = prog.map(c => c.id).join('-');
+    } while (mtState._recentProgs.includes(key) && tries++ < 25);
+    mtState._recentProgs.push(key); if (mtState._recentProgs.length > 6) mtState._recentProgs.shift();
     const keyRoot = 55 + Math.floor(Math.random() * 9);   // G3..D#4 (Toned Ear's default is D4)
     return {
       module: 'EAR TRAINING', moduleClass: 'mod-ear',
@@ -28728,6 +28743,8 @@ function buildMtRound(pick) {
 
 function renderMtRound(r) {
   mtClearHold();
+  mtState._roundShownAt = performance.now();
+  mtState._pausedThisRound = false;
   { const _h = document.getElementById('mt-rhythm-host'), _g = document.getElementById('mt-answer-grid');
     if (_h) { _h.style.order = ''; _h.style.flex = '1'; } if (_g) _g.style.order = ''; }
   if (window._activeSpaceHandler) { document.removeEventListener('keydown', window._activeSpaceHandler); window._activeSpaceHandler = null; }
@@ -28899,6 +28916,7 @@ function mtToggleTimerPause() {
     if (!mtState.timerRunning) { mtFlash('\u23F8 NO TIMER YET', 'levelup'); return; }
     mtState.timerRemainingAtPause = Math.max(0, mtState.timerDeadline - performance.now());
     mtState.timerPaused = true;
+    mtState._pausedThisRound = true;   // this question's answer won't be logged to Question Stats
     mtState.timerRunning = false;
     cancelAnimationFrame(mtState.timerRAF);
     mtState.timerRAF = null;
@@ -28981,7 +28999,7 @@ function mtCorrect(opts) {
   mtFlash('+' + pts, 'correct');
   if (opts && opts.why) {
     const ms = Math.max((KANTEON_CONFIG.arcadeRightBuildHoldSeconds || 3.5) * 1000, 2000 + opts.why.length * 40);
-    mtStartReviewHold(ms, () => nextMtRound(), opts.why, true);
+    mtStartReviewHold(ms, () => nextMtRound(), opts.why, true, opts.whyEl);
   } else setTimeout(() => nextMtRound(), 700);
 }
 
@@ -29027,9 +29045,12 @@ function mtLogAnswer(correct) {
   try {
     const r = mtState.currentRound;
     if (!r || !r._statKey || mtState.histPos !== -1) return;   // skip dev history replays
+    if (mtState._pausedThisRound) return;                         // timer was paused (dev) — answer time is meaningless
     const timedOut = !!mtState._timedOut;
     const limit = r._limitMs || 0;
-    const ms = Math.round(mtState._lastElapsed == null ? 0 : mtState._lastElapsed);
+    // time from the question appearing to the answer (the countdown can start
+    // after the audio, so answers given during playback used to log 0ms)
+    const ms = timedOut ? limit : Math.round(mtState._roundShownAt ? performance.now() - mtState._roundShownAt : (mtState._lastElapsed || 0));
     const frac = limit ? Math.min(0.999, ms / limit) : 0;
     const bucket = 'h' + Math.floor(frac * 5);
     const ev = { k: r._statKey, c: correct ? 1 : 0, t: timedOut ? 1 : 0, ms, lim: limit, at: Date.now() };
@@ -29226,7 +29247,7 @@ function mtStartReviewHold(ms, cont, why, good, whyEl) {
   (screen || document.body).appendChild(btn);
   if (mtState._why && mtState._whyEl) {          // inline (the round has a spot for it)
     mtState._whyEl.textContent = mtState._why;
-    mtState._whyEl.className = 'mt-why-inline';
+    mtState._whyEl.className = 'mt-why-inline' + (mtState._whyGood ? ' good' : '');
   } else if (mtState._why) {
     const w = document.createElement('div');
     w.id = 'mt-why'; w.className = 'mt-why' + (mtState._whyGood ? ' good' : '');
@@ -29474,7 +29495,7 @@ const MT_PROG = {
     4: ['I', 'ii', 'iii', 'IV', 'V', 'vi'],
     5: ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'Imaj7', 'iim7', 'V7', 'vim7'],
   },
-  length: { 2: 3, 3: 4, 4: 4, 5: 5 },          // chords per progression (incl. the given I)
+  length: { 2: 4, 3: 4, 4: 4, 5: 5 },   // L2 was 3 chords → only 4 possible progressions, so repeats were constant          // chords per progression (incl. the given I)
   beat:   { 2: 0.9, 3: 0.9, 4: 0.75, 5: 0.6 },  // seconds per chord (Toned Ear medium = 0.9)
 };
 const MT_DEG = {
@@ -29646,6 +29667,63 @@ function mtLenName(d) {
   const m = { 4: 'a whole note (4 beats)', 3: 'a dotted half (3 beats)', 2: 'a half note (2 beats)', 1.5: 'a dotted quarter (1½ beats)', 1: 'a quarter note (1 beat)', 0.75: 'a dotted eighth', 0.5: 'an eighth note (½ beat)', 0.25: 'a sixteenth note' };
   return m[d] || d + ' beats';
 }
+// Turn the player's piano-roll notes into notation events the staff renderer
+// can draw (notes 4/3/2/1.5/1/.75/.5/.25, rests 4/2/1/.5/.25), filling gaps with rests.
+function mtRwUserEvents(notes, step, meter) {
+  const NOTE_D = [4, 3, 2, 1.5, 1, 0.75, 0.5, 0.25], REST_D = [4, 2, 1, 0.5, 0.25];
+  const split = (len, set) => { const out = []; let left = len; while (left > 1e-6) { const d = set.find(v => v <= left + 1e-6) || set[set.length - 1]; out.push(d); left -= d; } return out; };
+  const ev = []; let pos = 0;
+  notes.slice().sort((a, b) => a.s - b.s).forEach(n => {
+    const s0 = n.s * step, d = n.len * step;
+    if (s0 > pos + 1e-6) split(s0 - pos, REST_D).forEach(r => ev.push({ d: r, rest: true }));
+    split(d, NOTE_D).forEach(v => ev.push({ d: v, rest: false }));
+    pos = s0 + d;
+  });
+  if (pos < meter - 1e-6) split(meter - pos, REST_D).forEach(r => ev.push({ d: r, rest: true }));
+  const parsed = klRhyFinalize(ev, meter);
+  return parsed ? parsed.events.map(e => Object.assign({}, e, { pitch: e.rest ? null : 71 })) : null;
+}
+// After SUBMIT: fade the given rhythm, draw the player's rhythm on top (same
+// time-proportional layout, so matching notes sit exactly on top of each other),
+// and play the player's rhythm (no audio before submitting).
+function mtRwShowAnswer(host, q, notes, allOk) {
+  const STEP_S = 0.6;   // seconds per beat (100 BPM)
+  try {
+    const box = host.querySelector('.mt-rw-staff .rhythm-notation');
+    const given = box && box.querySelector('svg');
+    const evs = notes.length ? mtRwUserEvents(notes.map(n => ({ s: n.s, len: n.len })), q.step, q.meter) : null;
+    if (box && given && evs) {
+      const col = allOk ? '#4ade80' : '#f87171';
+      const svg = klGrooveNotationSVG(evs, q.meter, [4, 4]).replace(/#e9e6dc/g, col).replace(/currentColor/g, col);
+      // Merge the player's rhythm INTO the given staff's SVG (same generator, same
+      // coordinates) so matching notes land exactly on top of each other.
+      const tmp = document.createElement('div'); tmp.innerHTML = svg;
+      const us = tmp.querySelector('svg');
+      const NS = 'http://www.w3.org/2000/svg';
+      const fadeG = document.createElementNS(NS, 'g');
+      fadeG.setAttribute('opacity', '0.3');
+      while (given.firstChild) fadeG.appendChild(given.firstChild);
+      given.appendChild(fadeG);
+      const userG = document.createElementNS(NS, 'g');
+      userG.setAttribute('class', 'mt-rw-user'); userG.style.color = col;
+      if (us) Array.from(us.childNodes).forEach(n => userG.appendChild(document.importNode(n, true)));
+      given.appendChild(userG);
+      const lg = document.createElement('div');
+      lg.className = 'mt-rw-legend';
+      lg.innerHTML = '<span style="color:' + col + '">■ your rhythm</span> <span style="opacity:.55">■ the written rhythm</span>';
+      host.querySelector('.mt-rw-staff').appendChild(lg);
+    }
+  } catch (e) { /* drawing the overlay must never break the round */ }
+  const legend = host.querySelector('.mt-rw-legend');
+  const play = () => {
+    try {
+      const ctx = getAudio(), t0 = ctx.currentTime + 0.1;
+      for (let b = 0; b < q.meter; b++) playTone(midiFreq(b === 0 ? 96 : 91), t0 + b * STEP_S, 0.04, ctx, 0.05, 'piano');   // soft click
+      notes.forEach(n => playTone(midiFreq(71), t0 + n.s * q.step * STEP_S, Math.max(0.08, n.len * q.step * STEP_S * 0.92), ctx, 0.24, 'piano'));
+    } catch (e) {}
+  };
+  return { play, ms: q.meter * STEP_S * 1000 + 400, legend };
+}
 function renderMtRhythmWriteRound(r) {
   document.getElementById('mt-answer-grid').style.display = 'none';
   const host = document.getElementById('mt-rhythm-host');
@@ -29756,7 +29834,8 @@ function renderMtRhythmWriteRound(r) {
     const allOk = !timedOut && ok.size === target.length && notes.length === target.length;
     paint({ target, ok });
     document.getElementById('mt-rw-hint').textContent = '';
-    if (allOk) { mtCorrect(); return; }
+    const shown = mtRwShowAnswer(host, q, notes, allOk);
+    if (allOk) { shown.play(); mtCorrect({ why: 'Nice! Your rhythm (green) lines up exactly with the written one.', whyEl: shown.legend || document.getElementById('mt-rw-hint') }); return; }
     // explain the first few problems in beat language
     const msgs = [];
     target.forEach(t => {
@@ -29769,7 +29848,8 @@ function renderMtRhythmWriteRound(r) {
     notes.forEach(n => { if (!target.some(t => t.s === n.s)) msgs.push('there’s no note on ' + mtBeatName(n.s * q.step) + ' (that’s a rest or a held note)'); });
     let why = msgs.slice(0, 2).join('; ') + (msgs.length > 2 ? '; and ' + (msgs.length - 2) + ' more' : '');
     why = why ? why.charAt(0).toUpperCase() + why.slice(1) + '. The dashed boxes show the real rhythm.' : 'The dashed boxes show the real rhythm.';
-    mtWrong({ why, whyEl: document.getElementById('mt-rw-hint') });
+    const _first = msgs.length ? msgs[0].charAt(0).toUpperCase() + msgs[0].slice(1) + (msgs.length > 1 ? ' (+' + (msgs.length - 1) + ' more)' : '') + '. ' : '';
+    mtWrong({ why: _first + 'Red = your rhythm, faded = the written one.', whyEl: shown.legend || document.getElementById('mt-rw-hint'), replay: notes.length ? shown.play : null, replayMs: shown.ms });
   }
   document.getElementById('mt-rw-submit').onclick = () => finish(false);
   mtState.revealHook = finish;
@@ -29829,7 +29909,13 @@ function renderMtScaleGridRound(r) {
     for (let c = 1; c < n; c++) if (!fixed[c] && picks[c] != null && picks[c - 1] != null && picks[c] <= picks[c - 1]) cellEl(c, picks[c]).classList.add('warn');
     document.getElementById('mt-sg-submit').disabled = mtState.isAnswered || picks.some(p => p == null);
   }
-  function flashCol(c) { host.querySelectorAll('.mt-sg-cell[data-c="' + c + '"]').forEach(el => { el.classList.add('playing'); setTimeout(() => el.classList.remove('playing'), 240); }); }
+  // light the WHOLE column (every cell + its header) while that step sounds
+  function flashCol(c) {
+    const els = host.querySelectorAll('.mt-sg-cell[data-c="' + c + '"]');
+    const hd = host.querySelectorAll('.mt-sg-head')[c];
+    els.forEach(el => el.classList.add('playing')); if (hd) hd.classList.add('playing');
+    setTimeout(() => { els.forEach(el => el.classList.remove('playing')); if (hd) hd.classList.remove('playing'); }, STEP * 1000 - 20);
+  }
   function playSeq(seq) {
     const ctx = getAudio(); const t0 = ctx.currentTime + 0.06;
     seq.forEach((k, i) => { if (k == null) return; tone(k, t0 + i * STEP, STEP * 0.95, ctx); setTimeout(() => flashCol(i), Math.max(0, (t0 + i * STEP - ctx.currentTime) * 1000)); });
