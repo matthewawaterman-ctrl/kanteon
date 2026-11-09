@@ -5880,6 +5880,78 @@
   .studio-loop-row { flex-wrap: wrap; gap: 6px; }
   .studio-loop-chip { display: inline-flex; gap: 2px; }
   .studio-loop-msg { width: 100%; font-family: var(--font-display); font-weight: 700; font-size: 15px; color: #4ecdc4; letter-spacing: 0.5px; }
+  /* ══ STUDIO — landscape tablet layout: controls sidebar + tracks area, no page scroll ══ */
+  #studio.screen.active { overflow: hidden !important; }
+  #studio .module-header { padding-top: 8px; padding-bottom: 8px; flex-shrink: 0; }
+  #studio .studio-body.studio-land { flex: 1; min-height: 0; max-width: none; width: 100%; margin: 0;
+    display: grid; grid-template-columns: clamp(300px, 30vw, 380px) 1fr; gap: 12px; padding: 8px 12px 10px; }
+  #studio .studio-side { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 2px; }
+  #studio .studio-main { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
+  #studio .studio-tabs { margin: 0; }
+  #studio .studio-tab { padding: 9px 6px; font-size: 14px; }
+  #studio .studio-transport { margin: 0; gap: 6px; display: grid; grid-template-columns: 1fr 1fr 1fr auto; align-items: stretch; }
+  #studio .studio-transport-btn { padding: 9px 6px; font-size: 14px; }
+  #studio .studio-bpm-display { padding: 4px 10px; min-width: 70px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+  #studio .studio-bpm-display #studio-bpm-readout { font-size: 24px; }
+  #studio .studio-bpm-row { margin: 0; gap: 6px; }
+  #studio .studio-bpm-pm-btn { height: 32px; width: 36px; }
+  #studio .studio-panel { margin: 0 0 8px; padding: 8px 10px; }
+  #studio .studio-panel-title { margin-bottom: 6px; font-size: 12px; }
+  #studio .studio-row { margin: 0 0 6px; gap: 5px; flex-wrap: wrap; align-items: center; }
+  #studio .studio-row-label { font-size: 11px; min-width: 0; margin-right: 2px; }
+  #studio .studio-chip { padding: 6px 8px; font-size: 12px; }
+  #studio .studio-select { padding: 4px 6px; font-size: 13px; }
+  #studio .studio-name-input { min-width: 0; flex: 1; padding: 6px 8px; font-size: 14px; }
+  /* tracks: wide, short rows */
+  #studio .studio-seq-track { margin-bottom: 8px; padding: 6px 8px; }
+  #studio .studio-seq-track-name { font-size: 15px; }
+  #studio .studio-seq-cell { aspect-ratio: auto; height: clamp(26px, 5vh, 40px); min-height: 0; }
+  #studio .studio-pianoroll-cell { aspect-ratio: auto; height: clamp(18px, 3.2vh, 26px); min-height: 0; }
+  #studio .studio-pianoroll-row, #studio .studio-seq-grid-row { gap: 2px; }
+  #studio .studio-pianoroll { display: grid; gap: 2px; }
+  #studio .studio-pianoroll-rowname { font-size: 12px; }
+  /* metronome main */
+  #studio .studio-main-metro { flex: 1; display: flex; flex-direction: column; gap: 12px; justify-content: center; }
+  #studio .studio-main-metro .studio-metro-display { flex: 1; display: flex; flex-direction: column; justify-content: center; margin: 0; }
+  #studio .studio-main-metro .studio-tap-btn { margin: 0; padding: 18px; font-size: 20px; }
+  #studio .studio-seq-cell, #studio .studio-pianoroll-cell { transition: none; }
+  #studio #studio-tracks-host { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  #studio #studio-tracks-host > .studio-seq-track:last-child { flex: 1; min-height: 0; display: flex; flex-direction: column; margin-bottom: 0; }
+  #studio #studio-tracks-host > .studio-seq-track:last-child .studio-pianoroll { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 2px; }
+  #studio .studio-pianoroll .studio-pianoroll-row { flex: 1; min-height: 12px; align-items: stretch; }
+  #studio .studio-pianoroll .studio-pianoroll-cell { height: auto; min-height: 12px; }
+  #studio .studio-pianoroll-rowname { display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; }
+  .studio-layer-tabs { display: flex; gap: 6px; margin: 0 0 6px; flex-wrap: wrap; }
+  .studio-layer-tab { font-family: var(--font-display); font-weight: 800; font-size: 14px; letter-spacing: 1.5px; padding: 7px 14px; border-radius: 8px;
+    background: var(--bg3); color: var(--text2); border: 1px solid var(--border); cursor: pointer; }
+  .studio-layer-tab .n { font-size: 11px; background: rgba(255,255,255,0.15); border-radius: 999px; padding: 1px 6px; margin-left: 4px; }
+  .studio-layer-tab.active { color: #0d0a22; }
+  .studio-layer-tab.active.studio-lt-bass { background: #a78bfa; } .studio-layer-tab.active.studio-lt-guitar { background: #ff7a59; }
+  .studio-layer-tab.active.studio-lt-keys { background: #4ecdc4; } .studio-layer-tab.active.studio-lt-synth { background: #f0c040; }
+  .studio-empty-hint { flex: 1; display: flex; align-items: center; justify-content: center; text-align: center; border: 2px dashed var(--border);
+    border-radius: 10px; color: var(--text2); font-family: var(--font-display); font-weight: 700; font-size: 18px; padding: 20px; }
+  #studio .studio-loop-select { flex: 1; min-width: 0; }
+  #studio .studio-main-metro { justify-content: flex-start; }
+  #studio .studio-main-metro .studio-metro-display { flex: 0 1 auto; padding: 14px; }
+  #studio .studio-main-metro .studio-metro-bpm-big { font-size: clamp(48px, 10vh, 96px); }
+  #studio .studio-main-metro .studio-tap-btn { padding: 12px; }
+  #studio .studio-main-metro .studio-autospeed-panel { margin: 0; }
+  /* compact sidebar for 1024×600 tablets */
+  #studio .studio-transport-btn { white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 4px; padding: 8px 4px; font-size: 13px; }
+  #studio .studio-transport-btn br { display: none; }
+  #studio .studio-bpm-display .bpm-label { font-size: 10px; }
+  #studio .studio-chip { padding: 5px 7px; font-size: 11px; letter-spacing: 1px; }
+  #studio .studio-row-label { font-size: 10px; letter-spacing: 1px; }
+  #studio .studio-panel-title { font-size: 11px; margin-bottom: 4px; }
+  #studio .studio-row { margin-bottom: 5px; flex-wrap: nowrap; }
+  #studio .studio-row:has(.studio-loop-msg) { flex-wrap: wrap; }
+  #studio .studio-chip { white-space: nowrap; }
+  #studio [data-spane="seq"] .studio-panel > .studio-row:nth-of-type(2) { flex-wrap: wrap; }
+  #studio .studio-select { font-size: 12px; min-width: 0; }
+  #studio .studio-select:last-child { flex: 1; }
+  #studio [data-spane="metro"] .studio-row { flex-wrap: wrap; }
+  .studio-layer-add { background: transparent; border-style: dashed; color: var(--text3); }
+  .studio-layer-add:hover { color: var(--text); border-color: var(--text2); }
 </style>
 </head>
 <body>
@@ -6914,8 +6986,8 @@
     <div class="module-header-title">STUDIO</div>
   </div>
 
-  <div class="studio-body">
-
+  <div class="studio-body studio-land">
+   <div class="studio-side">
     <!-- TAB SWITCHER -->
     <div class="studio-tabs">
       <button class="studio-tab active" id="studio-tab-seq" onclick="switchStudioTab('seq')">SEQUENCER</button>
@@ -6940,10 +7012,7 @@
       <button class="studio-bpm-pm-btn" onclick="studioBpmAdjust(1)">+</button>
     </div>
 
-    <!-- ─────────────────────────────────────────────────────────────── -->
-    <!-- TAB: SEQUENCER -->
-    <!-- ─────────────────────────────────────────────────────────────── -->
-    <div id="studio-pane-seq">
+    <div data-spane="seq">
 
       <div class="studio-panel">
         <div class="studio-panel-title">
@@ -6981,27 +7050,12 @@
           <button class="studio-chip studio-save" onclick="studioSaveLoop()">💾 SAVE</button>
           <button class="studio-chip" onclick="studioShareLoop()">🔗 SHARE</button>
         </div>
-        <input type="text" id="studio-share-url" class="studio-name-input" readonly style="display:none;width:100%;" onclick="this.select()">
         <div class="studio-row studio-loop-row" id="studio-loop-list"></div>
+        <input type="text" id="studio-share-url" class="studio-name-input" readonly style="display:none;width:100%;" onclick="this.select()">
       </div>
-
-      <div id="studio-tracks-host"></div>
 
     </div>
-
-    <!-- ─────────────────────────────────────────────────────────────── -->
-    <!-- TAB: METRONOME -->
-    <!-- ─────────────────────────────────────────────────────────────── -->
-    <div id="studio-pane-metro" style="display:none;">
-
-      <div class="studio-metro-display">
-        <div class="studio-metro-bpm-big" id="studio-metro-big">120</div>
-        <div class="studio-metro-bpm-label">BPM</div>
-        <div class="studio-metro-pulse" id="studio-metro-pulse"></div>
-      </div>
-
-      <button class="polished-btn studio-tap-btn" onclick="studioTapTempo()">TAP TEMPO</button>
-
+    <div data-spane="metro" style="display:none;">
       <div class="studio-panel">
         <div class="studio-panel-title">TIME SIGNATURE</div>
         <div class="studio-row">
@@ -7031,6 +7085,19 @@
         </div>
       </div>
 
+
+    </div>
+   </div>
+   <div class="studio-main">
+    <div data-spane="seq" id="studio-tracks-host"></div>
+    <div data-spane="metro" class="studio-main-metro" style="display:none;">
+      <div class="studio-metro-display">
+        <div class="studio-metro-bpm-big" id="studio-metro-big">120</div>
+        <div class="studio-metro-bpm-label">BPM</div>
+        <div class="studio-metro-pulse" id="studio-metro-pulse"></div>
+      </div>
+
+      <button class="polished-btn studio-tap-btn" onclick="studioTapTempo()">TAP TEMPO</button>
       <div class="studio-panel studio-autospeed-panel" id="studio-autospeed-panel">
         <div class="studio-panel-title">
           <span>AUTO SPEED-UP</span>
@@ -7064,9 +7131,8 @@
           &nbsp;&nbsp;<button class="studio-chip" onclick="studioAutospeedReset()" style="padding:4px 10px; font-size:10px;">RESET</button>
         </div>
       </div>
-
     </div>
-
+   </div>
   </div>
 </div>
 <!-- === CHAT F: STUDIO — END === -->
@@ -22075,7 +22141,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.08y'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.08z'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -26428,8 +26494,7 @@ window.switchStudioTab = function(tab) {
   studioState.tab = tab;
   document.getElementById('studio-tab-seq').classList.toggle('active', tab === 'seq');
   document.getElementById('studio-tab-metro').classList.toggle('active', tab === 'metro');
-  document.getElementById('studio-pane-seq').style.display = tab === 'seq' ? '' : 'none';
-  document.getElementById('studio-pane-metro').style.display = tab === 'metro' ? '' : 'none';
+  document.querySelectorAll('#studio [data-spane]').forEach(el => { el.style.display = el.dataset.spane === tab ? '' : 'none'; });
 };
 
 // ── BPM ────────────────────────────────────────────────────────────────────
@@ -26876,16 +26941,37 @@ function studioRenderTracks() {
   const host = document.getElementById('studio-tracks-host');
   if (!host) return;
   host.innerHTML = '';
-
-  studioState.tracks.forEach(tr => {
-    if (tr.kind === 'drums') {
-      host.appendChild(studioBuildDrumTrack(tr));
-    } else if (tr.kind === 'pitched') {
-      host.appendChild(studioBuildPitchedTrack(tr));
-    }
-  });
+  const pitched = studioState.tracks.filter(t => t.kind === 'pitched');
+  if (!pitched.find(t => t.id === studioState.focusLayer)) studioState.focusLayer = pitched.length ? pitched[pitched.length - 1].id : null;
+  studioState.tracks.forEach(tr => { if (tr.kind === 'drums') host.appendChild(studioBuildDrumTrack(tr)); });
+  // One pitched layer on screen at a time (tabs switch) so it all fits a landscape tablet.
+  // Every layer still plays.
+  const tabs = document.createElement('div');
+  tabs.className = 'studio-layer-tabs';
+  host.appendChild(tabs);
+  const missing = Object.keys(STUDIO_LAYERS).filter(id => !pitched.find(t => t.id === id));
+  const addHTML = missing.map(id => '<button class="studio-layer-tab studio-layer-add" onclick="studioAddLayer(\'' + id + '\')">+ ' + STUDIO_LAYERS[id][0] + '</button>').join('');
+  tabs.innerHTML = addHTML;
+  if (pitched.length) {
+    tabs.innerHTML = pitched.map(t => {
+      const n = Object.values(t.notes).reduce((a, r) => a + r.filter(Boolean).length, 0);
+      return '<button class="studio-layer-tab studio-lt-' + t.id + (t.id === studioState.focusLayer ? ' active' : '') +
+        '" onclick="studioFocusLayer(\'' + t.id + '\')">' + STUDIO_LAYERS[t.id][1] + ' ' + t.name + (n ? ' <span class="n">' + n + '</span>' : '') + '</button>';
+    }).join('') + addHTML;
+    host.appendChild(studioBuildPitchedTrack(pitched.find(t => t.id === studioState.focusLayer)));
+  } else {
+    const hint = document.createElement('div');
+    hint.className = 'studio-empty-hint';
+    hint.textContent = 'Tap + BASS, + GUITAR, + KEYS or + SYNTH above to play notes over your beat.';
+    host.appendChild(hint);
+  }
+  // column cache → the playhead touches only 2 columns per step (no lag)
+  studioState.colCells = {};
+  host.querySelectorAll('[data-step]').forEach(c => { (studioState.colCells[c.dataset.step] = studioState.colCells[c.dataset.step] || []).push(c); });
+  studioState.lastPlayheadStep = -1;
   studioRenderLayerControls();
 }
+window.studioFocusLayer = function (id) { studioState.focusLayer = id; studioRenderTracks(); };
 
 function studioBuildDrumTrack(tr) {
   const total = studioState.bars * studioState.stepsPerBar;
@@ -27035,6 +27121,7 @@ window.studioAddLayer = function (id) {
   if (studioState.tracks.find(t => t.id === id)) return;
   studioState.tracks.push(makePitchedTrack(id));
   studioState.tracks.sort((a, b) => STUDIO_ORDER.indexOf(a.id) - STUDIO_ORDER.indexOf(b.id));
+  studioState.focusLayer = id;
   studioReshapeTracks();
   studioRenderTracks();
 };
@@ -27047,13 +27134,8 @@ window.studioSetScale = function (s) { studioState.scale = s; studioRenderTracks
 function studioRenderLayerControls() {
   const host = document.getElementById('studio-layer-controls'); if (!host) return;
   const have = id => studioState.tracks.some(t => t.id === id);
-  let h = '<div class="studio-row"><span class="studio-row-label">ADD LAYER</span>';
-  Object.keys(STUDIO_LAYERS).forEach(id => {
-    const L = STUDIO_LAYERS[id];
-    h += '<button class="studio-chip studio-add' + (have(id) ? ' active' : '') + '" ' + (have(id) ? 'disabled' : '') +
-      ' onclick="studioAddLayer(\'' + id + '\')">' + (have(id) ? '✓ ' : '+ ') + L[0] + '</button>';
-  });
-  h += '</div><div class="studio-row"><span class="studio-row-label">KEY</span>' +
+  // (+ layer buttons live in the tab strip above the note grid)
+  let h = '<div class="studio-row"><span class="studio-row-label">KEY</span>' +
     '<select class="studio-select" onchange="studioSetKey(+this.value)">' +
     STUDIO_KEYS.map((k, i) => '<option value="' + i + '"' + (i === studioState.key ? ' selected' : '') + '>' + k + '</option>').join('') +
     '</select><span class="studio-row-label" style="margin-left:8px;">SCALE</span>' +
@@ -27135,12 +27217,23 @@ window.studioShareLoop = function () {
 function studioRenderLoops(msg) {
   const host = document.getElementById('studio-loop-list'); if (!host) return;
   const loops = studioGetLoops();
-  host.innerHTML = (msg ? '<div class="studio-loop-msg">' + msg + '</div>' : '') +
-    (loops.length ? loops.map((l, i) =>
-      '<span class="studio-loop-chip"><button class="studio-chip" onclick="studioOpenLoop(' + i + ')">📂 ' +
-      String(l.name).replace(/</g, '&lt;') + '</button><button class="studio-chip studio-x" title="Delete" onclick="studioDeleteLoop(' + i + ')">✕</button></span>').join('')
-      : '<span class="studio-row-label">No saved loops yet</span>');
+  const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  host.innerHTML = (loops.length
+      ? '<select class="studio-select studio-loop-select" onchange="if(this.value!==\'\')studioOpenLoop(+this.value)">' +
+        '<option value="">📂 Open a saved loop (' + loops.length + ')</option>' +
+        loops.map((l, i) => '<option value="' + i + '">' + esc(l.name) + '</option>').join('') + '</select>' +
+        '<button class="studio-chip studio-x" title="Delete the loop named above" onclick="studioDeleteNamed()">🗑</button>'
+      : '<span class="studio-row-label">No saved loops yet</span>') +
+    (msg ? '<div class="studio-loop-msg">' + msg + '</div>' : '');
 }
+window.studioDeleteNamed = function () {
+  const inp = document.getElementById('studio-loop-name');
+  const name = inp && inp.value.trim();
+  const loops = studioGetLoops(); const i = loops.findIndex(l => l.name === name);
+  if (i < 0) { studioRenderLoops('Open a loop first, then 🗑 deletes it'); return; }
+  loops.splice(i, 1); studioPutLoops(loops); if (inp) inp.value = '';
+  studioRenderLoops('Deleted “' + name + '”');
+};
 // Shared link (#studio=...) → offered on the mode-select page, loaded when Studio opens.
 (function () {
   try {
@@ -27209,13 +27302,10 @@ window.klOpenStudio = function () {
 // ── PLAYHEAD ───────────────────────────────────────────────────────────────
 function studioUpdatePlayhead(stepIdx) {
   if (stepIdx === studioState.lastPlayheadStep) return;
-  studioClearPlayheadHighlight();
+  const cc = studioState.colCells || {};
+  (cc[studioState.lastPlayheadStep] || []).forEach(c => c.classList.remove('playhead'));
+  (cc[stepIdx] || []).forEach(c => c.classList.add('playhead'));
   studioState.lastPlayheadStep = stepIdx;
-  // Add playhead class to all cells at this step
-  document.querySelectorAll('.studio-seq-cell[data-step="' + stepIdx + '"]').forEach(c =>
-    c.classList.add('playhead'));
-  document.querySelectorAll('.studio-pianoroll-cell[data-step="' + stepIdx + '"]').forEach(c =>
-    c.classList.add('playhead'));
 }
 function studioClearPlayheadHighlight() {
   document.querySelectorAll('.studio-seq-cell.playhead').forEach(c => c.classList.remove('playhead'));
