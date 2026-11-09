@@ -5850,6 +5850,36 @@
   /* role: HUD / score  ← .mt-score */
   #ear-session .ear-score-stat, #al-session .ear-score-stat, #notation-session .ear-score-stat, #build-session .ear-score-stat, #theory-session .ear-score-stat, #anatomy-session .ear-score-stat { font-size: clamp(14px, 1.3vw, 18px) !important; }
   #ear-session .module-header-title, #al-session .module-header-title, #notation-session .module-header-title, #build-session .module-header-title, #theory-session .module-header-title, #anatomy-session .module-header-title { font-size: clamp(24px, 2.2vw, 32px); }
+  /* Lesson screens: if content is taller than the window, the screen scrolls (never cut off) */
+  #studio.screen.active, #level-select.screen.active, #tx-index.screen.active, #module-index.screen.active, #ear-config.screen.active, #ear-session.screen.active, #al-config.screen.active, #al-session.screen.active, #build-config.screen.active, #build-session.screen.active, #anatomy-config.screen.active, #anatomy-session.screen.active, #theory-config.screen.active, #theory-session.screen.active, #notation-config.screen.active, #notation-session.screen.active, #question-screen.screen.active, #session-complete.screen.active, #calibrate-screen.screen.active { overflow-y: auto; overscroll-behavior: contain; }
+  /* Studio as a main mode — full-width card under the top three */
+  .kl-modeselect { justify-content: flex-start; padding-top: 188px; gap: 18px; }
+  .kl-modeselect .kl-modes .kl-mode { padding: 24px 22px; }
+  .kl-mode-studio { flex: none; flex-direction: row; gap: 18px; width: 100%; max-width: 1116px; min-width: 0; margin-top: 0;
+    padding: 14px 26px; border-color: rgba(78,205,196,0.6); box-shadow: 0 8px 30px rgba(0,0,0,0.3), 0 0 22px -6px #4ecdc4;
+    background: linear-gradient(90deg, rgba(78,205,196,0.12), rgba(255,255,255,0.05)); position: relative; }
+  .kl-mode-studio .kl-mode-txt { text-align: left; }
+  .kl-mode-studio .kl-mode-name { color: #4ecdc4; }
+  .kl-mode-studio .kl-mode-sub { max-width: none; }
+  .kl-mode-badge { position: absolute; top: 10px; right: 14px; font-family: var(--font-display); font-weight: 800; font-size: 13px; letter-spacing: 1px; color: #0d0a22; background: #4ecdc4; border-radius: 999px; padding: 4px 10px; }
+  .kl-remix-link { margin-top: 10px; font-size: 18px; }
+  /* Studio layers / key / loops */
+  .studio-select { background: var(--bg2); color: var(--text); border: 1px solid rgba(124,111,247,0.4); border-radius: 6px; padding: 6px 8px; font-family: var(--font-display); font-weight: 700; font-size: 14px; letter-spacing: 1px; }
+  .studio-add:disabled { opacity: 0.55; cursor: default; }
+  .studio-track-meta { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 11px; color: var(--text3); letter-spacing: 1.2px; }
+  .studio-x { padding: 2px 8px !important; min-width: 0; }
+  .studio-pianoroll-rowname { cursor: pointer; }
+  #studio .studio-pianoroll-cell { aspect-ratio: auto; height: 26px; min-height: 0; }
+  .studio-pianoroll-rowname.root { color: var(--gold); font-weight: 900; }
+  .studio-pianoroll-cell.root-row:not(.on) { background-color: rgba(240,192,64,0.07); }
+  .studio-pianoroll-cell.studio-l-bass.on   { background: #a78bfa; }
+  .studio-pianoroll-cell.studio-l-guitar.on { background: #ff7a59; }
+  .studio-pianoroll-cell.studio-l-keys.on   { background: #4ecdc4; }
+  .studio-pianoroll-cell.studio-l-synth.on  { background: #f0c040; }
+  .studio-name-input { background: var(--bg2); color: var(--text); border: 1px solid rgba(124,111,247,0.4); border-radius: 6px; padding: 7px 10px; font-family: var(--font-body); font-size: 15px; min-width: 180px; }
+  .studio-loop-row { flex-wrap: wrap; gap: 6px; }
+  .studio-loop-chip { display: inline-flex; gap: 2px; }
+  .studio-loop-msg { width: 100%; font-family: var(--font-display); font-weight: 700; font-size: 15px; color: #4ecdc4; letter-spacing: 0.5px; }
 </style>
 </head>
 <body>
@@ -6918,9 +6948,6 @@
       <div class="studio-panel">
         <div class="studio-panel-title">
           <span>SEQUENCER</span>
-          <span class="studio-toggle" id="studio-advanced-toggle" onclick="studioToggleAdvanced()">
-            ADVANCED <span class="studio-toggle-switch"></span>
-          </span>
         </div>
         <div class="studio-row">
           <span class="studio-row-label">PRESET</span>
@@ -6944,6 +6971,18 @@
             CLICK ON <span class="studio-toggle-switch"></span>
           </span>
         </div>
+        <div id="studio-layer-controls"></div>
+      </div>
+
+      <div class="studio-panel">
+        <div class="studio-panel-title"><span>MY LOOPS</span></div>
+        <div class="studio-row">
+          <input type="text" id="studio-loop-name" class="studio-name-input" maxlength="28" placeholder="Name your loop">
+          <button class="studio-chip studio-save" onclick="studioSaveLoop()">💾 SAVE</button>
+          <button class="studio-chip" onclick="studioShareLoop()">🔗 SHARE</button>
+        </div>
+        <input type="text" id="studio-share-url" class="studio-name-input" readonly style="display:none;width:100%;" onclick="this.select()">
+        <div class="studio-row studio-loop-row" id="studio-loop-list"></div>
       </div>
 
       <div id="studio-tracks-host"></div>
@@ -13851,7 +13890,6 @@ const LESSON_MORE = [
   { icon: '🔊', name: 'Active Listening — everything', what: 'Dynamics, articulation, tempo, texture and instruments in one session.', go: "selectModule('active_listening')" },
   { icon: '🥁', name: 'Drum Notation & Guitar Tab', what: 'Read drum parts and guitar tab.', go: "lessonOpenFocus('_drumtab')" },
   { icon: '🎸', name: 'Instrument Anatomy', what: 'Learn the parts of guitars, basses, amps, keys, drums and more.', go: "selectModule('instrument_anatomy')" },
-  { icon: '🎚️', name: 'Studio', what: 'Sandbox sequencer with a built-in metronome.', go: "selectModule('studio')" },
 ];
 LESSON_FOCUS._drumtab = { mod: 'notation', meta: 'NOTATION_META', st: 'notationState', modes: ['drum', 'tab'], tab: 'setNotationTab', ui: 'refreshNotationConfigUI' };
 window.lessonOpenFocus = function (kind) {
@@ -13883,7 +13921,7 @@ function buildCarousel() {
       '<div class="mt-tut-what">' + t.what + '</div>' +
       '<span class="mt-tut-try lm-go">▶ START</span></button>';
   });
-  h += '</div><div class="lm-more-h">MORE IN LESSON MODE</div><div class="mt-tut-list lm-list">';
+  // extras (no Arcade question type) sit at the END of the same list — no separate label
   LESSON_MORE.forEach(m => {
     h += '<button type="button" class="mt-tut-card lm-card lm-more" onclick="' + m.go + '">' +
       '<div class="mt-tut-top"><span class="mt-tut-icon">' + m.icon + '</span><span class="mt-tut-name">' + m.name + '</span></div>' +
@@ -17957,6 +17995,12 @@ window.klShowModeSelect = function() {
           '<div class="kl-mode-sub">Ear training, theory &amp; drills</div>' +
         '</button>' +
       '</div>' +
+      '<button class="kl-mode kl-mode-studio" onclick="klOpenStudio()">' +
+        '<div class="kl-mode-icon">🎚️</div>' +
+        '<div class="kl-mode-txt"><div class="kl-mode-name">STUDIO</div>' +
+        '<div class="kl-mode-sub">Make your own beats &amp; songs — drums, bass, guitar, keys, synth</div></div>' +
+        (window.__studioPending ? '<span class="kl-mode-badge">🔗 SHARED LOOP WAITING</span>' : '') +
+      '</button>' +
       '<div class="kl-mode-foot">' +
         '<button class="kl-tools-link" onclick="klRenderPlayerSelect()">← Switch player</button>' +
         '<button class="kl-tools-link kl-fs-link" onclick="klToggleFullscreen()">⛶ Fullscreen</button>' +
@@ -19701,7 +19745,7 @@ function klDevBarMarkup() {
   s += btn("selectModule('notation')", '📖 Notation', 'Lesson: Notation');
   s += btn("selectModule('theory')", '🎼 Mode Lab', 'Lesson: Mode Lab');
   s += btn("selectModule('instrument_anatomy')", '🎸 Instrument Anatomy', 'Lesson: Instrument Anatomy');
-  s += btn("selectModule('studio')", '🎚 Studio', 'Lesson: Studio');
+  s += btn("klOpenStudio()", '🎚 Studio', 'Studio');
 
   // ── STATIONS — enter the REAL module, PLUS a direct jump to every puzzle ──
   const pzBtns = m => m.indices.map(idx => {
@@ -22031,7 +22075,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.08w'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.08y'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -23028,7 +23072,8 @@ function klRenderLegComplete() {
     '<div class="kl-win-star" style="font-size:110px;">🤘</div>' +
     '<div class="kl-title" style="font-size:46px;">YOU ROCK!</div>' +
     '<div style="transform:scale(2.4); margin:10px 0 4px;">' + KL_BAND_SVG + '</div>' +
-    '<button class="kl-listen" onclick="klContinueFromLeg()">KEEP GOING ▶</button>';
+    '<button class="kl-listen" onclick="klContinueFromLeg()">KEEP GOING ▶</button>' +
+    '<button class="kl-tools-link kl-remix-link" onclick="klRemixInStudio(' + klDotOf(klState.puzzleIdx) + ')">🎚️ Remix this song in Studio</button>';
   // a triumphant little fanfare
   const ctx = getAudio();
   const t0 = ctx.currentTime + 0.05;
@@ -23060,6 +23105,7 @@ function klRenderAllDone() {
       '<div class="kl-title">⭐ ' + klState.score + ' ⭐</div>' +
       '<div class="kl-subtitle">You finished all the songs!</div>' +
       '<button class="kl-listen" onclick="klOpenTools()">📖 OPEN LESSON MODE</button>' +
+      '<button class="kl-listen" onclick="klOpenStudio()">🎚️ OPEN THE STUDIO</button>' +
       '<button class="kl-tools-link" onclick="klPlayAgain()">Play again</button>' +
       '<button class="kl-back" style="margin-top:12px;" onclick="klExit()">←</button>';
   });
@@ -26310,6 +26356,8 @@ const studioState = {
 
   // Sequencer
   advanced: false,
+  key: 0,                      // 0 = C … 11 = B
+  scale: 'majpent',            // STUDIO_SCALES key
   bars: 1,
   stepsPerBar: 8,              // 4, 8, or 16
   clickInSeq: false,
@@ -26349,12 +26397,15 @@ function studioBeatsPerBar() {
 
 // ── INIT ───────────────────────────────────────────────────────────────────
 window.initStudio = function() {
+  studioState._inited = true;
   // Build default tracks if not built yet
   if (studioState.tracks.length === 0) {
     studioState.tracks.push(makeDrumTrack());
   }
   // Default preset
   studioLoadPreset('basicrock');
+  studioRenderLayerControls();
+  studioRenderLoops();
   // Sync UI
   studioRenderShapeChips();
   studioRenderTimeSigChips();
@@ -26369,7 +26420,7 @@ window.initStudio = function() {
 // ── EXIT ───────────────────────────────────────────────────────────────────
 window.exitStudio = function() {
   studioStop();
-  showScreen('home');
+  klShowModeSelect();   // Studio is a main mode now
 };
 
 // ── TAB SWITCH ─────────────────────────────────────────────────────────────
@@ -26490,14 +26541,12 @@ function studioPlaySequencer(clock) {
         if (tr.pattern.snare[stepInGrid]) playDrumHit(ctx, audioTime, 'snare', 0.45);
         if (tr.pattern.hihat[stepInGrid]) playDrumHit(ctx, audioTime, 'hihat', 0.35);
       } else if (tr.kind === 'pitched') {
-        // pattern is [12][totalSteps]
-        for (let p = 0; p < 12; p++) {
-          if (tr.pattern[p] && tr.pattern[p][stepInGrid]) {
-            const midi = tr.rootMidi + p;
-            const dur = (60 / studioState.bpm) / colsPerBeat * 0.95;
-            playTone(midiFreq(midi), audioTime, dur, ctx, 0.22, tr.timbre || 'piano');
-          }
-        }
+        // only rows in the current scale sound (hidden rows stay silent)
+        const dur = (60 / studioState.bpm) / colsPerBeat * 0.95;
+        studioRowSemis(tr).forEach(semi => {
+          const row = tr.notes[semi];
+          if (row && row[stepInGrid]) studioPlayNote(tr, studioNoteMidi(tr, semi), audioTime, dur, 0.22);
+        });
       }
     });
 
@@ -26722,9 +26771,7 @@ function studioReshapeTracks() {
         tr.pattern[k] = resizeArr(tr.pattern[k], total);
       });
     } else if (tr.kind === 'pitched') {
-      for (let p = 0; p < 12; p++) {
-        tr.pattern[p] = resizeArr(tr.pattern[p], total);
-      }
+      Object.keys(tr.notes).forEach(k => { tr.notes[k] = resizeArr(tr.notes[k], total); });
     }
   });
 }
@@ -26734,23 +26781,6 @@ function resizeArr(arr, n) {
   if (arr.length > n) return arr.slice(0, n);
   return arr.concat(new Array(n - arr.length).fill(false));
 }
-
-// ── ADVANCED TOGGLE ────────────────────────────────────────────────────────
-window.studioToggleAdvanced = function() {
-  studioState.advanced = !studioState.advanced;
-  document.getElementById('studio-advanced-toggle').classList.toggle('on', studioState.advanced);
-  if (studioState.advanced) {
-    // Ensure all 5 tracks exist
-    if (!studioState.tracks.find(t => t.id === 'bass'))   studioState.tracks.push(makePitchedTrack('bass', 'BASS', 'bass', 36));
-    if (!studioState.tracks.find(t => t.id === 'guitar')) studioState.tracks.push(makePitchedTrack('guitar', 'GUITAR', 'guitar', 60));
-    if (!studioState.tracks.find(t => t.id === 'keys'))   studioState.tracks.push(makePitchedTrack('keys', 'KEYS', 'piano', 60));
-    if (!studioState.tracks.find(t => t.id === 'synth'))  studioState.tracks.push(makePitchedTrack('synth', 'SYNTH', 'synth', 60));
-    studioReshapeTracks();
-  } else {
-    // Hide non-drum tracks (keep them in memory)
-  }
-  studioRenderTracks();
-};
 
 // ── CLICK-IN-SEQ ───────────────────────────────────────────────────────────
 window.studioToggleMetroInSeq = function() {
@@ -26777,13 +26807,6 @@ function makeDrumTrack() {
     },
   };
 }
-function makePitchedTrack(id, name, timbre, rootMidi) {
-  const total = (studioState.bars || 1) * (studioState.stepsPerBar || 8);
-  const pattern = [];
-  for (let p = 0; p < 12; p++) pattern.push(new Array(total).fill(false));
-  return { id, name, kind: 'pitched', timbre, rootMidi, pattern };
-}
-
 // ── PRESETS ────────────────────────────────────────────────────────────────
 window.studioLoadPreset = function(name) {
   const drumTr = studioState.tracks.find(t => t.id === 'drums');
@@ -26857,10 +26880,11 @@ function studioRenderTracks() {
   studioState.tracks.forEach(tr => {
     if (tr.kind === 'drums') {
       host.appendChild(studioBuildDrumTrack(tr));
-    } else if (tr.kind === 'pitched' && studioState.advanced) {
+    } else if (tr.kind === 'pitched') {
       host.appendChild(studioBuildPitchedTrack(tr));
     }
   });
+  studioRenderLayerControls();
 }
 
 function studioBuildDrumTrack(tr) {
@@ -26921,56 +26945,266 @@ function studioBuildPitchedTrack(tr) {
   const total = studioState.bars * studioState.stepsPerBar;
   const wrap = document.createElement('div');
   wrap.className = 'studio-seq-track';
-
-  const noteNames = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-  const blackKeys = [false,true,false,true,false,false,true,false,true,false,true,false];
-
+  const L = STUDIO_LAYERS[tr.id];
+  const sc = STUDIO_SCALES[studioState.scale] || STUDIO_SCALES.majpent;
   wrap.innerHTML =
     '<div class="studio-seq-track-head">' +
-      '<div class="studio-seq-track-name">' + tr.name + '</div>' +
-      '<div style="font-family:var(--font-mono); font-size:10px; color:var(--text3); letter-spacing:1.5px;">' +
-        'ROOT C · 1 OCT' +
-      '</div>' +
+      '<div class="studio-seq-track-name">' + L[1] + ' ' + tr.name + '</div>' +
+      '<div class="studio-track-meta">' + STUDIO_KEYS[studioState.key] + ' ' + sc.label +
+      ' <button class="studio-chip studio-x" title="Remove layer" onclick="studioRemoveLayer(\'' + tr.id + '\')">✕</button></div>' +
     '</div>';
-
-  const gridCols = '36px repeat(' + total + ', minmax(14px, 1fr))';
+  const gridCols = '44px repeat(' + total + ', minmax(14px, 1fr))';
   const grid = document.createElement('div');
   grid.className = 'studio-pianoroll';
-
-  // Render top→bottom: B, A#, A, ... C (so high pitches on top)
-  for (let p = 11; p >= 0; p--) {
+  const rows = studioRowSemis(tr).slice().reverse();   // high notes on top
+  rows.forEach(semi => {
+    if (!tr.notes[semi]) tr.notes[semi] = new Array(total).fill(false);
+    const rowArr = tr.notes[semi];
     const rowDiv = document.createElement('div');
     rowDiv.className = 'studio-pianoroll-row';
     rowDiv.style.gridTemplateColumns = gridCols;
-
+    const isRoot = semi % 12 === 0;
     const label = document.createElement('div');
-    label.className = 'studio-pianoroll-rowname' + (blackKeys[p] ? ' black-key' : '');
-    label.textContent = noteNames[p];
+    label.className = 'studio-pianoroll-rowname' + (isRoot ? ' root' : '');
+    label.textContent = STUDIO_KEYS[(studioState.key + semi) % 12];
+    label.title = 'Click to hear';
+    label.onclick = () => studioPlayNote(tr, studioNoteMidi(tr, semi), (audioCtx || getAudio()).currentTime + 0.01, 0.35, 0.22);
     rowDiv.appendChild(label);
-
     for (let i = 0; i < total; i++) {
       const cell = document.createElement('div');
-      cell.className = 'studio-pianoroll-cell';
-      if (blackKeys[p]) cell.classList.add('black-key');
+      cell.className = 'studio-pianoroll-cell studio-l-' + tr.id;
+      if (isRoot) cell.classList.add('root-row');
       if (i % studioState.stepsPerBar === 0) cell.classList.add('beat-1');
-      if (tr.pattern[p][i]) cell.classList.add('on');
+      if (rowArr[i]) cell.classList.add('on');
       cell.setAttribute('data-track', tr.id);
-      cell.setAttribute('data-pitch', p);
+      cell.setAttribute('data-pitch', semi);
       cell.setAttribute('data-step', i);
       cell.onclick = () => {
-        tr.pattern[p][i] = !tr.pattern[p][i];
-        cell.classList.toggle('on', tr.pattern[p][i]);
-        if (tr.pattern[p][i] && audioCtx) {
-          playTone(midiFreq(tr.rootMidi + p), audioCtx.currentTime + 0.005, 0.25, audioCtx, 0.2, tr.timbre || 'piano');
-        }
+        rowArr[i] = !rowArr[i];
+        cell.classList.toggle('on', rowArr[i]);
+        if (rowArr[i]) studioPlayNote(tr, studioNoteMidi(tr, semi), (audioCtx || getAudio()).currentTime + 0.005, 0.25, 0.2);
       };
       rowDiv.appendChild(cell);
     }
     grid.appendChild(rowDiv);
-  }
+  });
   wrap.appendChild(grid);
   return wrap;
 }
+
+// ── LAYERS + KEY/SCALE LOCK (b-2026.11.08y) ────────────────────────────────
+// Pitched tracks store notes as { [semitone above the track's C]: bool[steps] }.
+// The piano roll only shows rows that belong to the chosen scale, so whatever a
+// kid draws sounds good. Key transposes everything.
+const STUDIO_SCALES = {
+  majpent:   { label: 'MAJOR PENTATONIC', semis: [0, 2, 4, 7, 9] },
+  minpent:   { label: 'MINOR PENTATONIC', semis: [0, 3, 5, 7, 10] },
+  blues:     { label: 'BLUES',            semis: [0, 3, 5, 6, 7, 10] },
+  major:     { label: 'MAJOR',            semis: [0, 2, 4, 5, 7, 9, 11] },
+  minor:     { label: 'MINOR',            semis: [0, 2, 3, 5, 7, 8, 10] },
+  chromatic: { label: 'ALL 12 NOTES',     semis: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] },
+};
+const STUDIO_KEYS = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+// id → [label, icon, base midi (the C the rows count from), span in semitones]
+const STUDIO_LAYERS = {
+  bass:   ['BASS',   '🎸', 36, 12],
+  guitar: ['GUITAR', '🎸', 48, 24],
+  keys:   ['KEYS',   '🎹', 60, 24],
+  synth:  ['SYNTH',  '🎛️', 60, 24],
+};
+function makePitchedTrack(id) {
+  const L = STUDIO_LAYERS[id];
+  return { id, name: L[0], kind: 'pitched', base: L[2], span: L[3], notes: {} };
+}
+function studioRowSemis(tr) {
+  const sc = (STUDIO_SCALES[studioState.scale] || STUDIO_SCALES.majpent).semis;
+  const out = [];
+  for (let s = 0; s <= tr.span; s++) if (sc.includes(s % 12)) out.push(s);
+  return out;   // low → high
+}
+function studioNoteMidi(tr, semi) { return tr.base + (studioState.key || 0) + semi; }
+function studioPlayNote(tr, midi, t, dur, gain) {
+  const ctx = audioCtx || getAudio();
+  if (tr.id === 'bass')        klBass(t, ctx.destination, ctx, midi, dur, gain * 1.1);
+  else if (tr.id === 'synth')  playChorusSynth(midiFreq(midi), t, dur, ctx, gain * 0.8);
+  else if (tr.id === 'keys')   playTone(midiFreq(midi), t, dur, ctx, gain, 'klKeys');
+  else                         playTone(midiFreq(midi), t, dur, ctx, gain, 'klGuitar');
+}
+const STUDIO_ORDER = ['drums', 'bass', 'guitar', 'keys', 'synth'];
+window.studioAddLayer = function (id) {
+  if (studioState.tracks.find(t => t.id === id)) return;
+  studioState.tracks.push(makePitchedTrack(id));
+  studioState.tracks.sort((a, b) => STUDIO_ORDER.indexOf(a.id) - STUDIO_ORDER.indexOf(b.id));
+  studioReshapeTracks();
+  studioRenderTracks();
+};
+window.studioRemoveLayer = function (id) {
+  studioState.tracks = studioState.tracks.filter(t => t.id !== id);
+  studioRenderTracks();
+};
+window.studioSetKey = function (k) { studioState.key = k; studioRenderTracks(); };
+window.studioSetScale = function (s) { studioState.scale = s; studioRenderTracks(); };
+function studioRenderLayerControls() {
+  const host = document.getElementById('studio-layer-controls'); if (!host) return;
+  const have = id => studioState.tracks.some(t => t.id === id);
+  let h = '<div class="studio-row"><span class="studio-row-label">ADD LAYER</span>';
+  Object.keys(STUDIO_LAYERS).forEach(id => {
+    const L = STUDIO_LAYERS[id];
+    h += '<button class="studio-chip studio-add' + (have(id) ? ' active' : '') + '" ' + (have(id) ? 'disabled' : '') +
+      ' onclick="studioAddLayer(\'' + id + '\')">' + (have(id) ? '✓ ' : '+ ') + L[0] + '</button>';
+  });
+  h += '</div><div class="studio-row"><span class="studio-row-label">KEY</span>' +
+    '<select class="studio-select" onchange="studioSetKey(+this.value)">' +
+    STUDIO_KEYS.map((k, i) => '<option value="' + i + '"' + (i === studioState.key ? ' selected' : '') + '>' + k + '</option>').join('') +
+    '</select><span class="studio-row-label" style="margin-left:8px;">SCALE</span>' +
+    '<select class="studio-select" onchange="studioSetScale(this.value)">' +
+    Object.keys(STUDIO_SCALES).map(s => '<option value="' + s + '"' + (s === studioState.scale ? ' selected' : '') + '>' + STUDIO_SCALES[s].label + '</option>').join('') +
+    '</select></div>';
+  host.innerHTML = h;
+}
+
+// ── SAVE / LOAD / SHARE ────────────────────────────────────────────────────
+function studioSerialize() {
+  const idx = arr => arr.reduce((a, v, i) => (v && a.push(i), a), []);
+  return {
+    v: 1, bpm: studioState.bpm, bars: studioState.bars, steps: studioState.stepsPerBar,
+    key: studioState.key, scale: studioState.scale,
+    tracks: studioState.tracks.map(tr => tr.kind === 'drums'
+      ? { id: 'drums', k: idx(tr.pattern.kick), s: idx(tr.pattern.snare), h: idx(tr.pattern.hihat) }
+      : { id: tr.id, n: Object.keys(tr.notes).map(semi => [+semi, idx(tr.notes[semi])]).filter(r => r[1].length) }),
+  };
+}
+function studioLoadData(d) {
+  if (!d || !d.tracks) return false;
+  studioStop();
+  studioState.bpm = d.bpm || 120; studioState.bpmStart = studioState.bpm;
+  studioState.bars = d.bars || 1; studioState.stepsPerBar = d.steps || 8;
+  studioState.key = d.key || 0; studioState.scale = STUDIO_SCALES[d.scale] ? d.scale : 'majpent';
+  const total = studioState.bars * studioState.stepsPerBar;
+  const fill = list => { const a = new Array(total).fill(false); (list || []).forEach(i => { if (i < total) a[i] = true; }); return a; };
+  studioState.tracks = [];
+  d.tracks.forEach(t => {
+    if (t.id === 'drums') {
+      const tr = makeDrumTrack();
+      tr.pattern = { kick: fill(t.k), snare: fill(t.s), hihat: fill(t.h) };
+      studioState.tracks.push(tr);
+    } else if (STUDIO_LAYERS[t.id]) {
+      const tr = makePitchedTrack(t.id);
+      (t.n || []).forEach(([semi, steps]) => { tr.notes[semi] = fill(steps); });
+      studioState.tracks.push(tr);
+    }
+  });
+  if (!studioState.tracks.find(t => t.id === 'drums')) studioState.tracks.unshift(makeDrumTrack());
+  studioState.tracks.sort((a, b) => STUDIO_ORDER.indexOf(a.id) - STUDIO_ORDER.indexOf(b.id));
+  studioRenderShapeChips(); studioSyncBpmUI(); studioRenderTracks();
+  return true;
+}
+function studioLoopsKey() { return 'kanteon_studio_loops_' + ((klState && klState.kid && klState.kid.id) || 'guest'); }
+function studioGetLoops() { try { return JSON.parse(localStorage.getItem(studioLoopsKey()) || '[]'); } catch (e) { return []; } }
+function studioPutLoops(l) { try { localStorage.setItem(studioLoopsKey(), JSON.stringify(l.slice(0, 30))); } catch (e) {} }
+window.studioSaveLoop = function () {
+  const inp = document.getElementById('studio-loop-name');
+  const loops = studioGetLoops();
+  const name = ((inp && inp.value) || '').trim() || ('My Loop ' + (loops.length + 1));
+  const i = loops.findIndex(l => l.name === name);
+  const entry = { name, at: Date.now(), data: studioSerialize() };
+  if (i >= 0) loops[i] = entry; else loops.unshift(entry);
+  studioPutLoops(loops);
+  if (inp) inp.value = name;
+  studioRenderLoops('Saved “' + name + '” ✓');
+};
+window.studioOpenLoop = function (i) {
+  const l = studioGetLoops()[i]; if (!l) return;
+  studioLoadData(l.data);
+  const inp = document.getElementById('studio-loop-name'); if (inp) inp.value = l.name;
+  studioRenderLoops('Loaded “' + l.name + '”');
+};
+window.studioDeleteLoop = function (i) {
+  const loops = studioGetLoops(); loops.splice(i, 1); studioPutLoops(loops); studioRenderLoops();
+};
+function studioB64(s) { return btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+function studioUnB64(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return decodeURIComponent(escape(atob(s))); }
+window.studioShareLoop = function () {
+  const url = location.origin + location.pathname + '#studio=' + studioB64(JSON.stringify(studioSerialize()));
+  const box = document.getElementById('studio-share-url');
+  if (box) { box.value = url; box.style.display = ''; box.select(); }
+  let ok = false;
+  try { navigator.clipboard.writeText(url).then(() => studioRenderLoops('Link copied — paste it to share 🔗'), () => {}); ok = true; } catch (e) {}
+  studioRenderLoops(ok ? 'Copying link…' : 'Copy the link below to share');
+};
+function studioRenderLoops(msg) {
+  const host = document.getElementById('studio-loop-list'); if (!host) return;
+  const loops = studioGetLoops();
+  host.innerHTML = (msg ? '<div class="studio-loop-msg">' + msg + '</div>' : '') +
+    (loops.length ? loops.map((l, i) =>
+      '<span class="studio-loop-chip"><button class="studio-chip" onclick="studioOpenLoop(' + i + ')">📂 ' +
+      String(l.name).replace(/</g, '&lt;') + '</button><button class="studio-chip studio-x" title="Delete" onclick="studioDeleteLoop(' + i + ')">✕</button></span>').join('')
+      : '<span class="studio-row-label">No saved loops yet</span>');
+}
+// Shared link (#studio=...) → offered on the mode-select page, loaded when Studio opens.
+(function () {
+  try {
+    const m = location.hash.match(/studio=([A-Za-z0-9_-]+)/);
+    if (m) window.__studioPending = JSON.parse(studioUnB64(m[1]));
+  } catch (e) { console.warn('bad studio link', e); }
+})();
+
+// ── REMIX A STORY SONG ─────────────────────────────────────────────────────
+// Builds a Studio loop from a Story dot: its drum puzzles, bassline and the last
+// melody the kid solved there. Story pitches are C-major scale degrees (KL_SCALE).
+function studioFromStoryDot(dot) {
+  const ps = KL_PUZZLES.filter(p => p.dot === dot);
+  if (!ps.length) return null;
+  let beats = 4;
+  ps.forEach(p => { if (p.beats) beats = Math.max(beats, p.beats); });
+  const bars = Math.min(4, Math.max(1, Math.ceil(beats / 4)));
+  const steps = 8, per = 2;   // 8 steps per bar = 8th notes
+  const st = b => Math.round(b * per);
+  const d = { v: 1, bpm: (ps.find(p => p.bpm) || {}).bpm || 100, bars, steps, key: 0, scale: 'major', tracks: [] };
+  const dr = { id: 'drums', k: [], s: [], h: [] };
+  ps.filter(p => p.type === 'drums' && p.drums).forEach(p => {
+    (p.drums.kick || []).forEach(b => dr.k.push(st(b)));
+    (p.drums.snare || []).forEach(b => dr.s.push(st(b)));
+    (p.drums.hat || []).forEach(b => dr.h.push(st(b)));
+  });
+  d.tracks.push(dr);
+  const toRows = (notes, base, octShift) => {
+    const rows = {};
+    notes.forEach(n => {
+      let semi = KL_SCALE[n.pitch] + octShift - base;
+      while (semi < 0) semi += 12;
+      while (semi > 24) semi -= 12;
+      (rows[semi] = rows[semi] || []).push(st(n.start));
+    });
+    return Object.keys(rows).map(k => [+k, rows[k]]);
+  };
+  const bp = ps.find(p => p.type === 'bass' && p.notes);
+  if (bp) d.tracks.push({ id: 'bass', n: toRows(bp.notes, 36, -24) });
+  const mel = ps.filter(p => (!p.type || p.type === 'melody') && p.notes).pop();
+  if (mel) d.tracks.push({ id: 'keys', n: toRows(mel.notes, 60, 0) });
+  return d;
+}
+window.klRemixInStudio = function (dot) {
+  try { klStopClock(); } catch (e) {}
+  const d = studioFromStoryDot(dot);
+  klOpenStudio();
+  if (d) { studioLoadData(d); studioRenderLayerControls(); studioRenderLoops('Remixing your Story song 🎚️ — change anything!'); }
+};
+
+// ── STUDIO AS A MAIN MODE ──────────────────────────────────────────────────
+window.klOpenStudio = function () {
+  currentModule = 'studio';
+  if (!studioState._inited) initStudio();
+  if (window.__studioPending) {
+    studioLoadData(window.__studioPending);
+    window.__studioPending = null;
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    studioRenderLoops('Opened a shared loop 🔗 — save it to keep it');
+  }
+  studioRenderLayerControls();
+  showScreen('studio');
+};
+
 
 // ── PLAYHEAD ───────────────────────────────────────────────────────────────
 function studioUpdatePlayhead(stepIdx) {
