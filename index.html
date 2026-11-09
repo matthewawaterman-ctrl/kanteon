@@ -6024,6 +6024,41 @@
     background: linear-gradient(180deg, rgba(29,24,80,0.9), rgba(19,16,58,0.9)); }
   .studio-mixer-inline .studio-strip { flex: 0 1 120px; }
   .studio-mixer-inline .studio-fader { width: 40px; }
+  /* instrument view under the note grid */
+  #studio .studio-view-head { display: flex; justify-content: space-between; align-items: center; margin: 6px 0 3px; font-family: var(--font-display);
+    font-weight: 900; font-size: 12px; letter-spacing: 1.5px; color: var(--text); flex: 0 0 auto; }
+  #studio .studio-view-hint { font-family: var(--font-body); font-weight: 600; font-size: 11px; letter-spacing: 0; color: var(--text3); margin-left: 6px; }
+  #studio .studio-view { flex: 0 0 auto; height: clamp(78px, 17vh, 150px); border-radius: 6px; background: #0b0920; border: 1px solid rgba(255,255,255,0.1); overflow: hidden;
+    --lc: #7c6ff7; touch-action: none; }
+  #studio .studio-view.studio-l-bass { --lc: #a78bfa; } #studio .studio-view.studio-l-guitar { --lc: #ff7a59; }
+  #studio .studio-view.studio-l-keys { --lc: #4ecdc4; } #studio .studio-view.studio-l-synth { --lc: #f0c040; }
+  #studio .studio-view-svg { width: 100%; height: 100%; display: block; }
+  #studio .studio-view-guitar, #studio .studio-view-bass { height: clamp(96px, 21vh, 170px); }
+  .studio-view .sv-white rect { fill: #ece9ff; stroke: #2a2560; }
+  .studio-view .sv-black rect { fill: #1a1638; stroke: #000; }
+  .studio-view .sv-key { cursor: pointer; }
+  .studio-view .sv-lbl { font: 700 9px var(--font-display); fill: #6d68a0; text-anchor: middle; pointer-events: none; }
+  .studio-view .sv-lbl.c { fill: #2a2560; font-size: 10px; }
+  .studio-view .sv-dot { fill: transparent; pointer-events: none; }
+  .studio-view .sv-key.used .sv-dot { fill: var(--lc); opacity: 0.4; }
+  .studio-view .sv-key.lit rect { fill: var(--lc); }
+  .studio-view .sv-key.lit .sv-dot { fill: #fff; opacity: 0.9; }
+  .studio-view .sv-key.lit .sv-lbl { fill: #0d0a22; }
+  .studio-view .sv-board { fill: #3a2616; }
+  .studio-view .sv-fret { stroke: #b9b3a0; stroke-width: 1.5; }
+  .studio-view .sv-nut { stroke: #efe8d4; stroke-width: 4; }
+  .studio-view .sv-string { stroke: #d9d4c4; }
+  .studio-view .sv-inlay { fill: #d8c9a6; opacity: 0.55; }
+  .studio-view .sv-sname { font: 800 11px var(--font-display); fill: var(--text2); }
+  .studio-view .sv-fnum { font: 700 9px var(--font-mono); fill: var(--text3); text-anchor: middle; }
+  .studio-view .sv-pos { cursor: pointer; }
+  .studio-view .sv-pos circle { fill: transparent; }
+  .studio-view .sv-pos .sv-plbl { font: 800 8px var(--font-display); text-anchor: middle; fill: transparent; pointer-events: none; }
+  .studio-view .sv-pos:hover circle { fill: rgba(255,255,255,0.12); }
+  .studio-view .sv-pos.used circle { fill: var(--lc); opacity: 0.45; }
+  .studio-view .sv-pos.used .sv-plbl { fill: #fff; opacity: 0.8; }
+  .studio-view .sv-pos.lit circle { fill: var(--lc); stroke: #fff; stroke-width: 2; filter: drop-shadow(0 0 4px var(--lc)); }
+  .studio-view .sv-pos.lit .sv-plbl { fill: #0d0a22; }
 </style>
 </head>
 <body>
@@ -22216,7 +22251,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.08ai'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.08aj'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -26678,6 +26713,7 @@ window.studioStop = function() {
   cancelAnimationFrame(studioState.phRAF); studioState.phQueue = [];
   studioState.lastPlayheadStep = -1;
   studioClearPlayheadHighlight();
+  studioViewUpdate(null);
   studioClearMetroPulse();
   document.getElementById('studio-play-btn').classList.remove('polished-btn-green');
   document.getElementById('studio-play-btn').innerHTML = '▶ PLAY';
@@ -27149,6 +27185,7 @@ function studioRenderTracks() {
   });
   studioState.lastPlayheadStep = -1;
   studioRenderLayerControls();
+  studioViewUpdate(null);
 }
 function studioUpdateTabCounts() {
   studioState.tracks.forEach(t => {
@@ -27430,6 +27467,8 @@ function studioBuildPitchedTrack(tr) {
         '<span class="studio-row-label" style="margin-left:8px;">RANGE</span>' +
         [1, 2, 3].map(r => '<button class="studio-chip' + (tr.range === r ? ' active' : '') + '" onclick="studioSetRange(\'' + tr.id + '\',' + r + ')">' + r + ' OCT</button>').join('') +
         '<span class="studio-range-txt">C' + tr.oct + '–C' + (tr.oct + tr.range) + '</span>' +
+        '<button class="studio-chip' + (studioState.showView !== false ? ' active' : '') + '" title="Show the instrument" onclick="studioToggleView()">' +
+          (studioViewKind(tr) === 'piano' ? '🎹' : '🎸') + ' VIEW</button>' +
         ' <button class="studio-chip studio-x" title="Remove layer" onclick="studioRemoveLayer(\'' + tr.id + '\')">✕</button></div>' +
     '</div>';
   const gridCols = '44px repeat(' + total + ', minmax(0, 1fr))';
@@ -27448,7 +27487,8 @@ function studioBuildPitchedTrack(tr) {
     label.className = 'studio-pianoroll-rowname' + (isRoot ? ' root' : '');
     label.textContent = STUDIO_KEYS[(studioState.key + semi) % 12] + (isRoot ? (tr.oct + Math.floor(semi / 12)) : '');
     label.title = 'Click to hear';
-    label.onclick = () => studioPlayNote(tr, studioNoteMidi(tr, semi), (audioCtx || getAudio()).currentTime + 0.01, 0.35, 0.22);
+    label.onclick = () => { studioPlayNote(tr, studioNoteMidi(tr, semi), (audioCtx || getAudio()).currentTime + 0.01, 0.35, 0.22);
+      studioState.viewTouch = studioNoteMidi(tr, semi); if (!studioState.isPlaying) studioViewUpdate(null); };
     rowDiv.appendChild(label);
     for (let i = 0; i < total; i++) {
       const cell = document.createElement('div');
@@ -27469,7 +27509,135 @@ function studioBuildPitchedTrack(tr) {
   });
   studioWireNoteDrag(tr, grid, total);
   wrap.appendChild(grid);
+  if (studioState.showView !== false) {
+    const kind = studioViewKind(tr);
+    const vh = document.createElement('div');
+    vh.className = 'studio-view-head';
+    vh.innerHTML = '<span>' + (kind === 'piano' ? '🎹 KEYBOARD' : kind === 'guitar' ? '🎸 GUITAR NECK' : '🎸 BASS NECK') +
+      ' <span class="studio-view-hint">' + (kind === 'piano' ? 'tap a key to hear it' : (studioState.allSpots ? 'tap a spot to make it your spot' : 'tap a lit note to move it to another string')) + '</span></span>' +
+      (kind === 'piano' ? '' : '<span><button class="studio-chip' + (!studioState.allSpots ? ' active' : '') + '" onclick="studioState.allSpots=true;studioToggleAllSpots()">ONE SPOT</button>' +
+        '<button class="studio-chip' + (studioState.allSpots ? ' active' : '') + '" onclick="studioState.allSpots=false;studioToggleAllSpots()">EVERY SPOT</button></span>');
+    wrap.appendChild(vh);
+    wrap.appendChild(studioBuildInstrumentView(tr));
+  }
   return wrap;
+}
+
+// ── INSTRUMENT VIEW: keyboard / guitar / bass that light up the notes ──────
+// Dim = every note this layer uses in the loop · bright = sounding now (or the
+// note you just touched). Guitar/bass: ONE SPOT shows one fret per note (tap a
+// lit dot to move it to the next string that has that note); EVERY SPOT shows
+// every string + fret where the note can be played.
+const STUDIO_TUNINGS = {
+  guitar: { names: ['E', 'B', 'G', 'D', 'A', 'E'], open: [64, 59, 55, 50, 45, 40], frets: 15 },   // high E on top (like tab)
+  bass:   { names: ['G', 'D', 'A', 'E'], open: [43, 38, 33, 28], frets: 15 },
+};
+function studioViewKind(tr) { return (tr.id === 'guitar' || tr.id === 'bass') ? tr.id : 'piano'; }
+function studioMidiName(m) { return STUDIO_KEYS[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1); }
+function studioFretPositions(kind, m) {
+  const t = STUDIO_TUNINGS[kind], out = [];
+  t.open.forEach((o, s) => { const f = m - o; if (f >= 0 && f <= t.frets) out.push([s, f]); });
+  return out;
+}
+// chosen spot for a pitch: kid's pick, else the lowest fret
+function studioFretPick(kind, m) {
+  const pos = studioFretPositions(kind, m); if (!pos.length) return null;
+  const ch = ((studioState.fretChoice || {})[kind] || {})[m];
+  const hit = ch != null && pos.find(p => p[0] === ch);
+  if (hit) return hit;
+  return pos.slice().sort((a, b) => a[1] - b[1] || b[0] - a[0])[0];
+}
+window.studioToggleView = function () { studioState.showView = studioState.showView === false; studioRenderTracks(); };
+window.studioToggleAllSpots = function () { studioState.allSpots = !studioState.allSpots; studioRenderTracks(); };
+function studioBuildInstrumentView(tr) {
+  const kind = studioViewKind(tr);
+  const box = document.createElement('div');
+  box.className = 'studio-view studio-view-' + kind + ' studio-l-' + tr.id;
+  box.dataset.kind = kind;
+  const NS = 'http://www.w3.org/2000/svg';
+  const el = (n, a, p) => { const e = document.createElementNS(NS, n); Object.keys(a).forEach(k => e.setAttribute(k, a[k])); if (p) p.appendChild(e); return e; };
+  if (kind === 'piano') {
+    const lo = studioNoteMidi(tr, 0), hi = studioNoteMidi(tr, tr.span);
+    const start = lo - (lo % 12 === 0 ? 0 : 0), end = hi;
+    const whites = []; for (let m = start; m <= end; m++) if (![1, 3, 6, 8, 10].includes(((m % 12) + 12) % 12)) whites.push(m);
+    const W = whites.length * 24, H = 100;
+    const svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'none', class: 'studio-view-svg' }, box);
+    whites.forEach((m, i) => {
+      const g = el('g', { class: 'sv-key sv-white', 'data-midi': m }, svg);
+      el('rect', { x: i * 24 + 0.5, y: 0.5, width: 23, height: H - 1, rx: 3 }, g);
+      el('circle', { class: 'sv-dot', cx: i * 24 + 12, cy: H - 16, r: 8 }, g);
+      const t = el('text', { x: i * 24 + 12, y: H - 12, class: 'sv-lbl' + (m % 12 === 0 ? ' c' : '') }, g); t.textContent = m % 12 === 0 ? studioMidiName(m) : STUDIO_KEYS[m % 12];
+    });
+    whites.forEach((m, i) => {
+      const b = m + 1;
+      if (b > end || ![1, 3, 6, 8, 10].includes(b % 12)) return;
+      const g = el('g', { class: 'sv-key sv-black', 'data-midi': b }, svg);
+      el('rect', { x: i * 24 + 16, y: 0.5, width: 16, height: H * 0.6, rx: 2 }, g);
+      el('circle', { class: 'sv-dot', cx: i * 24 + 24, cy: H * 0.6 - 12, r: 6.5 }, g);
+    });
+  } else {
+    const T = STUDIO_TUNINGS[kind], nS = T.open.length, F = T.frets;
+    const L = 46, fw = 38, W = L + F * fw + 8, sg = kind === 'bass' ? 24 : 17, top = 12, H = top * 2 + sg * (nS - 1) + 12;
+    const svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet', class: 'studio-view-svg' }, box);
+    const fx = f => f === 0 ? L - 12 : L + (f - 0.5) * fw;           // dot x for a fret (0 = open, left of the nut)
+    el('rect', { x: L, y: top - 6, width: F * fw, height: sg * (nS - 1) + 12, class: 'sv-board', rx: 3 }, svg);
+    [3, 5, 7, 9, 15].forEach(f => el('circle', { cx: L + (f - 0.5) * fw, cy: top + sg * (nS - 1) / 2, r: 4, class: 'sv-inlay' }, svg));
+    [12].forEach(f => { el('circle', { cx: L + (f - 0.5) * fw, cy: top + sg * 0.75, r: 4, class: 'sv-inlay' }, svg); el('circle', { cx: L + (f - 0.5) * fw, cy: top + sg * (nS - 1.75), r: 4, class: 'sv-inlay' }, svg); });
+    for (let f = 0; f <= F; f++) el('line', { x1: L + f * fw, y1: top - 6, x2: L + f * fw, y2: top + sg * (nS - 1) + 6, class: f === 0 ? 'sv-nut' : 'sv-fret' }, svg);
+    for (let s = 0; s < nS; s++) {
+      el('line', { x1: L - 20, y1: top + s * sg, x2: L + F * fw, y2: top + s * sg, class: 'sv-string', 'stroke-width': 1 + s * (kind === 'bass' ? 0.6 : 0.35) }, svg);
+      const t = el('text', { x: 8, y: top + s * sg + 4, class: 'sv-sname' }, svg); t.textContent = T.names[s];
+    }
+    for (let f = 1; f <= F; f++) { const t = el('text', { x: L + (f - 0.5) * fw, y: H - 2, class: 'sv-fnum' }, svg); t.textContent = f; }
+    for (let s = 0; s < nS; s++) for (let f = 0; f <= F; f++) {
+      const m = T.open[s] + f;
+      const g = el('g', { class: 'sv-pos', 'data-midi': m, 'data-s': s, 'data-f': f }, svg);
+      el('circle', { cx: fx(f), cy: top + s * sg, r: kind === 'bass' ? 9 : 7.5 }, g);
+      const t = el('text', { x: fx(f), y: top + s * sg + 3.5, class: 'sv-plbl' }, g); t.textContent = STUDIO_KEYS[m % 12];
+    }
+  }
+  // tap: hear it; on guitar/bass also choose this string for that pitch
+  box.onpointerdown = e => {
+    const g = e.target.closest('[data-midi]'); if (!g) return;
+    const m = +g.dataset.midi;
+    studioPlayNote(tr, m, (audioCtx || getAudio()).currentTime + 0.005, 0.5, 0.22);
+    if (kind !== 'piano' && (g.classList.contains('lit') || g.classList.contains('used'))) {
+      studioState.fretChoice = studioState.fretChoice || {};
+      const fc = studioState.fretChoice[kind] = studioState.fretChoice[kind] || {};
+      if (studioState.allSpots) fc[m] = +g.dataset.s;          // EVERY SPOT: tap one to make it your spot
+      else {                                                   // ONE SPOT: tap to move to the next string
+        const pos = studioFretPositions(kind, m), cur = studioFretPick(kind, m);
+        const i = pos.findIndex(p => p[0] === cur[0]); fc[m] = pos[(i + 1) % pos.length][0];
+      }
+    }
+    studioState.viewTouch = m;
+    studioViewUpdate();
+  };
+  return box;
+}
+// which pitches this layer uses (dim) and which are sounding at `step` (bright)
+function studioViewUpdate(step) {
+  const box = document.querySelector('#studio .studio-view'); if (!box) return;
+  const tr = studioState.tracks.find(t => t.id === studioState.focusLayer); if (!tr || tr.kind !== 'pitched') return;
+  const kind = box.dataset.kind, used = new Set(), on = new Set();
+  Object.keys(tr.notes).forEach(semi => {
+    if (!studioRowSemis(tr).includes(+semi)) return;
+    const m = studioNoteMidi(tr, +semi);
+    tr.notes[semi].forEach((v, i) => {
+      const L = studioNoteLen(v); if (!L) return;
+      used.add(m);
+      if (step != null && step >= i && step < i + L) on.add(m);
+    });
+  });
+  if (step == null && studioState.viewTouch != null) on.add(studioState.viewTouch);
+  box.querySelectorAll('.lit, .used').forEach(g => g.classList.remove('lit', 'used'));
+  const mark = (m, cls) => {
+    if (kind === 'piano') { const g = box.querySelector('[data-midi="' + m + '"]'); if (g) g.classList.add(cls); return; }
+    if (studioState.allSpots) box.querySelectorAll('.sv-pos[data-midi="' + m + '"]').forEach(g => g.classList.add(cls));
+    else { const p = studioFretPick(kind, m); if (p) { const g = box.querySelector('.sv-pos[data-s="' + p[0] + '"][data-f="' + p[1] + '"]'); if (g) g.classList.add(cls); } }
+  };
+  used.forEach(m => { if (!on.has(m)) mark(m, 'used'); });
+  on.forEach(m => mark(m, 'lit'));
 }
 
 // ── NOTE LENGTHS (DAW-style, like Write the Rhythm) ────────────────────────
@@ -27509,8 +27677,12 @@ function studioWireNoteDrag(tr, grid, total) {
     grid.querySelectorAll('.studio-pianoroll-row[data-pitch]').forEach(r => { const rc = r.getBoundingClientRect(); if (y >= rc.top && y <= rc.bottom) best = r; });
     return best;
   };
-  const hear = (semi, L) => studioPlayNote(tr, studioNoteMidi(tr, semi), (audioCtx || getAudio()).currentTime + 0.005,
-    Math.min(1.2, L * (60 / studioState.bpm) / studioColsPerBeat()), 0.2);
+  const hear = (semi, L) => {
+    studioPlayNote(tr, studioNoteMidi(tr, semi), (audioCtx || getAudio()).currentTime + 0.005,
+      Math.min(1.2, L * (60 / studioState.bpm) / studioColsPerBeat()), 0.2);
+    studioState.viewTouch = studioNoteMidi(tr, semi);
+    if (!studioState.isPlaying) studioViewUpdate(null);
+  };
   grid.onpointerdown = e => {
     const rowDiv = e.target.closest('.studio-pianoroll-row[data-pitch]'); if (!rowDiv) return;
     if (e.target.closest('.studio-pianoroll-rowname')) return;   // row name = listen
@@ -27840,6 +28012,7 @@ function studioUpdatePlayhead(stepIdx) {
   (cc[studioState.lastPlayheadStep] || []).forEach(c => c.classList.remove('playhead'));
   (cc[stepIdx] || []).forEach(c => c.classList.add('playhead'));
   studioState.lastPlayheadStep = stepIdx;
+  studioViewUpdate(stepIdx);
 }
 function studioClearPlayheadHighlight() {
   document.querySelectorAll('.studio-seq-cell.playhead').forEach(c => c.classList.remove('playhead'));
