@@ -5975,6 +5975,41 @@
     background: rgba(255,255,255,0.06); color: var(--text2); border: 1px solid var(--border); cursor: pointer; white-space: nowrap; }
   #studio .studio-bar-btn:hover { color: var(--text); border-color: var(--text2); }
   #studio .studio-bar-btn.on { background: #4ecdc4; color: #0d0a22; border-color: #4ecdc4; }
+  /* drum mixer */
+  #studio .studio-mixer { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 2px; justify-content: space-between; padding: 2px 4px; }
+  #studio .studio-mix-row { flex: 1; min-height: 0; display: grid; grid-template-columns: 110px 1fr 54px; align-items: center; gap: 12px; }
+  #studio .studio-mix-name { font-family: var(--font-display); font-weight: 800; font-size: 13px; letter-spacing: 1px; text-align: right; color: var(--text);
+    background: none; border: none; border-right: 4px solid var(--dc); padding: 2px 10px 2px 0; cursor: pointer; white-space: nowrap; }
+  #studio .studio-mix-slider { width: 100%; accent-color: var(--dc); height: 22px; cursor: pointer; }
+  #studio .studio-mix-val { font-family: var(--font-mono); font-size: 13px; color: var(--dc); text-align: right; }
+  #studio .studio-mix-toggle.active { background: #f0c040; color: #0d0a22; border-color: #f0c040; }
+  /* transport: PLAY/PAUSE · MIXER · LOOP */
+  #studio .studio-rewind { margin-left: 4px; white-space: nowrap; }
+  /* mixer pop-up over the edit window */
+  .studio-mixer-ov { position: absolute; inset: 0; z-index: 40; display: none; align-items: center; justify-content: center;
+    background: rgba(8,6,24,0.72); backdrop-filter: blur(2px); border-radius: 8px; }
+  #studio .studio-main { position: relative; }
+  .studio-mixer-win { background: linear-gradient(180deg, #1d1850, #13103a); border: 1px solid rgba(124,111,247,0.5); border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6); padding: 10px 14px 12px; width: min(100%, 720px); height: min(100%, 470px); display: flex; flex-direction: column; }
+  .studio-mixer-top { display: flex; justify-content: space-between; align-items: center; font-family: var(--font-display); font-weight: 900;
+    letter-spacing: 3px; font-size: 16px; color: var(--text); margin-bottom: 8px; }
+  .studio-strips { flex: 1; min-height: 0; display: flex; gap: 10px; justify-content: center; }
+  .studio-strip { flex: 0 1 96px; min-width: 64px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 6px;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; border-top: 3px solid var(--sc); }
+  .studio-strip.muted { opacity: 0.55; }
+  .studio-strip-val { font-family: var(--font-mono); font-size: 13px; color: var(--sc); }
+  .studio-fader { position: relative; flex: 1; min-height: 80px; width: 34px; border-radius: 6px; background: #0b0920;
+    border: 1px solid rgba(255,255,255,0.12); cursor: ns-resize; touch-action: none; }
+  .studio-fader-fill { position: absolute; left: 13px; right: 13px; bottom: 0; background: var(--sc); border-radius: 4px; opacity: 0.85; pointer-events: none; }
+  .studio-fader-unity { position: absolute; left: -6px; right: -6px; bottom: 66.67%; height: 1px; background: rgba(255,255,255,0.35); pointer-events: none; }
+  .studio-fader-knob { position: absolute; left: -9px; right: -9px; height: 18px; margin-bottom: -9px; border-radius: 4px; pointer-events: none;
+    background: linear-gradient(180deg, #f4f4ff, #b9b6d8); box-shadow: 0 2px 6px rgba(0,0,0,0.5); border-top: 2px solid var(--sc); }
+  .studio-strip-btns { display: flex; gap: 4px; }
+  .studio-ms { font-family: var(--font-display); font-weight: 900; font-size: 13px; width: 30px; height: 26px; border-radius: 5px; cursor: pointer;
+    background: rgba(255,255,255,0.07); color: var(--text2); border: 1px solid rgba(255,255,255,0.15); }
+  .studio-ms.m.on { background: #ff5a6a; color: #fff; border-color: #ff5a6a; }
+  .studio-ms.s.on { background: #f0c040; color: #0d0a22; border-color: #f0c040; }
+  .studio-strip-name { font-family: var(--font-display); font-weight: 800; font-size: 12px; letter-spacing: 1px; text-align: center; color: var(--text); line-height: 1.3; }
 </style>
 </head>
 <body>
@@ -7020,7 +7055,7 @@
     <!-- SHARED TRANSPORT -->
     <div class="studio-transport">
       <button class="polished-btn studio-transport-btn" id="studio-play-btn" onclick="studioTogglePlay()">▶ PLAY</button>
-      <button class="polished-btn studio-transport-btn" id="studio-stop-btn" onclick="studioStop()">■ STOP</button>
+      <button class="polished-btn studio-transport-btn" id="studio-mixer-btn" onclick="studioOpenMixer()">🎚 MIXER</button>
       <button class="polished-btn studio-transport-btn" id="studio-loop-btn" onclick="studioToggleLoop()">⟲ LOOP</button>
       <div class="studio-bpm-display">
         <span class="bpm-label">BPM</span>
@@ -7046,15 +7081,25 @@
           <button class="studio-chip" data-bars="1" onclick="studioSetBars(1)">1</button>
           <button class="studio-chip" data-bars="2" onclick="studioSetBars(2)">2</button>
           <button class="studio-chip" data-bars="4" onclick="studioSetBars(4)">4</button>
-          <span class="studio-row-label" style="margin-left:8px;">STEPS/BAR</span>
-          <button class="studio-chip" data-steps="4" onclick="studioSetSteps(4)">4</button>
-          <button class="studio-chip" data-steps="8" onclick="studioSetSteps(8)">8</button>
-          <button class="studio-chip" data-steps="16" onclick="studioSetSteps(16)">16</button>
+          <span class="studio-row-label" style="margin-left:8px;">TIME</span>
+          <button class="studio-chip" data-ts="4/4" onclick="studioSetTimeSig('4/4')">4/4</button>
+          <button class="studio-chip" data-ts="3/4" onclick="studioSetTimeSig('3/4')">3/4</button>
+          <button class="studio-chip" data-ts="6/8" onclick="studioSetTimeSig('6/8')">6/8</button>
         </div>
         <div class="studio-row">
-          <span class="studio-toggle" id="studio-metroclick-toggle" onclick="studioToggleMetroInSeq()">
-            CLICK ON <span class="studio-toggle-switch"></span>
+          <span class="studio-row-label">GRID</span>
+          <button class="studio-chip" data-grid="1" onclick="studioSetGrid(1)">¼</button>
+          <button class="studio-chip" data-grid="2" onclick="studioSetGrid(2)">⅛</button>
+          <button class="studio-chip" data-grid="4" onclick="studioSetGrid(4)">16TH</button>
+          <span class="studio-toggle" id="studio-metroclick-toggle" onclick="studioToggleMetroInSeq()" style="margin-left:8px;">
+            CLICK <span class="studio-toggle-switch"></span>
           </span>
+        </div>
+        <div class="studio-row">
+          <span class="studio-toggle" id="studio-autospeed-toggle2" onclick="studioToggleAutospeed()">
+            AUTO SPEED-UP <span class="studio-toggle-switch"></span>
+          </span>
+          <span class="studio-row-label" id="studio-autospeed-sum" style="margin-left:6px;"></span>
         </div>
         <div id="studio-layer-controls"></div>
       </div>
@@ -22157,7 +22202,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.08ab'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.08ae'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -24567,9 +24612,9 @@ function createMasterClock() {
     stop();
     running = true;
     anchorTime = startTime;
-    anchorBeat = 0;
-    nextColToFire = 0;
     colsPerBeat = opts.colsPerBeat || 1;
+    nextColToFire = opts.startCol || 0;          // resume mid-loop (Studio pause)
+    anchorBeat = nextColToFire / colsPerBeat;
     totalCols = opts.totalCols || 0;
     loopArmed = !!opts.loop;
     schedTick();
@@ -26438,8 +26483,9 @@ const studioState = {
 
   // Sequencer
   advanced: false,
+  grid: 2,                     // steps per quarter note: 1 ¼ · 2 ⅛ · 4 16th
   key: 0,                      // 0 = C … 11 = B
-  scale: 'majpent',            // STUDIO_SCALES key
+  scale: 'major',              // STUDIO_SCALES key — default C major
   bars: 1,
   stepsPerBar: 8,              // 4, 8, or 16
   clickInSeq: false,
@@ -26511,6 +26557,8 @@ window.switchStudioTab = function(tab) {
   document.getElementById('studio-tab-seq').classList.toggle('active', tab === 'seq');
   document.getElementById('studio-tab-metro').classList.toggle('active', tab === 'metro');
   document.querySelectorAll('#studio [data-spane]').forEach(el => { el.style.display = el.dataset.spane === tab ? '' : 'none'; });
+  if (!studioState.isPlaying) studioState.resumeStep = 0;
+  studioRenderRewind();
 };
 
 // ── BPM ────────────────────────────────────────────────────────────────────
@@ -26550,10 +26598,31 @@ window.studioTapTempo = function() {
 };
 
 // ── TRANSPORT ──────────────────────────────────────────────────────────────
+// PLAY ⇄ PAUSE. Pausing the sequencer remembers the step, PLAY resumes there.
+// ⏮ (shown only while paused mid-loop) jumps back to the start.
 window.studioTogglePlay = function() {
-  if (studioState.isPlaying) studioStop();
-  else studioPlay();
+  if (studioState.isPlaying) {
+    const resumeAt = (studioState.tab === 'seq' && studioState.lastPlayheadStep >= 0) ? studioState.lastPlayheadStep + 1 : 0;
+    studioStop();
+    const total = studioState.bars * studioState.stepsPerBar;
+    studioState.resumeStep = resumeAt % total;
+  } else {
+    studioPlay();
+  }
+  studioRenderRewind();
 };
+window.studioRewind = function () { studioState.resumeStep = 0; studioRenderRewind(); };
+function studioRenderRewind() {
+  let b = document.getElementById('studio-rewind-btn');
+  const show = !studioState.isPlaying && studioState.resumeStep > 0 && studioState.tab === 'seq';
+  if (!b) {
+    b = document.createElement('button');
+    b.id = 'studio-rewind-btn'; b.className = 'studio-chip studio-rewind'; b.title = 'Back to the start';
+    b.textContent = '⏮ TO START'; b.onclick = () => studioRewind();
+    const row = document.querySelector('#studio .studio-bpm-row'); if (row) row.appendChild(b);
+  }
+  b.style.display = show ? '' : 'none';
+}
 
 window.studioToggleLoop = function() {
   studioState.loopArmed = !studioState.loopArmed;
@@ -26567,6 +26636,7 @@ function studioPlay() {
   studioState.bpmStart = studioState.bpm;
   studioState.autospeed.barsElapsed = 0;
   studioState.autospeed.lastBarCounted = -1;
+  studioState.autospeed.seqStarted = false;
   studioState.isPlaying = true;
   document.getElementById('studio-play-btn').classList.add('polished-btn-green');
   document.getElementById('studio-play-btn').innerHTML = '⏸ PAUSE';
@@ -26609,7 +26679,8 @@ function studioPlaySequencer(clock) {
   // But to keep it dead simple, treat each step as 1 column, with colsPerBeat = stepsPerBar/4
   // Actually: simpler — each step IS one column. We just say colsPerBeat = (stepsPerBar / 4)
   // so beats progress correctly. For 8 steps: colsPerBeat=2 (eighths). For 16: 4 (sixteenths). For 4: 1.
-  const colsPerBeat = Math.max(1, studioState.stepsPerBar / 4);
+  const colsPerBeat = studioColsPerBeat();   // clock beat = metronome beat (shared time signature)
+  const spbar = studioState.stepsPerBar;
 
   // Subscribe: per-column callback
   const unsub = clock.subscribe((colIdx, audioTime) => {
@@ -26619,23 +26690,25 @@ function studioPlaySequencer(clock) {
     // Audio: fire each track that has a hit at this step
     studioState.tracks.forEach(tr => {
       if (tr.kind === 'drums') {
-        STUDIO_DRUMS.forEach(([v]) => { if (tr.pattern[v] && tr.pattern[v][stepInGrid]) studioDrum(v, audioTime, 0.5); });
+        const lv = studioLayerGain('drums');
+        if (lv > 0) STUDIO_DRUMS.forEach(([v]) => { if (tr.pattern[v] && tr.pattern[v][stepInGrid]) studioDrum(v, audioTime, 0.5 * studioDrumLvl(v) * lv); });
       } else if (tr.kind === 'pitched') {
         // only rows in the current scale sound (hidden rows stay silent)
         const dur = (60 / studioState.bpm) / colsPerBeat * 0.95;
         studioRowSemis(tr).forEach(semi => {
           const row = tr.notes[semi];
-          if (row && row[stepInGrid]) studioPlayNote(tr, studioNoteMidi(tr, semi), audioTime, dur, 0.22);
+          if (row && row[stepInGrid]) { const lv = studioLayerGain(tr.id); if (lv > 0) studioPlayNote(tr, studioNoteMidi(tr, semi), audioTime, dur, 0.22 * lv); }
         });
       }
     });
 
     // Metronome click (if enabled in sequencer tab)
     if (studioState.clickInSeq) {
-      // Click on every beat downbeat (each colsPerBeat columns)
-      if (colIdx % colsPerBeat === 0) {
-        const beatIdx = Math.floor(colIdx / colsPerBeat) % 4;
-        studioPlayClick(audioTime, beatIdx === 0);
+      // Metronome click inside the sequencer — same time signature + accent pattern
+      const inBar = stepInGrid % spbar;
+      if (inBar % colsPerBeat === 0) {
+        const beatInBar = inBar / colsPerBeat;
+        studioPlayClick(audioTime, studioMetroIsAccent(beatInBar, true));
       }
     }
   }, { audioOnly: true });
@@ -26653,20 +26726,23 @@ function studioPlaySequencer(clock) {
 
     // Auto-speedup: tick on every MUSICAL bar boundary
     // 1 bar = stepsPerBar columns (since each step is one col)
-    const musicalBar = Math.floor(colIdx / studioState.stepsPerBar);
-    const colInBar = colIdx % studioState.stepsPerBar;
-    if (musicalBar !== studioState.autospeed.lastBarCounted && colIdx > 0 && colInBar === 0) {
-      studioState.autospeed.lastBarCounted = musicalBar;
-      studioAutospeedTickIfArmed();
+    // (the loop restarts colIdx at 0, so count bar starts — skip only the very first one)
+    if (colIdx % spbar === 0) {
+      if (studioState.autospeed.seqStarted) studioAutospeedTickIfArmed();
+      studioState.autospeed.seqStarted = true;
     }
   }, { visualOnly: true });
 
   studioState.unsubs.push(unsub, unsubVis);
 
   const startTime = audioCtx.currentTime + 0.15;
+  const startCol = (studioState.resumeStep || 0) % totalSteps;
+  studioState.resumeStep = 0;
+  if (startCol % spbar === 0) studioState.autospeed.seqStarted = false;
+  else studioState.autospeed.seqStarted = true;
   // Loop the whole grid (totalSteps cols), or play once and stop if loop off
   if (studioState.loopArmed) {
-    clock.start(startTime, { colsPerBeat, totalCols: totalSteps, loop: true });
+    clock.start(startTime, { colsPerBeat, totalCols: totalSteps, loop: true, startCol });
   } else {
     // Play once — schedule auto-stop one grid later
     clock.start(startTime, { colsPerBeat, totalCols: totalSteps, loop: false });
@@ -26730,7 +26806,7 @@ function studioMetroIsAccent(beatInBar, isOnBeat) {
   const acc = studioState.accent;
   if (acc === 'none') return false;
   if (acc === '1') return beatInBar === 0;
-  if (acc === '1and3') return beatInBar === 0 || beatInBar === 2;
+  if (acc === '1and3') return studioState.timeSig === '6/8' ? (beatInBar === 0 || beatInBar === 3) : (beatInBar === 0 || beatInBar === 2);
   if (acc === 'backbeat') return beatInBar === 1 || beatInBar === 3;
   return false;
 }
@@ -26739,7 +26815,8 @@ function studioPlayClick(audioTime, isAccent) {
   const ctx = audioCtx;
   if (!ctx) return;
   const freq = isAccent ? midiFreq(76) : midiFreq(69);
-  const gain = isAccent ? 0.45 : 0.28;
+  const gain = (isAccent ? 0.45 : 0.28) * (studioState.layerVol && studioState.layerVol.click != null ? studioState.layerVol.click : 1);
+  if (gain <= 0.0001) return;
   const osc = ctx.createOscillator();
   const env = ctx.createGain();
   osc.connect(env); env.connect(ctx.destination);
@@ -26797,10 +26874,19 @@ function studioClearMetroPulse() {
 
 // ── TIME SIG / SUBDIV / ACCENT ─────────────────────────────────────────────
 window.studioSetTimeSig = function(ts) {
+  studioState.resumeStep = 0;
+  if (ts === studioState.timeSig) return;
+  const oldR = studioState.grid || 2;
   studioState.timeSig = ts;
+  if (ts === '6/8' && studioState.grid < 2) studioState.grid = 2;
+  if (ts === '6/8' && studioState.accent === 'backbeat') studioState.accent = '1';
+  studioRegrid(studioStepsFor(studioState.grid), studioBar16(), oldR, studioState.grid);   // the sequencer follows the metronome
   studioRenderTimeSigChips();
+  studioRenderShapeChips();
+  studioRenderAccentChips();
   studioRenderMetroPulse();
-  if (studioState.isPlaying && studioState.tab === 'metro') studioRestart();
+  studioRenderTracks();
+  if (studioState.isPlaying) studioRestart();
 };
 window.studioSetSubdivision = function(n) {
   studioState.subdivision = n;
@@ -26830,6 +26916,7 @@ function studioRenderAccentChips() {
 
 // ── SHAPE (bars / steps per bar) ───────────────────────────────────────────
 window.studioSetBars = function(n) {
+  studioState.resumeStep = 0;
   const oldBars = studioState.bars;
   studioState.bars = n;
   studioReshapeTracks();
@@ -26841,7 +26928,43 @@ window.studioSetBars = function(n) {
   studioRenderTracks();
   if (studioState.isPlaying && studioState.tab === 'seq') studioRestart();
 };
-window.studioSetSteps = function(n) {
+// ── SHARED TIME SIGNATURE + GRID ───────────────────────────────────────────
+// Sequencer and metronome share one time signature. A bar is 16 sixteenths in
+// 4/4, 12 in 3/4 and 6/8. GRID = steps per quarter note (1 = ¼, 2 = ⅛, 4 = 16th).
+// The clock's beat is the metronome's beat: a quarter in 4/4 and 3/4, an eighth in 6/8.
+function studioBar16() { return studioState.timeSig === '4/4' ? 16 : 12; }
+function studioStepsFor(r) { return studioBar16() * r / 4; }
+function studioColsPerBeat() { const r = studioState.grid || 2; return studioState.timeSig === '6/8' ? r / 2 : r; }
+function studioRegrid(newSpb, newBar16, oldR, newR) {
+  const old = studioState.stepsPerBar, bars = studioState.bars;
+  studioState.tracks.forEach(tr => {
+    const map = tr.kind === 'drums' ? tr.pattern : tr.notes;
+    Object.keys(map).forEach(k => {
+      const src = map[k] || [], out = new Array(bars * newSpb).fill(false);
+      src.forEach((on, j) => {
+        if (!on) return;
+        const t16 = (j % old) * 4 / oldR;              // position in 16ths
+        const pos = t16 * newR / 4;
+        if (Number.isInteger(pos) && t16 < newBar16) out[Math.floor(j / old) * newSpb + pos] = true;
+      });
+      map[k] = out;
+    });
+  });
+  studioState.stepsPerBar = newSpb;
+}
+window.studioSetGrid = function (r) {
+  studioState.resumeStep = 0;
+  if (studioState.timeSig === '6/8' && r < 2) r = 2;
+  const oldR = studioState.grid || 2;
+  studioState.grid = r;
+  studioRegrid(studioStepsFor(r), studioBar16(), oldR, r);
+  studioRenderShapeChips(); studioRenderTracks();
+  if (studioState.isPlaying) studioRestart();
+};
+window.studioSetSteps = function(n) {   // legacy (4/4 steps per bar) → grid
+  studioSetGrid(Math.max(1, Math.round(n / 4)));
+};
+window.studioSetStepsRaw = function(n) {
   const old = studioState.stepsPerBar, bars = studioState.bars;
   if (n !== old) studioState.tracks.forEach(tr => {
     const map = tr.kind === 'drums' ? tr.pattern : tr.notes;
@@ -26864,8 +26987,12 @@ window.studioSetSteps = function(n) {
 function studioRenderShapeChips() {
   document.querySelectorAll('[data-bars]').forEach(b =>
     b.classList.toggle('active', parseInt(b.getAttribute('data-bars'),10) === studioState.bars));
-  document.querySelectorAll('[data-steps]').forEach(b =>
-    b.classList.toggle('active', parseInt(b.getAttribute('data-steps'),10) === studioState.stepsPerBar));
+  document.querySelectorAll('[data-grid]').forEach(b => {
+    const r = +b.getAttribute('data-grid');
+    b.classList.toggle('active', r === (studioState.grid || 2));
+    b.style.display = (studioState.timeSig === '6/8' && r === 1) ? 'none' : '';
+  });
+  studioRenderTimeSigChips();
 }
 function studioReshapeTracks() {
   const total = studioState.bars * studioState.stepsPerBar;
@@ -27056,12 +27183,110 @@ function studioBarHeader(labelW) {
   return row;
 }
 
+
+// ── DRUM MIXER: one volume slider per drum sound (100% = the default level) ──
+function studioDrumLvl(v) { const m = studioState.drumVol; return (m && m[v] != null) ? m[v] : 1; }
+window.studioToggleDrumMixer = function () { studioState.drumMixer = !studioState.drumMixer; studioRenderTracks(); };
+window.studioResetDrumLevels = function () { studioState.drumVol = {}; studioRenderTracks(); };
+let _studioMixAud = {};
+window.studioSetDrumLvl = function (v, pct, el) {
+  studioState.drumVol = studioState.drumVol || {};
+  studioState.drumVol[v] = pct / 100;
+  const out = el && el.parentElement.querySelector('.studio-mix-val'); if (out) out.textContent = pct + '%';
+  // audition while dragging (throttled) unless the loop is already playing
+  const now = performance.now();
+  if (!studioState.isPlaying && (!_studioMixAud[v] || now - _studioMixAud[v] > 140)) {
+    _studioMixAud[v] = now; studioDrum(v, (audioCtx || getAudio()).currentTime + 0.01, 0.5 * studioDrumLvl(v));
+  }
+};
+function studioBuildDrumMixer() {
+  const box = document.createElement('div');
+  box.className = 'studio-mixer';
+  box.innerHTML = STUDIO_DRUMS.map(([v, label]) => {
+    const pct = Math.round(studioDrumLvl(v) * 100);
+    return '<div class="studio-mix-row" style="--dc:' + STUDIO_DRUM_COLORS[v] + '">' +
+      '<button class="studio-mix-name" onclick="studioDrum(\'' + v + '\', (audioCtx || getAudio()).currentTime + 0.01, 0.5 * studioDrumLvl(\'' + v + '\'))">' + label + '</button>' +
+      '<input type="range" class="studio-mix-slider" min="0" max="200" step="5" value="' + pct + '" oninput="studioSetDrumLvl(\'' + v + '\', +this.value, this)">' +
+      '<span class="studio-mix-val">' + pct + '%</span></div>';
+  }).join('');
+  return box;
+}
+
+
+// ── STUDIO MIXER (pop-up, DAW-style vertical faders) ───────────────────────
+// One channel per layer + the click. 100% = the default level, up to 150%.
+// MUTE silences a channel; SOLO plays only soloed channels.
+function studioLayerGain(id) {
+  const m = studioState.mute || {}, so = studioState.solo || {}, lv = studioState.layerVol || {};
+  if (m[id]) return 0;
+  if (Object.keys(so).some(k => so[k]) && !so[id]) return 0;
+  return lv[id] != null ? lv[id] : 1;
+}
+function studioMixChannels() {
+  const ch = studioState.tracks.map(t => ({ id: t.id, name: t.name, icon: t.id === 'drums' ? '🥁' : STUDIO_LAYERS[t.id][1],
+    color: t.id === 'drums' ? '#ff6b45' : ({ bass: '#a78bfa', guitar: '#ff7a59', keys: '#4ecdc4', synth: '#f0c040' })[t.id] }));
+  ch.push({ id: 'click', name: 'CLICK', icon: '⏱', color: '#9aa3c7', noSolo: true });
+  return ch;
+}
+window.studioOpenMixer = function () {
+  let ov = document.getElementById('studio-mixer-ov');
+  if (!ov) {
+    ov = document.createElement('div'); ov.id = 'studio-mixer-ov'; ov.className = 'studio-mixer-ov';
+    ov.onclick = e => { if (e.target === ov) studioCloseMixer(); };
+    document.querySelector('#studio .studio-main').appendChild(ov);
+  }
+  studioRenderMixer(); ov.style.display = 'flex';
+};
+window.studioCloseMixer = function () { const ov = document.getElementById('studio-mixer-ov'); if (ov) ov.style.display = 'none'; };
+function studioRenderMixer() {
+  const ov = document.getElementById('studio-mixer-ov'); if (!ov) return;
+  const lv = studioState.layerVol || {}, m = studioState.mute || {}, so = studioState.solo || {};
+  ov.innerHTML = '<div class="studio-mixer-win"><div class="studio-mixer-top"><span>🎚 MIXER</span>' +
+    '<span><button class="studio-chip" onclick="studioMixReset()">RESET</button> <button class="studio-chip studio-x" onclick="studioCloseMixer()">✕</button></span></div>' +
+    '<div class="studio-strips">' + studioMixChannels().map(c => {
+      const pct = Math.round((lv[c.id] != null ? lv[c.id] : 1) * 100);
+      return '<div class="studio-strip' + (m[c.id] ? ' muted' : '') + '" style="--sc:' + c.color + '" data-ch="' + c.id + '">' +
+        '<div class="studio-strip-val">' + pct + '%</div>' +
+        '<div class="studio-fader" data-ch="' + c.id + '"><div class="studio-fader-fill" style="height:' + (pct / 1.5) + '%"></div>' +
+          '<div class="studio-fader-unity"></div><div class="studio-fader-knob" style="bottom:' + (pct / 1.5) + '%"></div></div>' +
+        '<div class="studio-strip-btns"><button class="studio-ms m' + (m[c.id] ? ' on' : '') + '" onclick="studioMixToggle(\'mute\',\'' + c.id + '\')">M</button>' +
+        (c.noSolo ? '' : '<button class="studio-ms s' + (so[c.id] ? ' on' : '') + '" onclick="studioMixToggle(\'solo\',\'' + c.id + '\')">S</button>') + '</div>' +
+        '<div class="studio-strip-name">' + c.icon + '<br>' + c.name + '</div></div>';
+    }).join('') + '</div></div>';
+  ov.querySelectorAll('.studio-fader').forEach(f => {
+    const id = f.dataset.ch;
+    const set = e => {
+      const r = f.getBoundingClientRect();
+      let frac = 1 - (e.clientY - r.top) / r.height; frac = Math.max(0, Math.min(1, frac));
+      let pct = Math.round(frac * 150 / 5) * 5;
+      if (Math.abs(pct - 100) <= 4) pct = 100;                       // gentle snap to the default
+      studioState.layerVol = studioState.layerVol || {}; studioState.layerVol[id] = pct / 100;
+      f.querySelector('.studio-fader-fill').style.height = (pct / 1.5) + '%';
+      f.querySelector('.studio-fader-knob').style.bottom = (pct / 1.5) + '%';
+      f.parentElement.querySelector('.studio-strip-val').textContent = pct + '%';
+    };
+    f.onpointerdown = e => { e.preventDefault(); f.setPointerCapture(e.pointerId); set(e); f.onpointermove = set; };
+    f.onpointerup = f.onpointercancel = () => { f.onpointermove = null; };
+    f.ondblclick = () => { studioState.layerVol = studioState.layerVol || {}; studioState.layerVol[id] = 1; studioRenderMixer(); };
+  });
+}
+window.studioMixToggle = function (kind, id) {
+  studioState[kind] = studioState[kind] || {};
+  studioState[kind][id] = !studioState[kind][id];
+  studioRenderMixer();
+};
+window.studioMixReset = function () { studioState.layerVol = {}; studioState.mute = {}; studioState.solo = {}; studioRenderMixer(); };
+
 function studioBuildDrumTrack(tr) {
   const total = studioState.bars * studioState.stepsPerBar;
   const wrap = document.createElement('div');
   wrap.className = 'studio-seq-track';
-  wrap.innerHTML = '<div class="studio-seq-track-head"><div class="studio-seq-track-name">🥁 DRUMS</div>' +
-    '<div class="studio-track-meta">' + studioState.bars + ' BAR' + (studioState.bars > 1 ? 'S' : '') + ' · ' + total + ' STEPS · tap a name to hear it</div></div>';
+  const mix = !!studioState.drumMixer;
+  wrap.innerHTML = '<div class="studio-seq-track-head"><div class="studio-seq-track-name">🥁 DRUMS' + (mix ? ' · MIXER' : '') + '</div>' +
+    '<div class="studio-track-meta">' + (mix ? '<button class="studio-chip" onclick="studioResetDrumLevels()">RESET LEVELS</button>'
+      : studioState.bars + ' BAR' + (studioState.bars > 1 ? 'S' : '') + ' · ' + total + ' STEPS · tap a name to hear it') +
+    ' <button class="studio-chip studio-mix-toggle' + (mix ? ' active' : '') + '" onclick="studioToggleDrumMixer()">' + (mix ? '▦ BACK TO STEPS' : '🎚 MIXER') + '</button></div></div>';
+  if (mix) { wrap.appendChild(studioBuildDrumMixer()); return wrap; }
   const grid = document.createElement('div');
   grid.className = 'studio-pianoroll studio-drumroll' + (total > 32 ? ' many' : '');
   const gridCols = '78px repeat(' + total + ', minmax(0, 1fr))';
@@ -27155,7 +27380,7 @@ function studioBuildPitchedTrack(tr) {
   const wrap = document.createElement('div');
   wrap.className = 'studio-seq-track';
   const L = STUDIO_LAYERS[tr.id];
-  const sc = STUDIO_SCALES[studioState.scale] || STUDIO_SCALES.majpent;
+  const sc = STUDIO_SCALES[studioState.scale] || STUDIO_SCALES.major;
   wrap.innerHTML =
     '<div class="studio-seq-track-head">' +
       '<div class="studio-seq-track-name">' + L[1] + ' ' + tr.name + '</div>' +
@@ -27247,7 +27472,7 @@ window.studioSetRange = function (id, r) {
   tr.range = r; studioApplyOct(tr); studioRenderTracks();
 };
 function studioRowSemis(tr) {
-  const sc = (STUDIO_SCALES[studioState.scale] || STUDIO_SCALES.majpent).semis;
+  const sc = (STUDIO_SCALES[studioState.scale] || STUDIO_SCALES.major).semis;
   const out = [];
   for (let s = 0; s <= tr.span; s++) if (sc.includes(s % 12)) out.push(s);
   return out;   // low → high
@@ -27293,8 +27518,11 @@ function studioRenderLayerControls() {
 function studioSerialize() {
   const idx = arr => arr.reduce((a, v, i) => (v && a.push(i), a), []);
   return {
-    v: 1, bpm: studioState.bpm, bars: studioState.bars, steps: studioState.stepsPerBar,
+    v: 1, bpm: studioState.bpm, bars: studioState.bars, steps: studioState.stepsPerBar, ts: studioState.timeSig, g: studioState.grid,
     key: studioState.key, scale: studioState.scale,
+    dv: studioState.drumVol && Object.keys(studioState.drumVol).length ? studioState.drumVol : undefined,
+    lv: studioState.layerVol && Object.keys(studioState.layerVol).length ? studioState.layerVol : undefined,
+    mu: studioState.mute && Object.keys(studioState.mute).some(k => studioState.mute[k]) ? studioState.mute : undefined,
     tracks: studioState.tracks.map(tr => tr.kind === 'drums'
       ? { id: 'drums', v: Object.fromEntries(Object.keys(tr.pattern).map(k => [k, idx(tr.pattern[k])]).filter(e => e[1].length)) }
       : { id: tr.id, o: tr.oct, r: tr.range, n: Object.keys(tr.notes).map(semi => [+semi, idx(tr.notes[semi])]).filter(r => r[1].length) }),
@@ -27305,7 +27533,14 @@ function studioLoadData(d) {
   studioStop();
   studioState.bpm = d.bpm || 120; studioState.bpmStart = studioState.bpm;
   studioState.bars = d.bars || 1; studioState.stepsPerBar = d.steps || 8;
-  studioState.key = d.key || 0; studioState.scale = STUDIO_SCALES[d.scale] ? d.scale : 'majpent';
+  studioState.timeSig = d.ts || '4/4';
+  studioState.grid = d.g || Math.max(1, Math.round(studioState.stepsPerBar * 4 / studioBar16()));
+  studioRenderTimeSigChips(); studioRenderMetroPulse();
+  studioState.drumVol = d.dv ? Object.assign({}, d.dv) : {};
+  studioState.layerVol = d.lv ? Object.assign({}, d.lv) : {};
+  studioState.mute = d.mu ? Object.assign({}, d.mu) : {}; studioState.solo = {};
+  studioState.resumeStep = 0;
+  studioState.key = d.key || 0; studioState.scale = STUDIO_SCALES[d.scale] ? d.scale : 'major';
   const total = studioState.bars * studioState.stepsPerBar;
   const fill = list => { const a = new Array(total).fill(false); (list || []).forEach(i => { if (i < total) a[i] = true; }); return a; };
   studioState.tracks = [];
@@ -27477,6 +27712,8 @@ function studioClearPlayheadHighlight() {
 window.studioToggleAutospeed = function() {
   studioState.autospeed.on = !studioState.autospeed.on;
   document.getElementById('studio-autospeed-toggle').classList.toggle('on', studioState.autospeed.on);
+  const t2 = document.getElementById('studio-autospeed-toggle2'); if (t2) t2.classList.toggle('on', studioState.autospeed.on);
+  studioRenderAutospeedChips();
   document.getElementById('studio-autospeed-panel').classList.toggle('armed', studioState.autospeed.on);
   if (studioState.autospeed.on) {
     studioState.bpmStart = studioState.bpm;
@@ -27519,6 +27756,8 @@ function studioRenderAutospeedChips() {
     b.classList.toggle('active', parseInt(b.getAttribute('data-asx'),10) === studioState.autospeed.add));
   document.getElementById('studio-autospeed-start').textContent = studioState.bpmStart;
   document.getElementById('studio-autospeed-maxv').textContent = studioState.autospeed.max;
+  const sum = document.getElementById('studio-autospeed-sum');
+  if (sum) sum.textContent = '+' + studioState.autospeed.add + ' BPM every ' + studioState.autospeed.every + ' bar' + (studioState.autospeed.every > 1 ? 's' : '') + ' (to ' + studioState.autospeed.max + ')';
 }
 
 // === CHAT F: STUDIO — END ===
