@@ -3697,7 +3697,7 @@
   #mixtape-session .mt-rw-staff { padding: 0 0 clamp(8px, 3vh, 26px); }
   #mixtape-session .mt-rw-h { font-size: clamp(13px, 1.3vw, 18px); }
   #mixtape-session .mt-rw-h.beat { font-size: clamp(16px, 1.6vw, 22px); }
-  #mixtape-session .mt-rw-grid { height: clamp(56px, min(7vw, 10vh), 96px); }
+  #mixtape-session .mt-rw-grid { height: clamp(48px, min(7vw, 8vh), 90px); }
   #mixtape-session .mt-rw-wrap { gap: clamp(6px, 1.2vh, 10px); }
   #mixtape-session .bscale-num { font-size: clamp(13px, 1.3vw, 18px); }
   /* Read-the-Staff: the staff is the question — make it large */
@@ -3723,7 +3723,7 @@
   .mt-prog-slot { width: 92px; min-height: 86px; border-radius: 10px; border: 2px solid var(--border);
     background: var(--bg2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
   .mt-prog-slot.given { border-color: rgba(240,192,64,0.6); }
-  .mt-prog-slot:not(.given) { cursor: pointer; }
+  .mt-prog-slot { cursor: pointer; }
   .mt-prog-slot.active { border-color: #9b8fff; box-shadow: 0 0 14px rgba(124,111,247,0.6); }
   .mt-prog-slot.sounding { background: rgba(124,111,247,0.28); }
   .mt-prog-slot.correct { border-color: var(--green); }
@@ -3767,6 +3767,21 @@
   .mt-rw-note.ok { background: linear-gradient(180deg, #4ade80, #16a34a); }
   .mt-rw-note.bad { background: linear-gradient(180deg, #f87171, #dc2626); }
   .mt-rw-note.ghost { background: transparent; border: 2px dashed var(--gold); top: 3px; bottom: 3px; }
+  .mt-rw-lbl { font-family: var(--font-display); font-weight: 800; font-size: clamp(13px, 1.3vw, 17px); letter-spacing: 3px; color: var(--text3); margin-bottom: 2px; }
+  .mt-rw-yours { opacity: 0.55; }
+  .mt-rw-yours.show { opacity: 1; }
+  .mt-rw-yours .rhythm-notation { min-height: var(--rw-staff-h, 90px); }
+  /* two staffs + grid + buttons must fit a laptop window: size staffs by height */
+  #mixtape-session .mt-rw-staff { padding: 0; }
+  #mixtape-session .mt-rw-staff .rhythm-notation { margin-bottom: 0; }
+  #mixtape-session .mt-rw-lbl { margin-bottom: 0; line-height: 1.2; }
+  /* the Style Lab rule '#mt-rhythm-host svg { scale(1.5) }' made these staffs overflow — size them directly instead */
+  #mixtape-session .mt-rw-staff .rhythm-notation svg { transform: none !important; display: block; margin: 0 auto; width: min(820px, 76vw) !important; height: clamp(72px, 14vh, 170px) !important; }
+  #mixtape-session .mt-rw-staff .rhythm-notation { display: block !important; width: 100%; }
+  #mixtape-session .mt-rw-staff .rhythm-notation { max-width: none; margin: 0 auto; }
+  #mixtape-session .mt-rw-wrap { gap: clamp(4px, 1vh, 10px); }
+  .mt-rw-empty { font-family: var(--font-display); font-size: 20px; color: var(--text3); padding: 30px 0; }
+  .mt-rw-yours-why .mt-why-inline { margin: 4px auto 0; }
   .mt-rw-legend { font-family: var(--font-display); font-weight: 700; font-size: clamp(14px, 1.4vw, 18px); margin-top: 2px; }
   .mt-rw-hint { font-family: var(--font-mono); font-size: 12px; color: var(--text3); min-height: 16px; }
   .mt-rw-wrap .build-submit-btn:disabled { opacity: 0.5; }
@@ -3809,6 +3824,8 @@
   .mt-why-inline { font-family: var(--font-display); font-weight: 700; font-size: 19px; line-height: 1.3; color: var(--text);
     text-align: center; padding: 10px 16px; border: 1px solid rgba(239,68,68,0.55); border-radius: 10px; background: rgba(29,26,63,0.96); max-width: 900px; }
   .mt-rw-staff .mt-why-inline { margin: 4px auto 0; }
+  #mixtape-session .build-marker[data-off]::after,
+  #mixtape-session #mt-chord-ruler .build-marker.mt-lane-dot[data-off]::after { font-size: clamp(16px, 1.6vw, 21px); font-weight: 900; letter-spacing: 0.5px; }
   .mt-why-inline.good { border-color: rgba(74,222,128,0.6); }
   .mt-why.good { border-color: rgba(74,222,128,0.6); }
   .build-marker.correct[data-off]::after { content: '\2713  ' attr(data-off); white-space: nowrap; }
@@ -21812,7 +21829,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.08k'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.08m'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -29580,7 +29597,17 @@ function renderMtProgressionRound(r) {
   document.getElementById('mt-prog-hear').onclick = () => { if (!mtState.isAnswered) play(); };
 
   // tap a box (2..n) to pick which chord you're answering / changing
-  for (let i = 1; i < n; i++) slotEl(i).addEventListener('click', () => { if (mtState.isAnswered) return; active = i; paint(); });
+  // click a box: hear the chord in it (box 1 = I), and select it for changing
+  const strike = (id, el) => {
+    const c = q.set.find(x => x.id === id) || EAR_PROGRESSION_CHORDS.find(x => x.id === id); if (!c) return;
+    const ctx = getAudio(); c.ints.forEach(st => playTone(midiFreq(q.keyRoot + c.degree + st), ctx.currentTime + 0.02, 0.6, ctx, 0.15, 'piano'));
+    if (el) { el.classList.add('sounding'); setTimeout(() => el.classList.remove('sounding'), 450); }
+  };
+  for (let i = 0; i < n; i++) slotEl(i).addEventListener('click', () => {
+    if (picked[i]) strike(picked[i], slotEl(i));
+    if (i === 0 || mtState.isAnswered) return;
+    active = i; paint();
+  });
 
   function finish(timedOut) {
     if (mtState.isAnswered) return;
@@ -29686,35 +29713,27 @@ function mtRwUserEvents(notes, step, meter) {
 // After SUBMIT: fade the given rhythm, draw the player's rhythm on top (same
 // time-proportional layout, so matching notes sit exactly on top of each other),
 // and play the player's rhythm (no audio before submitting).
+// Crop a staff SVG to its drawing (both staffs use the SAME crop width so they line up).
+function mtRwCrop(svg, ref) {
+  try { const bb = (ref || svg).getBBox(); const pad = 8; svg.setAttribute('viewBox', (bb.x - pad) + ' ' + (bb.y - pad) + ' ' + (bb.width + pad * 2) + ' ' + (bb.height + pad * 2)); svg.removeAttribute('width'); svg.removeAttribute('height'); } catch (e) {}
+}
 function mtRwShowAnswer(host, q, notes, allOk) {
   const STEP_S = 0.6;   // seconds per beat (100 BPM)
+  const col = allOk ? '#4ade80' : '#f87171';
+  const slot = host.querySelector('.mt-rw-yours');
   try {
-    const box = host.querySelector('.mt-rw-staff .rhythm-notation');
-    const given = box && box.querySelector('svg');
     const evs = notes.length ? mtRwUserEvents(notes.map(n => ({ s: n.s, len: n.len })), q.step, q.meter) : null;
-    if (box && given && evs) {
-      const col = allOk ? '#4ade80' : '#f87171';
-      const svg = klGrooveNotationSVG(evs, q.meter, [4, 4]).replace(/#e9e6dc/g, col).replace(/currentColor/g, col);
-      // Merge the player's rhythm INTO the given staff's SVG (same generator, same
-      // coordinates) so matching notes land exactly on top of each other.
-      const tmp = document.createElement('div'); tmp.innerHTML = svg;
-      const us = tmp.querySelector('svg');
-      const NS = 'http://www.w3.org/2000/svg';
-      const fadeG = document.createElementNS(NS, 'g');
-      fadeG.setAttribute('opacity', '0.3');
-      while (given.firstChild) fadeG.appendChild(given.firstChild);
-      given.appendChild(fadeG);
-      const userG = document.createElementNS(NS, 'g');
-      userG.setAttribute('class', 'mt-rw-user'); userG.style.color = col;
-      if (us) Array.from(us.childNodes).forEach(n => userG.appendChild(document.importNode(n, true)));
-      given.appendChild(userG);
-      const lg = document.createElement('div');
-      lg.className = 'mt-rw-legend';
-      lg.innerHTML = '<span style="color:' + col + '">■ your rhythm</span> <span style="opacity:.55">■ the written rhythm</span>';
-      host.querySelector('.mt-rw-staff').appendChild(lg);
+    if (slot) {
+      slot.classList.add('show');
+      slot.querySelector('.mt-rw-yours-lbl').innerHTML = '<span style="color:' + col + '">YOUR RHYTHM</span>';
+      const box = slot.querySelector('.rhythm-notation');
+      if (evs) { box.innerHTML = klGrooveNotationSVG(evs, q.meter, [4, 4]).replace(/#e9e6dc/g, col).replace(/currentColor/g, col);
+        const g1 = host.querySelector('.mt-rw-staff .rhythm-notation svg'), g2 = box.querySelector('svg');
+        if (g1 && g2) g2.setAttribute('viewBox', g1.getAttribute('viewBox')), g2.removeAttribute('width'), g2.removeAttribute('height'); }
+      else box.innerHTML = '<div class="mt-rw-empty">(no notes)</div>';
+      box.style.color = col;
     }
-  } catch (e) { /* drawing the overlay must never break the round */ }
-  const legend = host.querySelector('.mt-rw-legend');
+  } catch (e) { /* drawing the second staff must never break the round */ }
   const play = () => {
     try {
       const ctx = getAudio(), t0 = ctx.currentTime + 0.1;
@@ -29722,7 +29741,7 @@ function mtRwShowAnswer(host, q, notes, allOk) {
       notes.forEach(n => playTone(midiFreq(71), t0 + n.s * q.step * STEP_S, Math.max(0.08, n.len * q.step * STEP_S * 0.92), ctx, 0.24, 'piano'));
     } catch (e) {}
   };
-  return { play, ms: q.meter * STEP_S * 1000 + 400, legend };
+  return { play, ms: q.meter * STEP_S * 1000 + 400, legend: host.querySelector('#mt-rw-hint') };
 }
 function renderMtRhythmWriteRound(r) {
   document.getElementById('mt-answer-grid').style.display = 'none';
@@ -29739,18 +29758,21 @@ function renderMtRhythmWriteRound(r) {
   }
   host.innerHTML =
     '<div class="mt-rw-wrap">' +
-      '<div class="mt-rw-staff"><div class="rhythm-notation" style="color:#e9e6dc;display:inline-block;">' + q.svg + '</div></div>' +
+      '<div class="mt-rw-staff"><div class="mt-rw-lbl">WRITTEN RHYTHM</div><div class="rhythm-notation" style="color:#e9e6dc;display:inline-block;">' + q.svg + '</div></div>' +
+      // second staff: reserved (so nothing jumps), filled with YOUR rhythm on SUBMIT
+      '<div class="mt-rw-staff mt-rw-yours"><div class="mt-rw-lbl mt-rw-yours-lbl">YOUR RHYTHM APPEARS HERE AFTER YOU SUBMIT</div><div class="rhythm-notation" style="display:inline-block;"></div><div class="mt-rw-yours-why"></div></div>' +
       '<div class="mt-rw-roll">' +
         '<div class="mt-rw-head" style="grid-template-columns:repeat(' + cols + ',1fr)">' + head + '</div>' +
         '<div class="mt-rw-grid" id="mt-rw-grid" style="grid-template-columns:repeat(' + cols + ',1fr)">' + lines + '<div class="mt-rw-notes" id="mt-rw-notes"></div></div>' +
       '</div>' +
-      '<div class="mt-rw-hint" id="mt-rw-hint">Click to add a note · drag its right edge to change the length · drag the note to move it · click a note to remove it</div>' +
+      '<div class="mt-rw-hint" id="mt-rw-hint">Click to add · drag the edge to lengthen · drag to move · click a note to delete</div>' +
       '<div class="build-ab-row" style="display:flex;gap:10px;width:100%;">' +
         '<button class="build-hear-btn" id="mt-rw-clear" type="button" style="flex:0 0 160px;">CLEAR</button>' +
         '<button class="build-submit-btn" id="mt-rw-submit" type="button" style="flex:1;">SUBMIT</button>' +
       '</div>' +
     '</div>';
   const grid = document.getElementById('mt-rw-grid'), layer = document.getElementById('mt-rw-notes');
+  try { const g1 = host.querySelector('.mt-rw-staff .rhythm-notation svg'); if (g1) { mtRwCrop(g1); host.style.setProperty('--rw-staff-h', Math.round(g1.getBoundingClientRect().height) + 'px'); } } catch (e) {}
   let notes = [];   // {s, len} in cells
   const pct = c => (c / cols * 100) + '%';
   function paint(reveal) {
@@ -29835,7 +29857,7 @@ function renderMtRhythmWriteRound(r) {
     paint({ target, ok });
     document.getElementById('mt-rw-hint').textContent = '';
     const shown = mtRwShowAnswer(host, q, notes, allOk);
-    if (allOk) { shown.play(); mtCorrect({ why: 'Nice! Your rhythm (green) lines up exactly with the written one.', whyEl: shown.legend || document.getElementById('mt-rw-hint') }); return; }
+    if (allOk) { shown.play(); mtCorrect({ why: 'Nice! Your rhythm matches the written rhythm exactly.', whyEl: shown.legend || document.getElementById('mt-rw-hint') }); return; }
     // explain the first few problems in beat language
     const msgs = [];
     target.forEach(t => {
@@ -29849,7 +29871,7 @@ function renderMtRhythmWriteRound(r) {
     let why = msgs.slice(0, 2).join('; ') + (msgs.length > 2 ? '; and ' + (msgs.length - 2) + ' more' : '');
     why = why ? why.charAt(0).toUpperCase() + why.slice(1) + '. The dashed boxes show the real rhythm.' : 'The dashed boxes show the real rhythm.';
     const _first = msgs.length ? msgs[0].charAt(0).toUpperCase() + msgs[0].slice(1) + (msgs.length > 1 ? ' (+' + (msgs.length - 1) + ' more)' : '') + '. ' : '';
-    mtWrong({ why: _first + 'Red = your rhythm, faded = the written one.', whyEl: shown.legend || document.getElementById('mt-rw-hint'), replay: notes.length ? shown.play : null, replayMs: shown.ms });
+    mtWrong({ why: _first + 'Compare the two staffs.', whyEl: shown.legend || document.getElementById('mt-rw-hint'), replay: notes.length ? shown.play : null, replayMs: shown.ms });
   }
   document.getElementById('mt-rw-submit').onclick = () => finish(false);
   mtState.revealHook = finish;
