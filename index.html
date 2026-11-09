@@ -6010,6 +6010,20 @@
   .studio-ms.m.on { background: #ff5a6a; color: #fff; border-color: #ff5a6a; }
   .studio-ms.s.on { background: #f0c040; color: #0d0a22; border-color: #f0c040; }
   .studio-strip-name { font-family: var(--font-display); font-weight: 800; font-size: 12px; letter-spacing: 1px; text-align: center; color: var(--text); line-height: 1.3; }
+  /* note pills (length) */
+  #studio .studio-pianoroll-row { position: relative; }
+  #studio .studio-note { grid-row: 1; z-index: 2; position: relative; border-radius: 5px; cursor: grab; min-width: 0;
+    border: 1px solid rgba(255,255,255,0.45); box-shadow: 0 0 6px rgba(0,0,0,0.35); }
+  #studio .studio-note.studio-l-bass { background: #a78bfa; } #studio .studio-note.studio-l-guitar { background: #ff7a59; }
+  #studio .studio-note.studio-l-keys { background: #4ecdc4; } #studio .studio-note.studio-l-synth { background: #f0c040; }
+  #studio .studio-note-grip { position: absolute; right: 2px; top: 20%; bottom: 20%; width: 4px; border-radius: 2px; background: rgba(13,10,34,0.45); cursor: ew-resize; }
+  #studio .studio-note.playhead { filter: brightness(1.35); outline: 2px solid #fff; outline-offset: -2px; }
+  /* mixer in place of the edit area (no pop-up) */
+  .studio-mixer-ov.studio-mixer-inline { position: static; inset: auto; flex: 1; min-height: 0; background: none; backdrop-filter: none; padding: 0; }
+  .studio-mixer-inline .studio-mixer-win { width: 100%; height: 100%; max-width: none; box-shadow: none; border-radius: 8px;
+    background: linear-gradient(180deg, rgba(29,24,80,0.9), rgba(19,16,58,0.9)); }
+  .studio-mixer-inline .studio-strip { flex: 0 1 120px; }
+  .studio-mixer-inline .studio-fader { width: 40px; }
 </style>
 </head>
 <body>
@@ -22202,7 +22216,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.08ae'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.08ai'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -26502,8 +26516,8 @@ const studioState = {
   // Auto-speedup
   autospeed: {
     on: false,
-    every: 4,                  // bars
-    add: 5,                    // bpm
+    every: 1,                  // bars  (default: +1 BPM every bar)
+    add: 1,                    // bpm
     max: 180,
     barsElapsed: 0,
     lastBarCounted: -1,
@@ -26694,10 +26708,11 @@ function studioPlaySequencer(clock) {
         if (lv > 0) STUDIO_DRUMS.forEach(([v]) => { if (tr.pattern[v] && tr.pattern[v][stepInGrid]) studioDrum(v, audioTime, 0.5 * studioDrumLvl(v) * lv); });
       } else if (tr.kind === 'pitched') {
         // only rows in the current scale sound (hidden rows stay silent)
-        const dur = (60 / studioState.bpm) / colsPerBeat * 0.95;
+        const stepDur = (60 / studioState.bpm) / colsPerBeat;
         studioRowSemis(tr).forEach(semi => {
           const row = tr.notes[semi];
-          if (row && row[stepInGrid]) { const lv = studioLayerGain(tr.id); if (lv > 0) studioPlayNote(tr, studioNoteMidi(tr, semi), audioTime, dur, 0.22 * lv); }
+          const L = row ? studioNoteLen(row[stepInGrid]) : 0;
+          if (L) { const lv = studioLayerGain(tr.id); if (lv > 0) studioPlayNote(tr, studioNoteMidi(tr, semi), audioTime, stepDur * L * 0.95, 0.22 * lv); }
         });
       }
     });
@@ -26815,7 +26830,7 @@ function studioPlayClick(audioTime, isAccent) {
   const ctx = audioCtx;
   if (!ctx) return;
   const freq = isAccent ? midiFreq(76) : midiFreq(69);
-  const gain = (isAccent ? 0.45 : 0.28) * (studioState.layerVol && studioState.layerVol.click != null ? studioState.layerVol.click : 1);
+  const gain = (isAccent ? 0.45 : 0.28) * studioClickGain();
   if (gain <= 0.0001) return;
   const osc = ctx.createOscillator();
   const env = ctx.createGain();
@@ -26945,7 +26960,8 @@ function studioRegrid(newSpb, newBar16, oldR, newR) {
         if (!on) return;
         const t16 = (j % old) * 4 / oldR;              // position in 16ths
         const pos = t16 * newR / 4;
-        if (Number.isInteger(pos) && t16 < newBar16) out[Math.floor(j / old) * newSpb + pos] = true;
+        if (Number.isInteger(pos) && t16 < newBar16)
+          out[Math.floor(j / old) * newSpb + pos] = (typeof on === 'number') ? Math.max(1, Math.round(on * newR / oldR)) : true;
       });
       map[k] = out;
     });
@@ -27101,6 +27117,13 @@ function studioRenderTracks() {
   const host = document.getElementById('studio-tracks-host');
   if (!host) return;
   host.innerHTML = '';
+  studioSyncMixerBtn();
+  if (studioState.mixerOpen) {
+    const ov = document.createElement('div'); ov.id = 'studio-mixer-ov'; ov.className = 'studio-mixer-ov studio-mixer-inline';
+    host.appendChild(ov); studioRenderMixer();
+    studioState.colCells = {}; studioState.lastPlayheadStep = -1;
+    return;
+  }
   // Every layer (drums included) is a tab; one layer's grid on screen at a time so it
   // all fits a landscape tablet. Every layer still plays.
   if (!studioState.tracks.find(t => t.id === studioState.focusLayer)) studioState.focusLayer = 'drums';
@@ -27119,6 +27142,11 @@ function studioRenderTracks() {
   // column cache → the playhead touches only 2 columns per step
   studioState.colCells = {};
   host.querySelectorAll('[data-step]').forEach(c => { (studioState.colCells[c.dataset.step] = studioState.colCells[c.dataset.step] || []).push(c); });
+  host.querySelectorAll('.studio-note').forEach(n => {
+    const tr = studioState.tracks.find(t => t.id === studioState.focusLayer);
+    const L = tr && tr.notes ? studioNoteLen((tr.notes[n.dataset.pitch] || [])[+n.dataset.start]) : 1;
+    for (let k = +n.dataset.start; k < +n.dataset.start + L; k++) (studioState.colCells[k] = studioState.colCells[k] || []).push(n);
+  });
   studioState.lastPlayheadStep = -1;
   studioRenderLayerControls();
 }
@@ -27216,7 +27244,16 @@ function studioBuildDrumMixer() {
 // ── STUDIO MIXER (pop-up, DAW-style vertical faders) ───────────────────────
 // One channel per layer + the click. 100% = the default level, up to 150%.
 // MUTE silences a channel; SOLO plays only soloed channels.
+// Mixer's CLICK channel (volume + mute) applies to the sequencer click. The
+// Metronome tab is nothing BUT the click, so it always plays there. Solo never
+// silences the click — you usually want time while soloing a part.
+function studioClickGain() {
+  if (studioState.tab === 'metro') return 1;
+  const m = studioState.mute || {}, lv = studioState.layerVol || {};
+  return m.click ? 0 : (lv.click != null ? lv.click : 1);
+}
 function studioLayerGain(id) {
+  if (id === 'click') return studioClickGain();
   const m = studioState.mute || {}, so = studioState.solo || {}, lv = studioState.layerVol || {};
   if (m[id]) return 0;
   if (Object.keys(so).some(k => so[k]) && !so[id]) return 0;
@@ -27228,18 +27265,21 @@ function studioMixChannels() {
   ch.push({ id: 'click', name: 'CLICK', icon: '⏱', color: '#9aa3c7', noSolo: true });
   return ch;
 }
+// The mixer takes over the edit area (tabs + grid); MIXER again or ✕ returns to editing.
 window.studioOpenMixer = function () {
-  let ov = document.getElementById('studio-mixer-ov');
-  if (!ov) {
-    ov = document.createElement('div'); ov.id = 'studio-mixer-ov'; ov.className = 'studio-mixer-ov';
-    ov.onclick = e => { if (e.target === ov) studioCloseMixer(); };
-    document.querySelector('#studio .studio-main').appendChild(ov);
-  }
-  studioRenderMixer(); ov.style.display = 'flex';
+  studioState.mixerOpen = !studioState.mixerOpen;
+  if (studioState.mixerOpen && studioState.tab !== 'seq') switchStudioTab('seq');
+  studioRenderTracks();
 };
-window.studioCloseMixer = function () { const ov = document.getElementById('studio-mixer-ov'); if (ov) ov.style.display = 'none'; };
+window.studioCloseMixer = function () { studioState.mixerOpen = false; studioRenderTracks(); };
+function studioSyncMixerBtn() {
+  const b = document.getElementById('studio-mixer-btn'); if (!b) return;
+  b.classList.toggle('polished-btn-gold', !!studioState.mixerOpen);
+  b.innerHTML = studioState.mixerOpen ? '▦ EDIT' : '🎚 MIXER';
+}
 function studioRenderMixer() {
   const ov = document.getElementById('studio-mixer-ov'); if (!ov) return;
+  ov.style.display = 'flex';
   const lv = studioState.layerVol || {}, m = studioState.mute || {}, so = studioState.solo || {};
   ov.innerHTML = '<div class="studio-mixer-win"><div class="studio-mixer-top"><span>🎚 MIXER</span>' +
     '<span><button class="studio-chip" onclick="studioMixReset()">RESET</button> <button class="studio-chip studio-x" onclick="studioCloseMixer()">✕</button></span></div>' +
@@ -27415,22 +27455,115 @@ function studioBuildPitchedTrack(tr) {
       cell.className = 'studio-pianoroll-cell studio-l-' + tr.id;
       if (isRoot) cell.classList.add('root-row');
       if (i % studioState.stepsPerBar === 0) cell.classList.add('beat-1');
-      if (rowArr[i]) cell.classList.add('on');
       cell.setAttribute('data-track', tr.id);
       cell.setAttribute('data-pitch', semi);
       cell.setAttribute('data-step', i);
-      cell.onclick = () => {
-        rowArr[i] = !rowArr[i];
-        cell.classList.toggle('on', rowArr[i]);
-        if (rowArr[i]) studioPlayNote(tr, studioNoteMidi(tr, semi), (audioCtx || getAudio()).currentTime + 0.005, 0.25, 0.2);
-        studioUpdateTabCounts();
-      };
+      cell.style.gridRow = '1'; cell.style.gridColumn = String(i + 2);   // explicit, so note pills can overlap
       rowDiv.appendChild(cell);
     }
+    label.style.gridRow = '1'; label.style.gridColumn = '1';
+    // notes are pills spanning their length (drawn over the cells)
+    rowArr.forEach((v, i) => { const L = studioNoteLen(v); if (L) rowDiv.appendChild(studioNotePill(tr, semi, i, L)); });
+    rowDiv.dataset.pitch = semi;
     grid.appendChild(rowDiv);
   });
+  studioWireNoteDrag(tr, grid, total);
   wrap.appendChild(grid);
   return wrap;
+}
+
+// ── NOTE LENGTHS (DAW-style, like Write the Rhythm) ────────────────────────
+// A row stores, at each note's START step, its length in steps (true = 1).
+// Drag on empty space to draw a note as long as you drag · drag a note's right
+// edge to lengthen/shorten it · drag a note's body to move it (also up/down) ·
+// tap a note to delete it.
+function studioNoteLen(v) { return v === true ? 1 : (typeof v === 'number' && v > 0 ? v : 0); }
+function studioNotePill(tr, semi, i, L) {
+  const n = document.createElement('div');
+  n.className = 'studio-note studio-l-' + tr.id;
+  n.style.gridRow = '1'; n.style.gridColumn = (i + 2) + ' / span ' + L;
+  n.dataset.start = i; n.dataset.pitch = semi;
+  n.innerHTML = '<span class="studio-note-grip"></span>';
+  return n;
+}
+// first step that is covered by a note in this row (other than `skip`), from `from` onward
+function studioRowCovers(row, step, skip) {
+  for (let i = 0; i <= step; i++) { const L = studioNoteLen(row[i]); if (L && i !== skip && step < i + L) return i; }
+  return -1;
+}
+function studioRowFree(row, start, len, skip, total) {
+  if (start < 0 || start + len > total) return false;
+  for (let k = start; k < start + len; k++) if (studioRowCovers(row, k, skip) >= 0) return false;
+  return true;
+}
+function studioWireNoteDrag(tr, grid, total) {
+  grid.style.touchAction = 'none';
+  const colAt = (x, rowDiv) => {
+    const cells = rowDiv.querySelectorAll('.studio-pianoroll-cell');
+    const a = cells[0].getBoundingClientRect(), b = cells[cells.length - 1].getBoundingClientRect();
+    const w = (b.right - a.left) / total;
+    return Math.max(0, Math.min(total - 1, Math.floor((x - a.left) / w)));
+  };
+  const rowAtY = y => {
+    let best = null;
+    grid.querySelectorAll('.studio-pianoroll-row[data-pitch]').forEach(r => { const rc = r.getBoundingClientRect(); if (y >= rc.top && y <= rc.bottom) best = r; });
+    return best;
+  };
+  const hear = (semi, L) => studioPlayNote(tr, studioNoteMidi(tr, semi), (audioCtx || getAudio()).currentTime + 0.005,
+    Math.min(1.2, L * (60 / studioState.bpm) / studioColsPerBeat()), 0.2);
+  grid.onpointerdown = e => {
+    const rowDiv = e.target.closest('.studio-pianoroll-row[data-pitch]'); if (!rowDiv) return;
+    if (e.target.closest('.studio-pianoroll-rowname')) return;   // row name = listen
+    e.preventDefault();
+    const semi = +rowDiv.dataset.pitch, row = tr.notes[semi];
+    const pill = e.target.closest('.studio-note');
+    const c0 = colAt(e.clientX, rowDiv);
+    let st;
+    if (pill) {
+      const start = +pill.dataset.start, L = studioNoteLen(row[start]);
+      const pr = pill.getBoundingClientRect();
+      const edge = e.clientX > pr.right - Math.max(10, Math.min(18, pr.width * 0.35));
+      st = { mode: edge ? 'resize' : 'move', pill, semi, start, L, grab: c0 - start, moved: false, newSemi: semi, newStart: start, newL: L };
+    } else {
+      if (studioRowCovers(row, c0, -1) >= 0) return;
+      row[c0] = true;
+      const p = studioNotePill(tr, semi, c0, 1); rowDiv.appendChild(p);
+      st = { mode: 'draw', pill: p, semi, start: c0, L: 1, newL: 1, newSemi: semi, newStart: c0, moved: true };
+      hear(semi, 1);
+    }
+    grid.setPointerCapture(e.pointerId);
+    grid.onpointermove = ev => {
+      const c = colAt(ev.clientX, rowDiv);
+      if (st.mode === 'draw' || st.mode === 'resize') {
+        let L = Math.max(1, c - st.start + 1);
+        while (L > 1 && !studioRowFree(row, st.start, L, st.start, total)) L--;
+        if (L !== st.newL) { st.newL = L; st.moved = true; st.pill.style.gridColumn = (st.start + 2) + ' / span ' + L; }
+      } else {
+        const tRow = rowAtY(ev.clientY) || rowDiv;
+        const ns = Math.max(0, Math.min(total - st.L, c - st.grab)), nsemi = +tRow.dataset.pitch;
+        if (ns === st.newStart && nsemi === st.newSemi) return;
+        const tArr = tr.notes[nsemi];
+        if (!studioRowFree(tArr, ns, st.L, nsemi === st.semi ? st.start : -1, total)) return;
+        st.moved = true; st.newStart = ns;
+        if (nsemi !== st.newSemi) { st.newSemi = nsemi; tRow.appendChild(st.pill); hear(nsemi, 1); }
+        st.pill.style.gridColumn = (ns + 2) + ' / span ' + st.L;
+      }
+    };
+    grid.onpointerup = grid.onpointercancel = () => {
+      grid.onpointermove = null; grid.onpointerup = grid.onpointercancel = null;
+      if (st.mode === 'draw' || st.mode === 'resize') {
+        if (st.mode === 'resize' && !st.moved) { row[st.start] = false; }        // tap on the edge = delete too
+        else row[st.start] = st.newL > 1 ? st.newL : true;
+        if (st.mode === 'resize' && st.moved) hear(st.semi, st.newL);
+      } else if (!st.moved) {
+        row[st.start] = false;                                                  // tap a note = delete it
+      } else {
+        const v = row[st.start]; row[st.start] = false;
+        tr.notes[st.newSemi][st.newStart] = v;
+      }
+      studioRenderTracks();
+    };
+  };
 }
 
 // ── LAYERS + KEY/SCALE LOCK (b-2026.11.08y) ────────────────────────────────
@@ -27525,7 +27658,7 @@ function studioSerialize() {
     mu: studioState.mute && Object.keys(studioState.mute).some(k => studioState.mute[k]) ? studioState.mute : undefined,
     tracks: studioState.tracks.map(tr => tr.kind === 'drums'
       ? { id: 'drums', v: Object.fromEntries(Object.keys(tr.pattern).map(k => [k, idx(tr.pattern[k])]).filter(e => e[1].length)) }
-      : { id: tr.id, o: tr.oct, r: tr.range, n: Object.keys(tr.notes).map(semi => [+semi, idx(tr.notes[semi])]).filter(r => r[1].length) }),
+      : { id: tr.id, o: tr.oct, r: tr.range, n: Object.keys(tr.notes).map(semi => [+semi, tr.notes[semi].reduce((a, v, i) => { const L = studioNoteLen(v); if (L) a.push(L > 1 ? [i, L] : i); return a; }, [])]).filter(r => r[1].length) }),
   };
 }
 function studioLoadData(d) {
@@ -27553,7 +27686,11 @@ function studioLoadData(d) {
     } else if (STUDIO_LAYERS[t.id]) {
       const tr = makePitchedTrack(t.id);
       if (t.o) tr.oct = t.o; if (t.r) tr.range = t.r; studioApplyOct(tr);
-      (t.n || []).forEach(([semi, steps]) => { tr.notes[semi] = fill(steps); });
+      (t.n || []).forEach(([semi, steps]) => {
+        const a = new Array(total).fill(false);
+        (steps || []).forEach(x => { const i = Array.isArray(x) ? x[0] : x, L = Array.isArray(x) ? x[1] : 1; if (i < total) a[i] = L > 1 ? L : true; });
+        tr.notes[semi] = a;
+      });
       studioState.tracks.push(tr);
     }
   });
@@ -27648,7 +27785,8 @@ function studioFromStoryDot(dot) {
       let semi = KL_SCALE[n.pitch] + octShift - base;
       while (semi < 0) semi += 12;
       while (semi > 24) semi -= 12;
-      (rows[semi] = rows[semi] || []).push(st(n.start));
+      const L = Math.max(1, Math.round((n.dur || 1) * per));
+      (rows[semi] = rows[semi] || []).push(L > 1 ? [st(n.start), L] : st(n.start));
     });
     return Object.keys(rows).map(k => [+k, rows[k]]);
   };
