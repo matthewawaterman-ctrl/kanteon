@@ -5823,6 +5823,12 @@
     font-family: var(--font-display); font-size: clamp(22px, min(2.8vw, 4.6vh), 42px) !important; font-weight: 800; letter-spacing: 1px;
     min-height: 0; padding: clamp(12px, min(2vw, 3vh), 30px) 12px !important; line-height: 1.15; }
   #ear-session .ear-answer-grid, #al-session .ear-answer-grid, #notation-session .ear-answer-grid, #build-session .ear-answer-grid, #theory-session .ear-answer-grid, #anatomy-session .ear-answer-grid, #ear-session .theory-answer-grid, #al-session .theory-answer-grid, #notation-session .theory-answer-grid, #build-session .theory-answer-grid, #theory-session .theory-answer-grid, #anatomy-session .theory-answer-grid { gap: 12px; }
+  /* answer grids with many choices — compact so they fit one screen (≈ Arcade .mt-grid-many) */
+  #ear-session .ear-answer-grid.lm-g-many .ear-answer-btn, #al-session .ear-answer-grid.lm-g-many .ear-answer-btn {
+    font-size: clamp(18px, min(2.2vw, 3.6vh), 32px) !important; padding: clamp(8px, 1.5vh, 16px) 10px !important; }
+  #ear-session .ear-answer-grid.lm-g-lots, #al-session .ear-answer-grid.lm-g-lots { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  #ear-session .ear-answer-grid.lm-g-lots .ear-answer-btn, #al-session .ear-answer-grid.lm-g-lots .ear-answer-btn {
+    font-size: clamp(17px, min(1.9vw, 3.3vh), 30px) !important; padding: clamp(10px, 2vh, 20px) 6px !important; }
   /* role: hear / play button  ← .mt-hear-btn */
   #ear-session .ear-hear-btn, #al-session .ear-hear-btn, #notation-session .ear-hear-btn, #build-session .ear-hear-btn, #theory-session .ear-hear-btn, #anatomy-session .ear-hear-btn, #ear-session .play-btn, #al-session .play-btn, #notation-session .play-btn, #build-session .play-btn, #theory-session .play-btn, #anatomy-session .play-btn { font-size: clamp(15px, min(1.6vw, 2.8vh), 22px) !important; padding: clamp(10px, 2vh, 18px) !important; letter-spacing: 4px; }
   /* role: build buttons  ← #mixtape-session .build-hear-btn / .build-submit-btn */
@@ -8728,6 +8734,7 @@ function renderEarQuestion(q) {
   const meta = EAR_MODE_META[q.kind];
   let candidates = [...earState[meta.setKey]].map(id => meta.catalog.find(item => item.id === id));
   candidates = klEvenAnswers(shuffleArray(candidates.slice()), q.id);
+  klSizeGrid(grid, candidates.length);
   candidates.forEach(item => {
     const btn = document.createElement('button');
     btn.className = 'ear-answer-btn';
@@ -11084,11 +11091,23 @@ window.nextAlQuestion = function() {
 // if odd, drop one wrong answer — never the correct one.
 function klEvenAnswers(items, correctId) {
   items = items.filter(Boolean);
-  if (items.length > 2 && items.length % 2 === 1) {
+  // Up to 8 answers → 2 columns (even count). 9+ → 4 columns (multiple of 4),
+  // capped at 16 so the whole grid fits on one screen.
+  const cols = items.length > 8 ? 4 : 2;
+  let keep = items.length > 16 ? 16 : items.length - (items.length % cols);
+  if (items.length <= 2) keep = items.length;
+  while (items.length > keep) {
     const wrong = items.map((it, i) => it.id === correctId ? -1 : i).filter(i => i >= 0);
     items.splice(wrong[Math.floor(Math.random() * wrong.length)], 1);
   }
   return items;
+}
+// Size the Lesson answer grid by how many answers it holds, so it always fits.
+function klSizeGrid(grid, n) {
+  if (!grid) return;
+  grid.classList.remove('lm-g-many', 'lm-g-lots');
+  if (n > 8) grid.classList.add('lm-g-lots');        // 4 columns
+  else if (n > 4) grid.classList.add('lm-g-many');   // 2 columns, compact
 }
 function generateAlQuestion() {
   const pool = getActiveAlPool();
@@ -11126,6 +11145,7 @@ function renderAlQuestion(q) {
   const meta = AL_MODE_META[q.kind];
   let candidates = [...alState[meta.setKey]].map(id => meta.catalog.find(item => item.id === id));
   candidates = klEvenAnswers(shuffleArray(candidates.slice()), q.id);
+  klSizeGrid(grid, candidates.length);
   candidates.forEach(item => {
     const btn = document.createElement('button');
     btn.className = 'ear-answer-btn';
@@ -22011,7 +22031,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.08v'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.08w'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
