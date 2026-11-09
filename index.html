@@ -1714,6 +1714,7 @@
   .ear-hear-btn:hover { filter: brightness(1.05); }
   .ear-hear-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #b45309, 0 4px 10px rgba(0,0,0,0.25); }
   .ear-hear-btn.playing { animation: klPulse 0.34s ease-in-out infinite; }
+  .ear-hear-btn:disabled, .bscale-play:disabled, .play-btn:disabled { cursor: default; pointer-events: none; }
   /* hearPulse retained — still used by .build-hear-btn.playing */
   @keyframes hearPulse {
     0%, 100% { filter: brightness(1); }
@@ -3815,6 +3816,15 @@
   .mt-sg-cell.bad { background: linear-gradient(180deg, #f87171, #dc2626); }
   .mt-sg-cell.ghost { border: 2px dashed var(--gold); }
   .mt-sg-wrap .build-submit-btn:disabled { opacity: 0.5; }
+  /* Lesson question titles — bigger + easier to read (match Arcade prompts) */
+  .ear-prompt, .q-text, .build-prompt, .notation-prompt, .anatomy-prompt {
+    font-size: clamp(26px, min(2.9vw, 4.6vh), 42px) !important;
+    font-weight: 800; letter-spacing: 1px; line-height: 1.15;
+    color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,0.35);
+  }
+  .theory-prompt { font-size: clamp(22px, min(2.3vw, 3.8vh), 32px) !important; font-weight: 800; letter-spacing: 1px; color: #fff; }
+  /* Lesson answer buttons — bigger, easier to read */
+  .ear-answer-grid { gap: 14px; }
   /* Lesson landing: same cards as the Arcade tutorials */
   .lm-intro { font-family: var(--font-display); font-weight: 700; font-size: clamp(16px, 1.6vw, 21px); color: var(--text2); text-align: center; margin: 4px 0 14px; }
   #bok-list { display: block; }
@@ -5799,6 +5809,41 @@
   .kl-next:active { transform: translateY(5px); box-shadow: 0 2px 0 #b45309; }
   /* === KIDLAB — END === */
 
+
+  /* ══ ARCADE ↔ LESSON SIZE SYNC (see claude/Kanteon_Mode_Sync_Protocol.md) ══
+     Arcade (#mixtape-session) is the reference. Every Lesson drill screen uses
+     the SAME clamp() values for the same role. Change a role here + in the
+     #mixtape-session block together, never one alone. */
+  /* role: prompt / question title  ← .mt-prompt */
+  #ear-session .ear-prompt, #al-session .ear-prompt, #notation-session .ear-prompt, #build-session .ear-prompt, #theory-session .ear-prompt, #anatomy-session .ear-prompt, #ear-session .notation-prompt, #al-session .notation-prompt, #notation-session .notation-prompt, #build-session .notation-prompt, #theory-session .notation-prompt, #anatomy-session .notation-prompt, #ear-session .build-prompt, #al-session .build-prompt, #notation-session .build-prompt, #build-session .build-prompt, #theory-session .build-prompt, #anatomy-session .build-prompt, #ear-session .anatomy-prompt, #al-session .anatomy-prompt, #notation-session .anatomy-prompt, #build-session .anatomy-prompt, #theory-session .anatomy-prompt, #anatomy-session .anatomy-prompt, #ear-session .q-text, #al-session .q-text, #notation-session .q-text, #build-session .q-text, #theory-session .q-text, #anatomy-session .q-text {
+    font-family: var(--font-display); font-size: clamp(24px, min(3.2vw, 5vh), 46px) !important; font-weight: 800; line-height: 1.15; letter-spacing: 1px; }
+  #ear-session .theory-prompt, #al-session .theory-prompt, #notation-session .theory-prompt, #build-session .theory-prompt, #theory-session .theory-prompt, #anatomy-session .theory-prompt { font-family: var(--font-display); font-size: clamp(22px, min(2.4vw, 4vh), 34px) !important; }
+  /* role: answer button  ← .mt-answer-btn (and .mt-grid-many for 7+ choices) */
+  #ear-session .ear-answer-btn, #al-session .ear-answer-btn, #notation-session .ear-answer-btn, #build-session .ear-answer-btn, #theory-session .ear-answer-btn, #anatomy-session .ear-answer-btn, #ear-session .theory-answer-btn, #al-session .theory-answer-btn, #notation-session .theory-answer-btn, #build-session .theory-answer-btn, #theory-session .theory-answer-btn, #anatomy-session .theory-answer-btn, #ear-session .anatomy-mcq-btn, #al-session .anatomy-mcq-btn, #notation-session .anatomy-mcq-btn, #build-session .anatomy-mcq-btn, #theory-session .anatomy-mcq-btn, #anatomy-session .anatomy-mcq-btn {
+    font-family: var(--font-display); font-size: clamp(22px, min(2.8vw, 4.6vh), 42px) !important; font-weight: 800; letter-spacing: 1px;
+    min-height: 0; padding: clamp(12px, min(2vw, 3vh), 30px) 12px !important; line-height: 1.15; }
+  #ear-session .ear-answer-grid, #al-session .ear-answer-grid, #notation-session .ear-answer-grid, #build-session .ear-answer-grid, #theory-session .ear-answer-grid, #anatomy-session .ear-answer-grid, #ear-session .theory-answer-grid, #al-session .theory-answer-grid, #notation-session .theory-answer-grid, #build-session .theory-answer-grid, #theory-session .theory-answer-grid, #anatomy-session .theory-answer-grid { gap: 12px; }
+  /* role: hear / play button  ← .mt-hear-btn */
+  #ear-session .ear-hear-btn, #al-session .ear-hear-btn, #notation-session .ear-hear-btn, #build-session .ear-hear-btn, #theory-session .ear-hear-btn, #anatomy-session .ear-hear-btn, #ear-session .play-btn, #al-session .play-btn, #notation-session .play-btn, #build-session .play-btn, #theory-session .play-btn, #anatomy-session .play-btn { font-size: clamp(15px, min(1.6vw, 2.8vh), 22px) !important; padding: clamp(10px, 2vh, 18px) !important; letter-spacing: 4px; }
+  /* role: build buttons  ← #mixtape-session .build-hear-btn / .build-submit-btn */
+  #build-session .build-submit-btn, #build-session .build-sound-btn, #build-session .ab-seg, #build-session .bscale-play {
+    font-size: clamp(15px, min(1.6vw, 2.8vh), 22px) !important; padding: clamp(10px, 2vh, 18px) 12px !important; letter-spacing: 3px; }
+  #build-session .build-ab-hint, #build-session .build-drag-hint { font-size: clamp(14px, min(1.5vw, 2.6vh), 20px) !important; }
+  /* role: staff / notation picture  ← .mt-staff-box svg */
+  #notation-session .notation-visual svg { width: min(760px, 70vw) !important; height: auto !important; max-height: 30vh; }
+  #notation-session .notation-visual { padding: clamp(8px, 1.6vh, 20px) 16px; min-height: 0; }
+  #notation-session .notation-mcq-visual { gap: 12px; }
+  #notation-session .notation-mcq-visual-btn { padding: clamp(10px, 1.8vh, 18px) 12px; }
+  #notation-session .notation-mcq-visual-btn svg { max-width: min(380px, 100%) !important; width: 100% !important; height: clamp(110px, 19vh, 200px) !important; }
+  #notation-session .notation-mcq-visual-btn .nmv-label { font-size: clamp(16px, min(1.8vw, 3vh), 24px); }
+  #notation-session .notation-tab-description { font-size: clamp(18px, min(2vw, 3.4vh), 28px); }
+  /* role: feedback (verdict, why-text, NEXT)  ← .mt-why / .mt-next-btn */
+  #ear-session .feedback-result, #al-session .feedback-result, #notation-session .feedback-result, #build-session .feedback-result, #theory-session .feedback-result, #anatomy-session .feedback-result { font-size: clamp(26px, min(3vw, 5vh), 44px) !important; }
+  #ear-session .feedback-explanation, #al-session .feedback-explanation, #notation-session .feedback-explanation, #build-session .feedback-explanation, #theory-session .feedback-explanation, #anatomy-session .feedback-explanation { font-size: clamp(18px, min(1.9vw, 3.4vh), 26px) !important; line-height: 1.3; }
+  #ear-session .ear-next-btn, #al-session .ear-next-btn, #notation-session .ear-next-btn, #build-session .ear-next-btn, #theory-session .ear-next-btn, #anatomy-session .ear-next-btn, #ear-session .feedback-next, #al-session .feedback-next, #notation-session .feedback-next, #build-session .feedback-next, #theory-session .feedback-next, #anatomy-session .feedback-next { font-size: clamp(17px, 1.8vw, 24px) !important; min-height: clamp(48px, 8vh, 62px); padding: 0 40px !important; }
+  /* role: HUD / score  ← .mt-score */
+  #ear-session .ear-score-stat, #al-session .ear-score-stat, #notation-session .ear-score-stat, #build-session .ear-score-stat, #theory-session .ear-score-stat, #anatomy-session .ear-score-stat { font-size: clamp(14px, 1.3vw, 18px) !important; }
+  #ear-session .module-header-title, #al-session .module-header-title, #notation-session .module-header-title, #build-session .module-header-title, #theory-session .module-header-title, #anatomy-session .module-header-title { font-size: clamp(24px, 2.2vw, 32px); }
 </style>
 </head>
 <body>
@@ -8578,7 +8623,7 @@ window.nextEarQuestion = function() {
   earState.currentQ = q;
   renderEarQuestion(q);
   // Auto-play after a short beat
-  setTimeout(() => playCurrentEarQuestion(), 250);
+  setTimeout(() => playCurrentEarQuestion(true), 250);
 };
 
 function generateEarQuestion() {
@@ -8682,7 +8727,7 @@ function renderEarQuestion(q) {
   grid.innerHTML = '';
   const meta = EAR_MODE_META[q.kind];
   let candidates = [...earState[meta.setKey]].map(id => meta.catalog.find(item => item.id === id));
-  candidates = shuffleArray(candidates.slice());
+  candidates = klEvenAnswers(shuffleArray(candidates.slice()), q.id);
   candidates.forEach(item => {
     const btn = document.createElement('button');
     btn.className = 'ear-answer-btn';
@@ -8695,6 +8740,7 @@ function renderEarQuestion(q) {
   const hearBtn = document.getElementById('ear-hear-btn');
   hearBtn.textContent = '▶ HEAR AGAIN';
   hearBtn.classList.remove('playing');
+  hearBtn.disabled = false;
 }
 
 function shuffleArray(arr) {
@@ -8772,20 +8818,28 @@ function earVoice(ctx, t0, q, speed) {
   return totalMs;
 }
 
-window.playCurrentEarQuestion = function() {
+window.playCurrentEarQuestion = function(force) {
   const q = earState.currentQ;
   if (!q) return;
+  // While a clip is playing, the button is locked — no restarting mid-clip.
+  // (force = a new question auto-playing, which always wins.)
+  if (!force && earState._playingUntil > performance.now()) return;
   stopAllAudio();
   const hearBtn = document.getElementById('ear-hear-btn');
   hearBtn.classList.add('playing');
+  hearBtn.disabled = true;
   hearBtn.textContent = '🔊 PLAYING...';
 
   const ctx = getAudio();
   const t0 = ctx.currentTime + 0.1;
   const totalMs = earVoice(ctx, t0, q, earState.progressionSpeed);
+  const tok = earState._playTok = (earState._playTok || 0) + 1;
+  earState._playingUntil = performance.now() + totalMs;
 
   setTimeout(() => {
+    if (earState._playTok !== tok) return;
     hearBtn.classList.remove('playing');
+    hearBtn.disabled = false;
     hearBtn.textContent = '▶ HEAR AGAIN';
   }, totalMs);
 };
@@ -8799,7 +8853,7 @@ function handleEarAnswer(pickedId, btn) {
   if (isCorrect) {
     btn.classList.add('correct');
     earState.answered = true;
-    earState.score.correct++;
+    earState.score.correct++;   // accuracy = right submissions ÷ all submissions
     const xpGain = earState.attempts === 1 ? 10 : earState.attempts === 2 ? 5 : 0;
     earState.score.xp += xpGain;
     showEarFeedback(true, xpGain);
@@ -8808,11 +8862,11 @@ function handleEarAnswer(pickedId, btn) {
       if (!b.classList.contains('correct')) b.classList.add('dim');
     });
   } else {
+    earState.score.wrong++;   // every wrong submission counts
     btn.classList.add('wrong');
     btn.disabled = true;
     if (earState.attempts >= 3) {
       earState.answered = true;
-      earState.score.wrong++;
       document.querySelectorAll('#ear-answer-grid .ear-answer-btn').forEach(b => {
         if (b.dataset.id === q.id) b.classList.add('correct');
         b.disabled = true;
@@ -9823,6 +9877,8 @@ window.submitBuildAnswer = function() {
     document.getElementById('build-submit-btn').disabled = true;
     advanceBuildNote();
   } else {
+    q.retried = true;
+    buildState.score.wrong++;   // every wrong submission counts
     if (marker) {
       marker.classList.add('wrong');
       setTimeout(() => marker.classList.remove('wrong'), 600);
@@ -9859,7 +9915,7 @@ function submitBuildChord(q) {
 
   if (off === 0) {
     buildState.answered = true;
-    buildState.score.correct++;
+    buildState.score.correct++;   // accuracy = right submissions ÷ all submissions
     buildState.score.xp += 10;
     cmarkers.forEach(m => m.classList.add('correct'));
     document.getElementById('build-submit-btn').disabled = true;
@@ -9875,6 +9931,7 @@ function submitBuildChord(q) {
     document.getElementById('build-submit-btn').disabled = true;
     showBuildFeedback(false, 0, 0);
   } else {
+    buildState.score.wrong++;   // every wrong submission counts
     // Per-marker hint flash, then try again — no positions revealed.
     perMarker.forEach(pm => {
       const m = document.querySelector('#build-ruler .build-cmarker[data-idx="' + pm.idx + '"]');
@@ -9909,8 +9966,7 @@ function advanceBuildNote() {
   if (wasLast) {
     buildState.answered = true;
     const questionCorrect = !q.missed;
-    if (questionCorrect) { buildState.score.correct++; buildState.score.xp += 10; }
-    else                 { buildState.score.wrong++; }
+    if (questionCorrect) { buildState.score.correct++; buildState.score.xp += q.retried ? 5 : 10; }
     document.getElementById('build-submit-btn').disabled = true;
     showBuildFeedback(questionCorrect, questionCorrect ? 10 : 0, 0);
   } else {
@@ -10046,6 +10102,7 @@ function flashScaleTrack(i) {
 
 function buildPlayScaleSeq(vals) {
   const q = buildState.currentQ; if (!q || !vals) return;
+  if (buildState._scalePlayingUntil > performance.now()) return;   // no restarting mid-playback
   const ctx = getAudio();
   stopBuildDrone(); if (typeof stopBuildScrub === 'function') stopBuildScrub();
   const step = 0.32, dur = 0.30, t0 = ctx.currentTime + 0.06;
@@ -10054,6 +10111,11 @@ function buildPlayScaleSeq(vals) {
     const delay = Math.max(0, (t0 + i * step - ctx.currentTime) * 1000);
     setTimeout(() => flashScaleTrack(i), delay);
   });
+  const ms = (0.06 + vals.length * step) * 1000 + 100;
+  buildState._scalePlayingUntil = performance.now() + ms;
+  const bt = ['bscale-play-target', 'bscale-play-yours'].map(id => document.getElementById(id)).filter(Boolean);
+  bt.forEach(b => { b.disabled = true; b.classList.add('playing'); });
+  setTimeout(() => bt.forEach(b => { b.disabled = false; b.classList.remove('playing'); }), ms);
 }
 window.buildPlayScaleTarget = function () { buildPlayScaleSeq(buildState.scaleTargets); };
 window.buildPlayScaleYours  = function () { buildPlayScaleSeq(buildState.scaleVals); };
@@ -10075,7 +10137,8 @@ function submitBuildScale(q) {
   const moveable = buildState.scaleTargets.length - 2;
   if (off === 0) {
     buildState.answered = true;
-    buildState.score.correct++; buildState.score.xp += 10;
+    buildState.score.correct++;   // accuracy = right submissions ÷ all submissions
+    buildState.score.xp += 10;
     per.forEach(p => { const d = scaleDot(p.i); if (d) { d.classList.remove('warn'); d.classList.add('correct'); } });
     document.getElementById('build-submit-btn').disabled = true;
     showBuildFeedback(true, 10, 0);
@@ -10087,6 +10150,7 @@ function submitBuildScale(q) {
     document.getElementById('build-submit-btn').disabled = true;
     showBuildFeedback(false, 0, 0);
   } else {
+    buildState.score.wrong++;   // every wrong submission counts
     per.forEach(p => {
       if (p.fixed) return;
       const d = scaleDot(p.i); if (!d) return;
@@ -10830,9 +10894,6 @@ const AL_TEMPO = [
   { id: 'presto',   label: 'Presto (~176 BPM)',   mnemonic: 'Very fast and driving.' },
   { id: 'straight', label: 'Straight 8ths',          mnemonic: 'Even, mechanical eighth notes.' },
   { id: 'swung',    label: 'Swung 8ths',             mnemonic: 'Long-short triplet feel — jazz/blues.' },
-  { id: 'time44',   label: '4/4 Time',               mnemonic: 'Four-beat cycle — most rock/pop.' },
-  { id: 'time34',   label: '3/4 Time',               mnemonic: 'Three-beat cycle — waltz feel.' },
-  { id: 'time68',   label: '6/8 Time',               mnemonic: 'Compound duple — two groups of three.' },
 ];
 
 // TEXTURE — how many voices
@@ -10841,8 +10902,6 @@ const AL_TEXTURE = [
   { id: 'homo',      label: 'Homophonic',     mnemonic: 'Melody with chord accompaniment.' },
   { id: 'poly',      label: 'Polyphonic',     mnemonic: 'Multiple independent melodies at once.' },
   { id: 'hetero',    label: 'Heterophonic',   mnemonic: 'One melody played by two parts at once, each with its own small variations.' },
-  { id: 'solo',      label: 'Solo (single instrument)', mnemonic: 'One instrument playing alone.' },
-  { id: 'ensemble',  label: 'Ensemble (multiple instruments)', mnemonic: 'Several instruments playing together.' },
 ];
 
 // Starter presets
@@ -10851,7 +10910,7 @@ const AL_PRESETS = {
   dynamics:     ['soft', 'loud', 'crescendo', 'decrescendo'],
   articulation: ['staccato', 'legato', 'sustained'],
   tempo:        ['adagio', 'moderato', 'allegro'],
-  texture:      ['mono', 'homo', 'solo', 'ensemble'],
+  texture:      ['mono', 'homo', 'poly', 'hetero'],
 };
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -10986,7 +11045,7 @@ function getActiveAlPool() {
   AL_MODES.forEach(mode => {
     const meta = AL_MODE_META[mode];
     if (alState[meta.includeKey] && alState[meta.setKey].size >= 2) {
-      alState[meta.setKey].forEach(id => pool.push({ kind: mode, id }));
+      alState[meta.setKey].forEach(id => { if (meta.catalog.some(c => c.id === id)) pool.push({ kind: mode, id }); });
     }
   });
   return pool;
@@ -11018,9 +11077,19 @@ window.nextAlQuestion = function() {
   const q = generateAlQuestion();
   alState.currentQ = q;
   renderAlQuestion(q);
-  setTimeout(() => playCurrentAlQuestion(), 300);
+  setTimeout(() => playCurrentAlQuestion(true), 300);
 };
 
+// Lesson answer grids always have an even number of buttons (even columns):
+// if odd, drop one wrong answer — never the correct one.
+function klEvenAnswers(items, correctId) {
+  items = items.filter(Boolean);
+  if (items.length > 2 && items.length % 2 === 1) {
+    const wrong = items.map((it, i) => it.id === correctId ? -1 : i).filter(i => i >= 0);
+    items.splice(wrong[Math.floor(Math.random() * wrong.length)], 1);
+  }
+  return items;
+}
 function generateAlQuestion() {
   const pool = getActiveAlPool();
   const pick = pool[Math.floor(Math.random() * pool.length)];
@@ -11056,7 +11125,7 @@ function renderAlQuestion(q) {
   grid.innerHTML = '';
   const meta = AL_MODE_META[q.kind];
   let candidates = [...alState[meta.setKey]].map(id => meta.catalog.find(item => item.id === id));
-  candidates = shuffleArray(candidates.slice());
+  candidates = klEvenAnswers(shuffleArray(candidates.slice()), q.id);
   candidates.forEach(item => {
     const btn = document.createElement('button');
     btn.className = 'ear-answer-btn';
@@ -11069,6 +11138,7 @@ function renderAlQuestion(q) {
   const hearBtn = document.getElementById('al-hear-btn');
   hearBtn.textContent = '▶ HEAR AGAIN';
   hearBtn.classList.remove('playing');
+  hearBtn.disabled = false;
 }
 
 function handleAlAnswer(pickedId, btn) {
@@ -11080,7 +11150,7 @@ function handleAlAnswer(pickedId, btn) {
   if (isCorrect) {
     btn.classList.add('correct');
     alState.answered = true;
-    alState.score.correct++;
+    alState.score.correct++;   // accuracy = right submissions ÷ all submissions
     const xpGain = alState.attempts === 1 ? 10 : alState.attempts === 2 ? 5 : 0;
     alState.score.xp += xpGain;
     showAlFeedback(true, xpGain);
@@ -11089,11 +11159,11 @@ function handleAlAnswer(pickedId, btn) {
       if (!b.classList.contains('correct')) b.classList.add('dim');
     });
   } else {
+    alState.score.wrong++;   // every wrong submission counts
     btn.classList.add('wrong');
     btn.disabled = true;
     if (alState.attempts >= 3) {
       alState.answered = true;
-      alState.score.wrong++;
       document.querySelectorAll('#al-answer-grid .ear-answer-btn').forEach(b => {
         if (b.dataset.id === q.id) b.classList.add('correct');
         b.disabled = true;
@@ -11577,12 +11647,16 @@ function playTextureDemo(ctx, t0, textureId) {
 }
 
 // ── Main audio dispatch ──────────────────────────────────────────────────
-window.playCurrentAlQuestion = function() {
+window.playCurrentAlQuestion = function(force) {
   const q = alState.currentQ;
   if (!q) return;
+  // While a clip is playing, the button is locked — no restarting mid-clip.
+  // (force = a new question auto-playing, which always wins.)
+  if (!force && alState._playingUntil > performance.now()) return;
   stopAllAudio();
   const hearBtn = document.getElementById('al-hear-btn');
   hearBtn.classList.add('playing');
+  hearBtn.disabled = true;
   hearBtn.textContent = '🔊 PLAYING...';
 
   const ctx = getAudio();
@@ -11594,9 +11668,13 @@ window.playCurrentAlQuestion = function() {
   else if (q.kind === 'articulation') totalMs = playArticulationDemo(ctx, t0, q.id);
   else if (q.kind === 'tempo')    totalMs = playTempoDemo(ctx, t0, q.id);
   else if (q.kind === 'texture')  totalMs = playTextureDemo(ctx, t0, q.id);
+  const tok = alState._playTok = (alState._playTok || 0) + 1;
+  alState._playingUntil = performance.now() + totalMs;
 
   setTimeout(() => {
+    if (alState._playTok !== tok) return;
     hearBtn.classList.remove('playing');
+    hearBtn.disabled = false;
     hearBtn.textContent = '▶ HEAR AGAIN';
   }, totalMs);
 };
@@ -21933,7 +22011,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.08q'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.08v'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -27060,13 +27138,13 @@ const NOTATION_TAB = [
   // Stacked chord shape
   { id: 'tab_chord_emajor', label: 'E Major Chord (Open)', kind: 'chord', frets: [0, 0, 1, 2, 2, 0], mnemonic: 'Open E. Stack: high to low strings.' },
   // Symbols
-  { id: 'tab_h', label: 'Hammer-On (h)',  kind: 'symbol', symbol: 'h',  mnemonic: 'Strike one note, hammer onto a higher fret without picking.' },
-  { id: 'tab_p', label: 'Pull-Off (p)',   kind: 'symbol', symbol: 'p',  mnemonic: 'Strike one note, pull finger off to sound a lower fret.' },
-  { id: 'tab_b', label: 'Bend (b)',       kind: 'symbol', symbol: 'b',  mnemonic: 'Push or pull the string to raise the pitch.' },
-  { id: 'tab_slide_up', label: 'Slide Up (/)', kind: 'symbol', symbol: '/',  mnemonic: 'Slide finger up the neck to a higher fret.' },
-  { id: 'tab_slide_dn', label: 'Slide Down (\\)', kind: 'symbol', symbol: '\\',  mnemonic: 'Slide finger down the neck to a lower fret.' },
-  { id: 'tab_vib', label: 'Vibrato (~)',  kind: 'symbol', symbol: '~',  mnemonic: 'Rapid pitch wobble for expression.' },
-  { id: 'tab_pm',  label: 'Palm Mute (PM)', kind: 'symbol', symbol: 'PM', mnemonic: 'Damp strings with the picking-hand palm.' },
+  { id: 'tab_h', label: 'Hammer-On',  kind: 'symbol', symbol: 'h',  mnemonic: 'Written as h. Strike one note, hammer onto a higher fret without picking.' },
+  { id: 'tab_p', label: 'Pull-Off',   kind: 'symbol', symbol: 'p',  mnemonic: 'Written as p. Strike one note, pull finger off to sound a lower fret.' },
+  { id: 'tab_b', label: 'Bend',       kind: 'symbol', symbol: 'b',  mnemonic: 'Drawn as a curved arrow ("full" = a whole step). Push or pull the string to raise the pitch.' },
+  { id: 'tab_slide_up', label: 'Slide Up', kind: 'symbol', symbol: '/',  mnemonic: 'Written as /. Slide finger up the neck to a higher fret.' },
+  { id: 'tab_slide_dn', label: 'Slide Down', kind: 'symbol', symbol: '\\',  mnemonic: 'Written as \\. Slide finger down the neck to a lower fret.' },
+  { id: 'tab_vib', label: 'Vibrato',  kind: 'symbol', symbol: '~',  mnemonic: 'Written as ~. Rapid pitch wobble for expression.' },
+  { id: 'tab_pm',  label: 'Palm Mute', kind: 'symbol', symbol: 'PM', mnemonic: 'Written as P.M. Damp strings with the picking-hand palm.' },
 ];
 
 // Starter sets
@@ -27410,7 +27488,7 @@ function handleNotationAnswer(pickedId, btn) {
   if (isCorrect) {
     btn.classList.add('correct');
     notationState.answered = true;
-    notationState.score.correct++;
+    notationState.score.correct++;   // accuracy = right submissions ÷ all submissions
     const xpGain = notationState.attempts === 1 ? 10 : notationState.attempts === 2 ? 5 : 0;
     notationState.score.xp += xpGain;
     showNotationFeedback(true, xpGain);
@@ -27419,11 +27497,11 @@ function handleNotationAnswer(pickedId, btn) {
       if (!b.classList.contains('correct')) b.classList.add('dim');
     });
   } else {
+    notationState.score.wrong++;   // every wrong submission counts
     btn.classList.add('wrong');
     btn.disabled = true;
     if (notationState.attempts >= 3) {
       notationState.answered = true;
-      notationState.score.wrong++;
       allBtns.forEach(b => {
         if (b.dataset.id === q.item.id) b.classList.add('correct');
         b.disabled = true;
@@ -28064,7 +28142,7 @@ function mtBuildPool(maxLevel) {
   const tmpSets = {
     3: ['adagio', 'moderato', 'allegro'],
     4: ['adagio', 'moderato', 'allegro', 'straight', 'swung'],
-    5: ['largo', 'adagio', 'andante', 'moderato', 'allegro', 'presto', 'straight', 'swung', 'time44', 'time34', 'time68'],
+    5: ['largo', 'adagio', 'andante', 'moderato', 'allegro', 'presto', 'straight', 'swung'],
   };
   // Texture only — "solo"/"ensemble" are about HOW MANY INSTRUMENTS, not texture, and
   // overlapped with monophonic (a solo melody IS monophonic), so they're out of Arcade.
@@ -29091,6 +29169,7 @@ window.replayMtAudio = function() {
   const r = mtState.currentRound;
   if (!r || !r.audio || mtState.isAnswered) return;
   const hearBtn = document.getElementById('mt-hear-btn');
+  if (hearBtn.disabled) return;   // still playing — wait for it to finish
   hearBtn.classList.add('playing');
   hearBtn.disabled = true;
   const ctx = getAudio();
