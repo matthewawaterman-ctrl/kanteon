@@ -6092,6 +6092,27 @@
     background: #0b0920; border: 1px solid rgba(240,192,64,0.45); color: var(--gold); font: 700 18px var(--font-mono); }
   .studio-bpm-box:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 2px rgba(240,192,64,0.25); }
   .studio-bpm-box::-webkit-inner-spin-button { opacity: 0.6; }
+  /* cents verdict ("✓ 32¢ high") sits ABOVE the dot, not on top of it */
+  #mixtape-session .build-marker:not(.mt-lane-dot)[data-off]::after { top: auto !important; bottom: calc(100% + 10px) !important; left: 50% !important;
+    transform: translateX(-50%) !important; line-height: 1; text-shadow: 0 2px 6px rgba(0,0,0,0.8); }
+  /* a wrong guess often sits near the gold root note — lift its label clear of the root's name tag */
+  #mixtape-session .build-marker.wrong:not(.mt-lane-dot)[data-off]::after { bottom: calc(100% + 30px) !important; }
+  /* the transcription grid never needs a visible scrollbar */
+  #mixtape-session .mt-tx-scroll { scrollbar-width: none; }
+  #mixtape-session .mt-tx-scroll::-webkit-scrollbar { display: none; }
+  /* breathing room under the last row of buttons (never flush with the screen edge) */
+  #mixtape-session .mt-body { padding-bottom: clamp(16px, 3.2vh, 30px) !important; box-sizing: border-box; flex: 1 1 auto; min-height: 0; }
+  /* when space is tight, the staff picture gives way (not the bottom margin) */
+  #mixtape-session .mt-body > #mt-rhythm-host:has(.mt-staff-box) { flex: 0 1 auto !important; min-height: 90px; display: flex; flex-direction: column; }
+  #mixtape-session .mt-staff-box { min-height: 0; flex: 1 1 auto; display: flex; justify-content: center; }
+  #mixtape-session .mt-staff-box svg { max-height: 100%; width: auto; }
+  /* keep a bottom margin on the tallest question types too */
+  #mixtape-session .mt-rw-staff .rhythm-notation svg { max-height: min(87px, 11.5vh); width: auto; }
+  #mixtape-session .mt-rw-hint { margin-top: 2px; margin-bottom: 0; }
+  #mixtape-session .mt-sg-cell { height: min(18px, 2.2vh) !important; }
+  #mixtape-session .mt-sg-wrap .mt-tx-hint { margin-bottom: 4px; }
+  #mixtape-session .mt-sg-grid > .mt-sg-row { line-height: 1 !important; font-size: min(15px, 2.2vh) !important; display: flex; align-items: center; }
+  #mixtape-session .mt-sg-grid { row-gap: min(4px, 0.6vh) !important; }
 </style>
 </head>
 <body>
@@ -22280,7 +22301,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.22h'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.22i'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -31359,8 +31380,10 @@ function mtRwShowAnswer(host, q, notes, allOk) {
   const play = () => {
     try {
       const ctx = getAudio(), t0 = ctx.currentTime + 0.1;
-      for (let b = 0; b < q.meter; b++) playTone(midiFreq(b === 0 ? 96 : 91), t0 + b * STEP_S, 0.04, ctx, 0.05, 'piano');   // soft click
-      notes.forEach(n => playTone(midiFreq(71), t0 + n.s * q.step * STEP_S, Math.max(0.08, n.len * q.step * STEP_S * 0.92), ctx, 0.24, 'piano'));
+      // beat = soft rim/hat tick (accent on 1); notes = a warm keys tone held for its length.
+      // (was two bare high sine beeps — thin and "low quality" through laptop speakers)
+      for (let b = 0; b < q.meter; b++) studioDrum(b === 0 ? 'rim' : 'hat', t0 + b * STEP_S, b === 0 ? 0.35 : 0.22);
+      notes.forEach(n => playTone(midiFreq(67), t0 + n.s * q.step * STEP_S, Math.max(0.1, n.len * q.step * STEP_S * 0.92), ctx, 0.3, 'klKeys'));
     } catch (e) {}
   };
   return { play, ms: q.meter * STEP_S * 1000 + 400, legend: host.querySelector('#mt-rw-hint') };
