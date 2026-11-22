@@ -6084,9 +6084,14 @@
   #studio .studio-lead-row { align-items: center; display: flex; flex-wrap: nowrap; gap: 6px; }
   #studio .studio-lead-row input { min-width: 0; }
   #studio .studio-lead-row .studio-row-label:last-child { white-space: nowrap; }
-  #studio .studio-trip { font-style: italic; }
+  #studio .studio-trip { letter-spacing: 1px; }
+  #studio .studio-trip.dim { opacity: 0.4; }
   #studio [data-spane="seq"] .studio-panel > .studio-row:nth-of-type(3) { flex-wrap: wrap; row-gap: 5px; }
   #studio .studio-beat { white-space: nowrap; }
+  .studio-bpm-box { width: 76px; padding: 3px 6px; margin: 0 4px; border-radius: 6px; text-align: center;
+    background: #0b0920; border: 1px solid rgba(240,192,64,0.45); color: var(--gold); font: 700 18px var(--font-mono); }
+  .studio-bpm-box:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 2px rgba(240,192,64,0.25); }
+  .studio-bpm-box::-webkit-inner-spin-button { opacity: 0.6; }
 </style>
 </head>
 <body>
@@ -7143,7 +7148,7 @@
     <!-- BPM SLIDER ROW -->
     <div class="studio-bpm-row">
       <button class="studio-bpm-pm-btn" onclick="studioBpmAdjust(-1)">−</button>
-      <input type="range" id="studio-bpm-slider" min="40" max="200" step="1" value="120" oninput="studioBpmSlider(this.value)">
+      <input type="range" id="studio-bpm-slider" min="40" max="240" step="1" value="120" oninput="studioBpmSlider(this.value)">
       <button class="studio-bpm-pm-btn" onclick="studioBpmAdjust(1)">+</button>
     </div>
 
@@ -7165,11 +7170,10 @@
         </div>
         <div class="studio-row">
           <span class="studio-row-label">GRID</span>
-          <button class="studio-chip" data-grid="1" onclick="studioSetGrid(1)">¼</button>
-          <button class="studio-chip" data-grid="2" onclick="studioSetGrid(2)">⅛</button>
-          <button class="studio-chip" data-grid="4" onclick="studioSetGrid(4)">¹⁄₁₆</button>
-          <button class="studio-chip studio-trip" data-grid="3" onclick="studioSetGrid(3)" title="8th-note triplets (3 per beat)">⅛T</button>
-          <button class="studio-chip studio-trip" data-grid="6" onclick="studioSetGrid(6)" title="16th-note triplets (6 per beat)">¹⁄₁₆T</button>
+          <button class="studio-chip" data-grid="1" onclick="studioSetGridBase(1)">¼</button>
+          <button class="studio-chip" data-grid="2" onclick="studioSetGridBase(2)">⅛</button>
+          <button class="studio-chip" data-grid="4" onclick="studioSetGridBase(4)">¹⁄₁₆</button>
+          <button class="studio-chip studio-trip" id="studio-trip-btn" onclick="studioToggleTriplet()" title="Turn the grid into triplets: 3 in the space of 2">TRIPLET</button>
           <span class="studio-toggle" id="studio-metroclick-toggle" onclick="studioToggleMetroInSeq()" style="margin-left:8px;">
             CLICK <span class="studio-toggle-switch"></span>
           </span>
@@ -7259,15 +7263,10 @@
           <button class="studio-chip" data-asx="5" onclick="studioAutospeedSet('add',5)">+5</button>
           <button class="studio-chip" data-asx="10" onclick="studioAutospeedSet('add',10)">+10</button>
         </div>
-        <div class="studio-row">
-          <span class="studio-row-label">MAX BPM</span>
-          <input type="range" id="studio-autospeed-max" min="60" max="240" step="1" value="180" style="flex:1;accent-color:#f0c040;" oninput="studioAutospeedSet('max',this.value)">
-          <span style="font-family:var(--font-mono); font-size:13px; color:var(--gold); min-width:40px; text-align:right;" id="studio-autospeed-max-readout">180</span>
-        </div>
         <div class="studio-autospeed-current" id="studio-autospeed-current">
-          START <span class="v" id="studio-autospeed-start">120</span> →
-          NOW <span class="v" id="studio-autospeed-now">120</span> /
-          MAX <span class="v" id="studio-autospeed-maxv">180</span>
+          START <input type="number" class="studio-bpm-box" id="studio-autospeed-start" min="40" max="240" step="1" value="120" title="Tempo to start from" onchange="studioAsField('start', this)" onkeydown="if(event.key==='Enter')this.blur()"> →
+          NOW <input type="number" class="studio-bpm-box" id="studio-autospeed-now" min="40" max="240" step="1" value="120" title="Current tempo" onchange="studioAsField('now', this)" onkeydown="if(event.key==='Enter')this.blur()"> /
+          MAX <input type="number" class="studio-bpm-box" id="studio-autospeed-maxv" min="40" max="240" step="1" value="180" title="Stop speeding up at this tempo" onchange="studioAsField('max', this)" onkeydown="if(event.key==='Enter')this.blur()">
           &nbsp;&nbsp;<button class="studio-chip" onclick="studioAutospeedReset()" style="padding:4px 10px; font-size:10px;">RESET</button>
         </div>
       </div>
@@ -22281,7 +22280,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.22f'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.22h'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -26646,8 +26645,25 @@ function studioSyncBpmUI() {
   document.getElementById('studio-bpm-readout').textContent = bpm;
   document.getElementById('studio-bpm-slider').value = bpm;
   document.getElementById('studio-metro-big').textContent = bpm;
-  document.getElementById('studio-autospeed-now').textContent = bpm;
+  studioSetBox('studio-autospeed-now', bpm);
 }
+function studioSetBox(id, v) { const el = document.getElementById(id); if (el && document.activeElement !== el) el.value = v; }
+// typing in START / NOW / MAX (40–240 BPM)
+window.studioAsField = function (which, el) {
+  let v = Math.round(+el.value);
+  if (!isFinite(v) || !el.value) { studioRenderAutospeedChips(); studioSyncBpmUI(); return; }
+  v = Math.max(40, Math.min(240, v));
+  if (which === 'now') { studioBpmSlider(v); if (studioState.autospeed.max < studioState.bpmStart) studioState.autospeed.max = studioState.bpmStart; }
+  else if (which === 'start') {
+    studioState.bpmStart = v;
+    if (!studioState.isPlaying) { studioState.bpm = v; studioSyncBpmUI(); }
+    if (studioState.autospeed.max < v) studioState.autospeed.max = v;
+  } else if (which === 'max') {
+    studioState.autospeed.max = Math.max(v, studioState.bpmStart);
+  }
+  el.value = which === 'max' ? studioState.autospeed.max : v;
+  studioRenderAutospeedChips();
+};
 window.studioBpmSlider = function(v) {
   studioState.bpm = parseInt(v, 10);
   if (!studioState.isPlaying) studioState.bpmStart = studioState.bpm;
@@ -26977,7 +26993,7 @@ window.studioSetTimeSig = function(ts) {
   if (ts === studioState.timeSig) return;
   const oldR = studioState.grid || 2;
   studioState.timeSig = ts;
-  if (ts === '6/8' && (studioState.grid < 2 || studioState.grid === 3 || studioState.grid === 6)) studioState.grid = studioState.grid === 6 ? 4 : 2;
+  if (!studioGridValid(studioState.grid)) { studioState.grid = studioGridBase(studioState.grid); if (!studioGridValid(studioState.grid)) studioState.grid = 2; }
   if (ts === '6/8' && studioState.accent === 'backbeat') studioState.accent = '1';
   studioRegrid(studioStepsFor(studioState.grid), studioBar16(), oldR, studioState.grid);   // the sequencer follows the metronome
   studioRenderTimeSigChips();
@@ -27033,6 +27049,27 @@ window.studioSetBars = function(n) {
 // The clock's beat is the metronome's beat: a quarter in 4/4 and 3/4, an eighth in 6/8.
 function studioBar16() { return studioState.timeSig === '4/4' ? 16 : 12; }
 function studioStepsFor(r) { return studioBar16() * r / 4; }
+// grid r = steps per quarter note. Straight: 1 ¼ · 2 ⅛ · 4 ¹⁄₁₆. TRIPLET multiplies by 1.5
+// (3 in the space of 2): ¼T = 1.5, ⅛T = 3, ¹⁄₁₆T = 6.
+function studioIsTrip(r) { r = r == null ? studioState.grid : r; return r === 1.5 || r === 3 || r === 6; }
+function studioGridBase(r) { r = r == null ? studioState.grid : r; return studioIsTrip(r) ? r / 1.5 : r; }
+function studioGridValid(r) {
+  if (studioState.timeSig === '6/8' && (studioIsTrip(r) || r < 2)) return false;   // 6/8 already moves in threes
+  return Math.abs(studioBar16() * r / 4 - Math.round(studioBar16() * r / 4)) < 1e-9;   // whole steps per bar
+}
+window.studioSetGridBase = function (b) {
+  let r = studioIsTrip() ? b * 1.5 : b;
+  if (!studioGridValid(r)) r = b;                     // e.g. ¼ triplets don't fit a 3/4 bar → straight ¼
+  studioSetGrid(r);
+};
+window.studioToggleTriplet = function () {
+  const b = studioGridBase(), r = studioIsTrip() ? b : b * 1.5;
+  if (!studioGridValid(r)) {
+    studioRenderLoops(studioState.timeSig === '6/8' ? '6/8 already counts in threes — no triplets needed' : '¼-note triplets don\'t fit a 3/4 bar — try ⅛ or ¹⁄₁₆');
+    return;
+  }
+  studioSetGrid(r);
+};
 function studioColsPerBeat() { const r = studioState.grid || 2; return studioState.timeSig === '6/8' ? r / 2 : r; }
 function studioRegrid(newSpb, newBar16, oldR, newR) {
   const old = studioState.stepsPerBar, bars = studioState.bars;
@@ -27054,7 +27091,7 @@ function studioRegrid(newSpb, newBar16, oldR, newR) {
 }
 window.studioSetGrid = function (r) {
   studioState.resumeStep = 0;
-  if (studioState.timeSig === '6/8' && (r < 2 || r === 3 || r === 6)) r = r === 6 ? 4 : 2;
+  if (!studioGridValid(r)) { r = studioGridBase(r); if (!studioGridValid(r)) r = 2; }
   const oldR = studioState.grid || 2;
   studioState.grid = r;
   studioRegrid(studioStepsFor(r), studioBar16(), oldR, r);
@@ -27087,11 +27124,18 @@ window.studioSetStepsRaw = function(n) {
 function studioRenderShapeChips() {
   document.querySelectorAll('[data-bars]').forEach(b =>
     b.classList.toggle('active', parseInt(b.getAttribute('data-bars'),10) === studioState.bars));
+  const base = studioGridBase(), trip = studioIsTrip();
   document.querySelectorAll('[data-grid]').forEach(b => {
     const r = +b.getAttribute('data-grid');
-    b.classList.toggle('active', r === (studioState.grid || 2));
-    b.style.display = (studioState.timeSig === '6/8' && (r === 1 || r === 3 || r === 6)) ? 'none' : '';
+    b.classList.toggle('active', r === base);
+    b.style.display = (studioState.timeSig === '6/8' && r === 1) ? 'none' : '';
   });
+  const tb = document.getElementById('studio-trip-btn');
+  if (tb) {
+    tb.classList.toggle('active', trip);
+    tb.style.display = studioState.timeSig === '6/8' ? 'none' : '';
+    tb.classList.toggle('dim', !trip && !studioGridValid(base * 1.5));
+  }
   studioRenderTimeSigChips();
 }
 function studioReshapeTracks() {
@@ -27288,9 +27332,10 @@ function studioBeatRuler(labelW) {
   row.style.gridTemplateColumns = labelW + ' repeat(' + total + ', minmax(0, 1fr))';
   let h = '<div class="studio-beat-lbl">BEAT</div>';
   for (let i = 0; i < total; i++) {
-    const inBar = i % spb, k = inBar % cpb, beat = Math.floor(inBar / cpb) + 1;
-    const txt = k === 0 ? String(beat) : (total > 32 ? '' : sub[k] || '');
-    h += '<div class="studio-beat' + (k === 0 ? ' on' : '') + (inBar === 0 ? ' one' : '') + '" data-step="' + i + '">' + txt + '</div>';
+    const inBar = i % spb, bp = inBar / cpb, onBeat = Math.abs(bp - Math.round(bp)) < 1e-6, beat = Math.round(bp) + 1;
+    const k = Number.isInteger(cpb) ? inBar % cpb : -1;
+    const txt = onBeat ? String(beat) : (total > 32 ? '' : (k >= 0 ? (sub[k] || '') : '·'));
+    h += '<div class="studio-beat' + (onBeat ? ' on' : '') + (inBar === 0 ? ' one' : '') + '" data-step="' + i + '">' + txt + '</div>';
   }
   row.innerHTML = h;
   return row;
@@ -28252,7 +28297,7 @@ window.studioToggleAutospeed = function() {
   document.getElementById('studio-autospeed-panel').classList.toggle('armed', studioState.autospeed.on);
   if (studioState.autospeed.on) {
     studioState.bpmStart = studioState.bpm;
-    document.getElementById('studio-autospeed-start').textContent = studioState.bpmStart;
+    studioSetBox('studio-autospeed-start', studioState.bpmStart);
   }
 };
 window.studioAutospeedSet = function(key, value) {
@@ -28260,8 +28305,7 @@ window.studioAutospeedSet = function(key, value) {
   if (key === 'add')   studioState.autospeed.add = parseInt(value,10);
   if (key === 'max')   {
     studioState.autospeed.max = parseInt(value,10);
-    document.getElementById('studio-autospeed-max-readout').textContent = value;
-    document.getElementById('studio-autospeed-maxv').textContent = value;
+    studioSetBox('studio-autospeed-maxv', value);
   }
   studioRenderAutospeedChips();
 };
@@ -28289,8 +28333,8 @@ function studioRenderAutospeedChips() {
     b.classList.toggle('active', parseInt(b.getAttribute('data-asn'),10) === studioState.autospeed.every));
   document.querySelectorAll('[data-asx]').forEach(b =>
     b.classList.toggle('active', parseInt(b.getAttribute('data-asx'),10) === studioState.autospeed.add));
-  document.getElementById('studio-autospeed-start').textContent = studioState.bpmStart;
-  document.getElementById('studio-autospeed-maxv').textContent = studioState.autospeed.max;
+  studioSetBox('studio-autospeed-start', studioState.bpmStart);
+  studioSetBox('studio-autospeed-maxv', studioState.autospeed.max);
   const sum = document.getElementById('studio-autospeed-sum');
   if (sum) sum.textContent = '+' + studioState.autospeed.add + ' BPM every ' + studioState.autospeed.every + ' bar' + (studioState.autospeed.every > 1 ? 's' : '') + ' (to ' + studioState.autospeed.max + ')';
 }
