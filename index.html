@@ -6073,6 +6073,20 @@
   @media (max-width: 1200px) { #studio .studio-view-hint { display: none; } }
   #studio .studio-view-head > span:last-child { white-space: nowrap; display: flex; align-items: center; gap: 3px; }
   #studio .studio-view-head .studio-chip { padding: 3px 6px; font-size: 10px; }
+  #studio .studio-note-ghost { opacity: 0.75; outline: 2px dashed #fff; outline-offset: -2px; z-index: 3; }
+  .kl-infoicon { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; flex: 0 0 16px; border-radius: 50%;
+    border: 1.5px solid var(--text3); color: var(--text2); font: italic 800 11px Georgia, serif; cursor: help; user-select: none; margin-left: 4px; }
+  .kl-infoicon:hover, .kl-infoicon:focus { border-color: #4ecdc4; color: #4ecdc4; outline: none; }
+  .kl-info-tip { position: fixed; z-index: 99999; max-width: 280px; padding: 10px 12px; border-radius: 8px; pointer-events: none;
+    background: #1b1748; border: 1px solid rgba(124,111,247,0.6); box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    color: var(--text); font: 500 12.5px/1.45 var(--font-body); }
+  .kl-info-tip b { color: #4ecdc4; font-weight: 800; }
+  #studio .studio-lead-row { align-items: center; display: flex; flex-wrap: nowrap; gap: 6px; }
+  #studio .studio-lead-row input { min-width: 0; }
+  #studio .studio-lead-row .studio-row-label:last-child { white-space: nowrap; }
+  #studio .studio-trip { font-style: italic; }
+  #studio [data-spane="seq"] .studio-panel > .studio-row:nth-of-type(3) { flex-wrap: wrap; row-gap: 5px; }
+  #studio .studio-beat { white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -7153,7 +7167,9 @@
           <span class="studio-row-label">GRID</span>
           <button class="studio-chip" data-grid="1" onclick="studioSetGrid(1)">¼</button>
           <button class="studio-chip" data-grid="2" onclick="studioSetGrid(2)">⅛</button>
-          <button class="studio-chip" data-grid="4" onclick="studioSetGrid(4)">16TH</button>
+          <button class="studio-chip" data-grid="4" onclick="studioSetGrid(4)">¹⁄₁₆</button>
+          <button class="studio-chip studio-trip" data-grid="3" onclick="studioSetGrid(3)" title="8th-note triplets (3 per beat)">⅛T</button>
+          <button class="studio-chip studio-trip" data-grid="6" onclick="studioSetGrid(6)" title="16th-note triplets (6 per beat)">¹⁄₁₆T</button>
           <span class="studio-toggle" id="studio-metroclick-toggle" onclick="studioToggleMetroInSeq()" style="margin-left:8px;">
             CLICK <span class="studio-toggle-switch"></span>
           </span>
@@ -7245,7 +7261,7 @@
         </div>
         <div class="studio-row">
           <span class="studio-row-label">MAX BPM</span>
-          <input type="range" id="studio-autospeed-max" min="60" max="240" step="10" value="180" style="flex:1;accent-color:#f0c040;" oninput="studioAutospeedSet('max',this.value)">
+          <input type="range" id="studio-autospeed-max" min="60" max="240" step="1" value="180" style="flex:1;accent-color:#f0c040;" oninput="studioAutospeedSet('max',this.value)">
           <span style="font-family:var(--font-mono); font-size:13px; color:var(--gold); min-width:40px; text-align:right;" id="studio-autospeed-max-readout">180</span>
         </div>
         <div class="studio-autospeed-current" id="studio-autospeed-current">
@@ -8175,7 +8191,7 @@ function playBassGuitar(freq, startTime, duration, ctx, gain) {
 
 // Chorus synth — sine + detuned copy + soft reverb tail
 const KL_LEAD_WAVES = ['sine', 'triangle', 'sawtooth', 'square'];
-function playChorusSynth(freq, startTime, duration, ctx, gain) {
+function playChorusSynth(freq, startTime, duration, ctx, gain, dest) {
   gain = (gain || 0.2) * (KL_SND.volSynth != null ? KL_SND.volSynth : 1);   // live "Vol · Synth" slider (seeded from CONTROL PANEL synthVolume)
   // Main sine
   const osc1 = ctx.createOscillator();
@@ -8202,7 +8218,7 @@ function playChorusSynth(freq, startTime, duration, ctx, gain) {
   const synLp = ctx.createBiquadFilter();
   synLp.type = 'lowpass'; synLp.frequency.value = KL_SND.synCutoff; synLp.Q.value = KL_SND.synReso;
   osc1.connect(env1); osc2.connect(env2);
-  env1.connect(synLp); env2.connect(synLp); synLp.connect(ctx.destination);
+  env1.connect(synLp); env2.connect(synLp); synLp.connect(dest || ctx.destination);
   osc1.start(startTime); osc2.start(startTime);
   osc1.stop(startTime + duration + 0.55);
   osc2.stop(startTime + duration + 0.55);
@@ -22265,7 +22281,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.08ap'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.22f'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -26876,6 +26892,24 @@ function studioMetroIsAccent(beatInBar, isOnBeat) {
   return false;
 }
 
+// Studio mix bus: every Studio sound goes through ONE gain (headroom) and a gentle
+// limiter before the speakers, so 5 layers at 100% sum cleanly instead of clipping.
+function studioOut(ctx) {
+  const b = studioState._bus;
+  if (b && b.ctx === ctx) return b.node;
+  const g = ctx.createGain(); g.gain.value = 0.5;                  // headroom for the sum
+  const lim = ctx.createDynamicsCompressor();
+  lim.threshold.value = -9; lim.knee.value = 6; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.15;
+  const makeup = ctx.createGain(); makeup.gain.value = 1.2;
+  // last stop: a soft "tape" clipper, so any peak the limiter misses rounds off
+  // smoothly under 1.0 instead of cracking (which is what was heard as distortion)
+  const soft = ctx.createWaveShaper(), N = 2048, curve = new Float32Array(N);
+  for (let i = 0; i < N; i++) { const x = i / (N - 1) * 2 - 1; curve[i] = Math.abs(x) < 0.7 ? x : Math.sign(x) * (0.7 + 0.28 * Math.tanh((Math.abs(x) - 0.7) / 0.28)); }
+  soft.curve = curve; soft.oversample = '2x';
+  g.connect(lim); lim.connect(makeup); makeup.connect(soft); soft.connect(ctx.destination);
+  studioState._bus = { ctx, node: g, out: soft };
+  return g;
+}
 function studioPlayClick(audioTime, isAccent) {
   const ctx = audioCtx;
   if (!ctx) return;
@@ -26884,7 +26918,7 @@ function studioPlayClick(audioTime, isAccent) {
   if (gain <= 0.0001) return;
   const osc = ctx.createOscillator();
   const env = ctx.createGain();
-  osc.connect(env); env.connect(ctx.destination);
+  osc.connect(env); env.connect(studioOut(ctx));
   osc.type = 'square';
   osc.frequency.value = freq;
   env.gain.setValueAtTime(gain, audioTime);
@@ -26943,7 +26977,7 @@ window.studioSetTimeSig = function(ts) {
   if (ts === studioState.timeSig) return;
   const oldR = studioState.grid || 2;
   studioState.timeSig = ts;
-  if (ts === '6/8' && studioState.grid < 2) studioState.grid = 2;
+  if (ts === '6/8' && (studioState.grid < 2 || studioState.grid === 3 || studioState.grid === 6)) studioState.grid = studioState.grid === 6 ? 4 : 2;
   if (ts === '6/8' && studioState.accent === 'backbeat') studioState.accent = '1';
   studioRegrid(studioStepsFor(studioState.grid), studioBar16(), oldR, studioState.grid);   // the sequencer follows the metronome
   studioRenderTimeSigChips();
@@ -27008,9 +27042,9 @@ function studioRegrid(newSpb, newBar16, oldR, newR) {
       const src = map[k] || [], out = new Array(bars * newSpb).fill(false);
       src.forEach((on, j) => {
         if (!on) return;
-        const t16 = (j % old) * 4 / oldR;              // position in 16ths
-        const pos = t16 * newR / 4;
-        if (Number.isInteger(pos) && t16 < newBar16)
+        const tq = (j % old) / oldR;                   // position in quarter notes (works for triplets too)
+        const p0 = tq * newR, pos = Math.round(p0);
+        if (Math.abs(p0 - pos) < 1e-6 && tq * 4 < newBar16 - 1e-6)
           out[Math.floor(j / old) * newSpb + pos] = (typeof on === 'number') ? Math.max(1, Math.round(on * newR / oldR)) : true;
       });
       map[k] = out;
@@ -27020,7 +27054,7 @@ function studioRegrid(newSpb, newBar16, oldR, newR) {
 }
 window.studioSetGrid = function (r) {
   studioState.resumeStep = 0;
-  if (studioState.timeSig === '6/8' && r < 2) r = 2;
+  if (studioState.timeSig === '6/8' && (r < 2 || r === 3 || r === 6)) r = r === 6 ? 4 : 2;
   const oldR = studioState.grid || 2;
   studioState.grid = r;
   studioRegrid(studioStepsFor(r), studioBar16(), oldR, r);
@@ -27056,7 +27090,7 @@ function studioRenderShapeChips() {
   document.querySelectorAll('[data-grid]').forEach(b => {
     const r = +b.getAttribute('data-grid');
     b.classList.toggle('active', r === (studioState.grid || 2));
-    b.style.display = (studioState.timeSig === '6/8' && r === 1) ? 'none' : '';
+    b.style.display = (studioState.timeSig === '6/8' && (r === 1 || r === 3 || r === 6)) ? 'none' : '';
   });
   studioRenderTimeSigChips();
 }
@@ -27248,7 +27282,7 @@ window.studioBarClear = function (bar) {
 // Beat ruler under the bar strip: 1 2 3 4 (¼) · 1 & 2 & (⅛) · 1 e & a (16ths)
 function studioBeatRuler(labelW) {
   const spb = studioState.stepsPerBar, total = studioState.bars * spb, cpb = studioColsPerBeat();
-  const sub = cpb === 4 ? ['', 'e', '&', 'a'] : cpb === 2 ? ['', '&'] : cpb === 3 ? ['', '&', 'a'] : [''];
+  const sub = cpb === 4 ? ['', 'e', '&', 'a'] : cpb === 2 ? ['', '&'] : cpb === 3 ? ['', 'trip', 'let'] : cpb === 6 ? ['', '·', 'trip', '·', 'let', '·'] : [''];
   const row = document.createElement('div');
   row.className = 'studio-beat-ruler';
   row.style.gridTemplateColumns = labelW + ' repeat(' + total + ', minmax(0, 1fr))';
@@ -27417,16 +27451,31 @@ function studioBuildDrumTrack(tr) {
       if (i % Math.max(1, studioState.stepsPerBar / 4) === 0) cell.classList.add('beat');
       if (arr[i]) cell.classList.add('on');
       cell.setAttribute('data-step', i);
-      cell.onclick = () => {
-        arr[i] = !arr[i];
-        cell.classList.toggle('on', arr[i]);
-        if (arr[i]) studioDrum(v, (audioCtx || getAudio()).currentTime + 0.005, 0.5);
-        studioUpdateTabCounts();
-      };
+      cell.dataset.voice = v;
       rowDiv.appendChild(cell);
     }
     grid.appendChild(rowDiv);
   });
+  // tap = toggle a hit · drag = paint a row of hits (or erase, if you started on a hit)
+  grid.style.touchAction = 'none';
+  grid.onpointerdown = e => {
+    const c0 = e.target.closest('.studio-drum-cell'); if (!c0) return;
+    e.preventDefault();
+    const turnOn = !tr.pattern[c0.dataset.voice][+c0.dataset.step];
+    const done = new Set();
+    const paint = c => {
+      if (!c || !c.classList.contains('studio-drum-cell')) return;
+      const key = c.dataset.voice + ':' + c.dataset.step; if (done.has(key)) return; done.add(key);
+      const a = tr.pattern[c.dataset.voice], i = +c.dataset.step;
+      if (a[i] === turnOn) return;
+      a[i] = turnOn; c.classList.toggle('on', turnOn);
+      if (turnOn) studioDrum(c.dataset.voice, (audioCtx || getAudio()).currentTime + 0.005, 0.5 * studioDrumLvl(c.dataset.voice));
+    };
+    paint(c0);
+    grid.setPointerCapture(e.pointerId);
+    grid.onpointermove = ev => paint(document.elementFromPoint(ev.clientX, ev.clientY));
+    grid.onpointerup = grid.onpointercancel = () => { grid.onpointermove = null; grid.onpointerup = grid.onpointercancel = null; studioUpdateTabCounts(); };
+  };
   wrap.appendChild(grid);
   return wrap;
 }
@@ -27448,7 +27497,7 @@ function studioNoiseBuf(ctx) {
   return (_studioNoise = b);
 }
 function studioDrum(v, t, gain) {
-  const ctx = audioCtx || getAudio(), out = ctx.destination;
+  const ctx = audioCtx || getAudio(), out = studioOut(ctx);
   gain = gain == null ? 0.5 : gain;
   const env = (g, a, d) => { const e = ctx.createGain(); e.gain.setValueAtTime(0.0001, t); e.gain.linearRampToValueAtTime(g, t + a); e.gain.exponentialRampToValueAtTime(0.0001, t + d); return e; };
   const noise = (dur, type, freq, q, g, a, d) => {
@@ -27805,16 +27854,31 @@ function studioWireNoteDrag(tr, grid, total) {
       const pr = pill.getBoundingClientRect();
       const edge = e.clientX > pr.right - Math.max(10, Math.min(18, pr.width * 0.35));
       st = { mode: edge ? 'resize' : 'move', pill, semi, start, L, grab: c0 - start, moved: false, newSemi: semi, newStart: start, newL: L };
+      // Alt/Option + drag a note = drag out a COPY (the original stays put), like a DAW
+      if (st.mode === 'move' && e.altKey) {
+        st.copy = true;
+        st.pill = pill.cloneNode(true); st.pill.classList.add('studio-note-ghost');
+        rowDiv.appendChild(st.pill);
+      }
     } else {
       if (studioRowCovers(row, c0, -1) >= 0) return;
       row[c0] = true;
       const p = studioNotePill(tr, semi, c0, 1); rowDiv.appendChild(p);
-      st = { mode: 'draw', pill: p, semi, start: c0, L: 1, newL: 1, newSemi: semi, newStart: c0, moved: true };
+      st = { mode: e.shiftKey ? 'paint' : 'draw', pill: p, semi, start: c0, L: 1, newL: 1, newSemi: semi, newStart: c0, moved: true, last: c0 };
       hear(semi, 1);
     }
     grid.setPointerCapture(e.pointerId);
     grid.onpointermove = ev => {
       const c = colAt(ev.clientX, rowDiv);
+      if (st.mode === 'paint') {                        // Shift-drag: a row of separate short notes
+        if (c === st.last) return;
+        const dir = c > st.last ? 1 : -1;
+        for (let k = st.last + dir; dir > 0 ? k <= c : k >= c; k += dir) {
+          if (studioRowCovers(row, k, -1) >= 0) continue;
+          row[k] = true; rowDiv.appendChild(studioNotePill(tr, st.semi, k, 1)); hear(st.semi, 1);
+        }
+        st.last = c; return;
+      }
       if (st.mode === 'draw' || st.mode === 'resize') {
         let L = Math.max(1, c - st.start + 1);
         while (L > 1 && !studioRowFree(row, st.start, L, st.start, total)) L--;
@@ -27824,7 +27888,7 @@ function studioWireNoteDrag(tr, grid, total) {
         const ns = Math.max(0, Math.min(total - st.L, c - st.grab)), nsemi = +tRow.dataset.pitch;
         if (ns === st.newStart && nsemi === st.newSemi) return;
         const tArr = tr.notes[nsemi];
-        if (!studioRowFree(tArr, ns, st.L, nsemi === st.semi ? st.start : -1, total)) return;
+        if (!studioRowFree(tArr, ns, st.L, (nsemi === st.semi && !st.copy) ? st.start : -1, total)) return;
         st.moved = true; st.newStart = ns;
         if (nsemi !== st.newSemi) { st.newSemi = nsemi; tRow.appendChild(st.pill); hear(nsemi, 1); }
         st.pill.style.gridColumn = (ns + 2) + ' / span ' + st.L;
@@ -27832,10 +27896,13 @@ function studioWireNoteDrag(tr, grid, total) {
     };
     grid.onpointerup = grid.onpointercancel = () => {
       grid.onpointermove = null; grid.onpointerup = grid.onpointercancel = null;
-      if (st.mode === 'draw' || st.mode === 'resize') {
+      if (st.mode === 'paint') { /* notes already placed */ }
+      else if (st.mode === 'draw' || st.mode === 'resize') {
         if (st.mode === 'resize' && !st.moved) { row[st.start] = false; }        // tap on the edge = delete too
         else row[st.start] = st.newL > 1 ? st.newL : true;
         if (st.mode === 'resize' && st.moved) hear(st.semi, st.newL);
+      } else if (st.copy) {
+        if (st.moved) tr.notes[st.newSemi][st.newStart] = row[st.start];       // drop the copy; original stays
       } else if (!st.moved) {
         row[st.start] = false;                                                  // tap a note = delete it
       } else {
@@ -27894,10 +27961,11 @@ function studioRowSemis(tr) {
 function studioNoteMidi(tr, semi) { return tr.base + (studioState.key || 0) + semi; }
 function studioPlayNote(tr, midi, t, dur, gain) {
   const ctx = audioCtx || getAudio();
-  if (tr.id === 'bass')        klBass(t, ctx.destination, ctx, midi, dur, gain * 1.1);
-  else if (tr.id === 'synth')  playChorusSynth(midiFreq(midi), t, dur, ctx, gain * 0.8);
-  else if (tr.id === 'keys')   playTone(midiFreq(midi), t, dur, ctx, gain, 'klKeys');
-  else                         playTone(midiFreq(midi), t, dur, ctx, gain, 'klGuitar');
+  const out = studioOut(ctx);
+  if (tr.id === 'bass')        klBass(t, out, ctx, midi, dur, gain * 1.1);
+  else if (tr.id === 'synth')  playChorusSynth(midiFreq(midi), t, dur, ctx, gain * 0.8, out);
+  else if (tr.id === 'keys')   playTone(midiFreq(midi), t, dur, ctx, gain, 'klKeys', out);
+  else                         playTone(midiFreq(midi), t, dur, ctx, gain, 'klGuitar', out);
 }
 const STUDIO_ORDER = ['drums', 'bass', 'guitar', 'keys', 'synth'];
 window.studioAddLayer = function (id) {
@@ -28115,9 +28183,37 @@ function studioRenderLeadTrim() {
   const row = document.querySelector('#studio .studio-bpm-row'); if (!row || document.getElementById('studio-lead-row')) return;
   if (!(typeof klIsDevAvailable === 'function' && klIsDevAvailable())) return;
   const d = document.createElement('div'); d.id = 'studio-lead-row'; d.className = 'studio-row studio-lead-row';
-  d.innerHTML = '<span class="studio-row-label">DEV · LIGHTS SYNC</span><input type="range" min="-100" max="250" step="10" value="' + studioLightLeadMs() +
+  d.innerHTML = '<span class="studio-row-label" style="white-space:nowrap">DEV · LIGHTS SYNC</span><span class="kl-infoicon" tabindex="0" aria-label="What is Lights Sync?">i</span><input type="range" min="-100" max="250" step="10" value="' + studioLightLeadMs() +
     '" oninput="studioSetLightLead(this.value)" style="flex:1"><span class="studio-row-label" id="studio-lead-val">+' + studioLightLeadMs() + ' ms</span>';
   row.parentElement.insertBefore(d, row.nextSibling);
+  klInfoTip(d.querySelector('.kl-infoicon'),
+    '<b>LIGHTS SYNC</b> (dev only)<br>' +
+    'Lines up the moving lights — the playhead, beat ruler and keyboard / guitar-neck notes — with what you actually <i>hear</i>.<br><br>' +
+    'Screens and speakers each add a small delay, so the lights are fired a little early to land on the sound.<br><br>' +
+    '<b>Lights behind the sound?</b> slide right.<br><b>Lights ahead of the sound?</b> slide left.<br><br>' +
+    'Saved on this device only. Default +90 ms (tuned on Matt\'s Mac). Only shown on dev profiles — kids never see it.');
+}
+
+// ── small "i" info tooltips (hover with a mouse, tap on a tablet) ───────────
+// The tip lives on <body> with position:fixed so scrolling sidebars can't clip it.
+function klInfoTip(icon, html) {
+  if (!icon) return;
+  let tip = null;
+  const show = () => {
+    if (tip) return;
+    tip = document.createElement('div'); tip.className = 'kl-info-tip'; tip.innerHTML = html;
+    document.body.appendChild(tip);
+    const r = icon.getBoundingClientRect(), tw = tip.offsetWidth, th = tip.offsetHeight;
+    let x = Math.min(window.innerWidth - tw - 8, Math.max(8, r.left + r.width / 2 - tw / 2));
+    let y = r.bottom + 8; if (y + th > window.innerHeight - 8) y = Math.max(8, r.top - th - 8);
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  };
+  const hide = () => { if (tip) { tip.remove(); tip = null; } };
+  icon.addEventListener('mouseenter', show);
+  icon.addEventListener('mouseleave', hide);
+  icon.addEventListener('focus', show);
+  icon.addEventListener('blur', hide);
+  icon.addEventListener('click', e => { e.stopPropagation(); tip ? hide() : show(); });
 }
 function studioStartPlayheadLoop() {
   cancelAnimationFrame(studioState.phRAF);
