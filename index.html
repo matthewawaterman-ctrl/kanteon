@@ -33,7 +33,8 @@
     --neb-layers:
       radial-gradient(ellipse 60% 40% at 30% 30%, rgba(120,60,200,0.25) 0%, transparent 60%),
       radial-gradient(ellipse 50% 30% at 75% 60%, rgba(40,180,220,0.18) 0%, transparent 55%);
-    --space-bg: var(--neb-layers), var(--bg);
+    --space-bg: linear-gradient(180deg, rgba(8,8,40,0.42), rgba(8,8,40,0.66));   /* see-through: the 3-D world (#kl-world) shows behind */
+    --space-bg-solid: var(--neb-layers), var(--bg);
     --bg2: #17153d;
     --bg3: #1f1c50;
     --bg4: #0a0919;
@@ -6115,6 +6116,52 @@
   /* looping demo clip on each How to Play card */
   .mt-tut-vid { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; margin: 8px 0 10px;
     background: #0b0920; border: 1px solid rgba(124,111,247,0.35); }
+
+  /* ══ KANTEON WORLD + HOLOGRAM SKIN (look only: colors, borders, shadows — no sizes) ══ */
+  #kl-world { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: -1; image-rendering: pixelated; pointer-events: none; }
+  html { background: #0b1f8a !important; }
+  body { background: transparent !important; }
+  /* every non-Story screen is see-through so the 3-D world shows behind it */
+  #studio.screen, #home.screen, #level-select.screen, #tx-index.screen, #session-complete.screen, #ear-config.screen, #ear-session.screen, #al-config.screen, #al-session.screen, #build-config.screen, #build-session.screen, #anatomy-config.screen, #anatomy-session.screen, #theory-config.screen, #theory-session.screen, #notation-config.screen, #notation-session.screen, #question-screen.screen, #mixtape-start.screen, #mixtape-session.screen, #mixtape-over.screen { background: var(--space-bg) !important; }
+  #kidlab { isolation: isolate; }
+  #kidlab:has(.kl-modeselect) { background: linear-gradient(180deg, rgba(8,8,40,0.30), rgba(8,8,40,0.6)) !important; }
+  #kidlab:has(.kl-modeselect)::before, #kidlab:has(.kl-modeselect) .kl-machine, #kidlab:has(.kl-modeselect) .kl-nebula { opacity: 0.35; }
+  /* hologram panels: see-through teal/violet glass + scanlines + cyan edge */
+  .mt-tut-card, .kl-mode, .studio-panel, .studio-seq-track, .mt-board-box, .mt-tut-box,
+  #mixtape-start .mt-start-card, .bok-list .mt-tut-card, .ear-config-card, .module-card {
+    background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 3px),
+      linear-gradient(180deg, rgba(78,205,196,0.16), rgba(124,111,247,0.12)) !important;
+    background-color: rgba(14,16,60,0.72) !important;
+    border-color: rgba(143,240,232,0.55) !important;
+    box-shadow: inset 0 0 18px rgba(78,205,196,0.14), 0 14px 28px -12px rgba(78,205,196,0.45), 0 0 0 1px rgba(78,205,196,0.12) !important;
+  }
+  .mt-tut-modal .mt-tut-box { background-color: rgba(10,12,48,0.86) !important; }
+  /* question area floats on a projector glow */
+  #mixtape-session .mt-body, .screen.active > .session-body, #studio .studio-main {
+    background: radial-gradient(ellipse 70% 40% at 50% 100%, rgba(78,205,196,0.10), transparent 70%);
+  }
+  /* answer keys: hologram keycaps with a visible base (push down on press) */
+  #mixtape-session .mt-answer-btn, .ear-answer-btn, .theory-answer-btn, .anatomy-mcq-btn {
+    background-color: rgba(38,32,118,0.86);
+    border-color: rgba(217,255,251,0.5) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 5px 0 rgba(78,205,196,0.28), 0 9px 14px -6px rgba(0,0,0,0.5);
+    transition: transform .07s, box-shadow .07s, background-color .15s;
+  }
+  #mixtape-session .mt-answer-btn:active, .ear-answer-btn:active, .theory-answer-btn:active, .anatomy-mcq-btn:active {
+    transform: translateY(4px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 1px 0 rgba(78,205,196,0.28);
+  }
+  /* headings glow like projected light */
+  .mt-prompt, .ear-prompt, .notation-prompt, .build-prompt, .mt-tut-name, .kl-mode-name, .module-header-title, .studio-panel-title {
+    text-shadow: 0 0 8px rgba(78,205,196,0.45), 0 1px 0 rgba(0,0,0,0.6);
+  }
+  /* HUD bars read as cockpit glass */
+  #mixtape-session .mt-hud, .module-header { background: rgba(8,10,40,0.62) !important; border-bottom: 1px solid rgba(143,240,232,0.35) !important;
+    box-shadow: 0 1px 0 rgba(78,205,196,0.15), 0 8px 20px -10px rgba(0,0,0,0.6); }
+  /* staff and grids sit on dark glass so the world never hurts readability */
+  #mixtape-session .mt-staff-box, #notation-session .notation-visual, #mixtape-session .mt-tx-grid, #mixtape-session .mt-sg-grid,
+  #mixtape-session .mt-rw-grid, #studio .studio-pianoroll, #studio .studio-view {
+    background-color: rgba(6,8,34,0.78);
+  }
 </style>
 </head>
 <body>
@@ -19974,6 +20021,7 @@ function klDevBarMarkup() {
   s += btn("selectModule('theory')", '🎼 Mode Lab', 'Lesson: Mode Lab');
   s += btn("selectModule('instrument_anatomy')", '🎸 Instrument Anatomy', 'Lesson: Instrument Anatomy');
   s += btn("klOpenStudio()", '🎚 Studio', 'Studio');
+  s += btn("klWorldToggle()", '🌐 3-D world on/off', 'Turn the low-poly 3-D background on or off on this device (reloads)');
 
   // ── STATIONS — enter the REAL module, PLUS a direct jump to every puzzle ──
   const pzBtns = m => m.indices.map(idx => {
@@ -22303,7 +22351,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.22k'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.22l'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -23457,6 +23505,128 @@ window.klExportSessions = function() {
   URL.revokeObjectURL(url);
 };
 // === KIDLAB — END ===
+
+
+// ══ KANTEON WORLD — low-poly 3-D backdrop (late-90s console look) ══════════
+// A WebGL scene rendered at 640px wide and scaled up (pixelated), with vertex
+// "snapping" for the classic wobble. It sits behind every screen; UI stays on
+// top, unchanged in size. Three.js loads on demand from cdnjs; if it can't load
+// (offline / old device) the app just shows the plain gradient.
+// Pauses when the tab is hidden and during Story mode (Story has its own art).
+const KL_WORLD = { on: true, res: 640, fps: 30 };
+const KL_WORLD_THEMES = {
+  base:   { bg: 0x1238c8, fog: [6, 26], speed: 0.0,  drift: 0.6, accent: 0x4ecdc4 },
+  arcade: { bg: 0x1030b4, fog: [5, 24], speed: 2.2,  drift: 0.9, accent: 0xf0c040 },
+  lesson: { bg: 0x0f3a9e, fog: [7, 28], speed: 0.0,  drift: 0.4, accent: 0x4ecdc4 },
+  studio: { bg: 0x2a1f9a, fog: [6, 25], speed: 0.6,  drift: 0.7, accent: 0xff7ad9 },
+};
+function klWorldTheme() {
+  const a = document.querySelector('.screen.active'); const id = a ? a.id : '';
+  if (id === 'kidlab') { const ms = document.querySelector('#kidlab .kl-modeselect'); return (ms && ms.offsetParent) ? 'base' : null; }
+  if (/^mixtape/.test(id)) return 'arcade';
+  if (id === 'studio') return 'studio';
+  if (/(ear|al|build|notation|theory|anatomy)-(config|session)|^home$|level-select|tx-index|session-complete/.test(id)) return 'lesson';
+  return 'base';
+}
+window.klWorldPulse = function (kind) { const W = window.__klW; if (W) { W.pulse = 1; W.pulseKind = kind; } };
+function klWorldStart() {
+  if (window.__klW || !KL_WORLD.on) return;
+  try { if (localStorage.getItem('kanteon_world_off') === '1') return; } catch (e) {}
+  const cv = document.createElement('canvas'); cv.id = 'kl-world'; cv.setAttribute('aria-hidden', 'true');
+  document.body.insertBefore(cv, document.body.firstChild);
+  const go = () => { try { klWorldBuild(cv); } catch (e) { console.warn('world', e); cv.remove(); } };
+  if (window.THREE) return go();
+  const sc = document.createElement('script');
+  sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+  sc.onload = go; sc.onerror = () => cv.remove();
+  document.head.appendChild(sc);
+}
+function klWorldBuild(cv) {
+  const T = window.THREE;
+  const r = new T.WebGLRenderer({ canvas: cv, antialias: false, powerPreference: 'low-power' });
+  r.setPixelRatio(1);
+  const scene = new T.Scene(); const bg = new T.Color(0x1238c8); scene.background = bg;
+  scene.fog = new T.Fog(0x1238c8, 6, 26);
+  const cam = new T.PerspectiveCamera(60, 16 / 9, 0.1, 70); cam.position.set(0, 2.2, 7);
+  scene.add(new T.HemisphereLight(0x9fd8ff, 0x0a1a6b, 1.0));
+  const dl = new T.DirectionalLight(0xffffff, 0.9); dl.position.set(3, 6, 4); scene.add(dl);
+  const U = { value: new T.Vector2(320, 180) };
+  const snap = m => { m.onBeforeCompile = s => { s.uniforms.uRes = U; s.vertexShader = 'uniform vec2 uRes;\n' + s.vertexShader.replace('#include <project_vertex>',
+    '#include <project_vertex>\n gl_Position.xy = floor(gl_Position.xy / gl_Position.w * uRes + 0.5) / uRes * gl_Position.w;'); }; return m; };
+  const mat = (c, e) => snap(new T.MeshLambertMaterial({ color: c, emissive: e || 0, flatShading: true }));
+  const ground = new T.Group(); scene.add(ground);
+  const grid = new T.GridHelper(120, 60, 0x7fd8ff, 0x3f6bff); ground.add(grid);
+  const floor = new T.Mesh(new T.PlaneGeometry(120, 120), mat(0x0b2aa0)); floor.rotation.x = -Math.PI / 2; floor.position.y = -0.01; ground.add(floor);
+  const planet = new T.Mesh(new T.IcosahedronGeometry(2.2, 1), mat(0x7c6ff7, 0x1a1050)); planet.position.set(-6.5, 4.6, -11); scene.add(planet);
+  const ring = new T.Mesh(new T.TorusGeometry(3.3, 0.18, 4, 18), mat(0xf0c040, 0x332200)); ring.position.copy(planet.position); ring.rotation.x = 1.2; scene.add(ring);
+  const moon = new T.Mesh(new T.IcosahedronGeometry(0.7, 0), mat(0x4ecdc4, 0x08302c)); scene.add(moon);
+  function note(color, beamed) {
+    const g = new T.Group();
+    const head = new T.Mesh(new T.SphereGeometry(0.42, 6, 4), mat(color, 0x101030)); head.scale.set(1.25, 0.85, 0.85); g.add(head);
+    const stem = new T.Mesh(new T.BoxGeometry(0.09, 1.5, 0.09), mat(color)); stem.position.set(0.45, 0.75, 0); g.add(stem);
+    if (beamed) {
+      const h2 = head.clone(); h2.position.x = 1.3; g.add(h2);
+      const s2 = stem.clone(); s2.position.x = 1.75; g.add(s2);
+      const beam = new T.Mesh(new T.BoxGeometry(1.4, 0.16, 0.1), mat(color)); beam.position.set(1.1, 1.45, 0); g.add(beam);
+    } else { const flag = new T.Mesh(new T.BoxGeometry(0.5, 0.12, 0.09), mat(color)); flag.position.set(0.68, 1.42, 0); flag.rotation.z = -0.6; g.add(flag); }
+    return g;
+  }
+  const notes = [[0x4ecdc4, 5.4, 1.8, -3, 0], [0xf0c040, -5.6, 2.8, -4.5, 1], [0xecebff, 3.8, 3.9, -8, 0], [0xff7ad9, -2.6, 4.6, -12, 1]]
+    .map(([c, x, y, z, b]) => { const n = note(c, b); n.position.set(x, y, z); n.userData.y = y; scene.add(n); return n; });
+  const shapes = [];
+  const geos = [new T.BoxGeometry(0.5, 0.5, 0.5), new T.OctahedronGeometry(0.4, 0), new T.TetrahedronGeometry(0.45, 0)];
+  for (let i = 0; i < 18; i++) {
+    const m = new T.Mesh(geos[i % 3], mat(i % 4 === 0 ? 0x4ecdc4 : i % 4 === 1 ? 0x7c6ff7 : 0x3f6bff));
+    m.position.set((Math.random() - 0.5) * 26, Math.random() * 5.5 + 0.6, -3 - Math.random() * 22);
+    m.userData.s = Math.random() * 0.02 + 0.005; scene.add(m); shapes.push(m);
+  }
+  const W = window.__klW = { pulse: 0, pulseKind: '' };
+  const fit = () => {
+    const w = KL_WORLD.res, h = Math.max(1, Math.round(w * innerHeight / Math.max(1, innerWidth)));
+    r.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); U.value.set(w / 2, h / 2);
+  };
+  fit(); addEventListener('resize', fit);
+  let t = 0, last = 0, theme = 'base', themeCheck = 0, zOff = 0;
+  const target = new T.Color(KL_WORLD_THEMES.base.bg), tmp = new T.Color();
+  const frame = now => {
+    requestAnimationFrame(frame);
+    if (document.hidden) return;
+    if (now - last < 1000 / KL_WORLD.fps) return;
+    const dt = Math.min(0.1, (now - last) / 1000 || 0.033); last = now;
+    if (now - themeCheck > 500) {
+      themeCheck = now; const th = klWorldTheme();
+      cv.style.display = th ? '' : 'none';
+      if (th) { theme = th; target.setHex(KL_WORLD_THEMES[th].bg); }
+    }
+    if (cv.style.display === 'none') return;
+    const TH = KL_WORLD_THEMES[theme];
+    t += dt;
+    bg.lerp(target, 0.04);
+    if (W.pulse > 0) {
+      W.pulse = Math.max(0, W.pulse - dt * 1.2);
+      tmp.setHex(W.pulseKind === 'bad' ? 0x7a1030 : W.pulseKind === 'level' ? 0xf0c040 : 0x1a8f8a);
+      bg.lerp(tmp, W.pulse * 0.25);
+    }
+    scene.fog.color.copy(bg);
+    scene.fog.near += (TH.fog[0] - scene.fog.near) * 0.05; scene.fog.far += (TH.fog[1] - scene.fog.far) * 0.05;
+    zOff = (zOff + dt * TH.speed) % 2; ground.position.z = zOff;          // fly forward over the grid
+    const spin = W.pulseKind !== 'bad' ? W.pulse * 0.35 : 0;
+    notes.forEach((n, i) => { n.rotation.y += dt * (1 + i * 0.3) + spin; n.position.y = n.userData.y + Math.sin(t * 2 + i) * 0.15 + (W.pulseKind === 'level' ? W.pulse * 1.2 : 0); });
+    planet.rotation.y = t * 0.15; ring.rotation.z = t * 0.2;
+    moon.position.set(planet.position.x + Math.cos(t * 0.5) * 4.4, planet.position.y + Math.sin(t * 0.5) * 1.2, planet.position.z + Math.sin(t * 0.5) * 2);
+    shapes.forEach(c => { c.rotation.x += c.userData.s; c.rotation.y += c.userData.s * 1.3; if (TH.speed) { c.position.z += dt * TH.speed; if (c.position.z > 6) c.position.z -= 26; } });
+    cam.position.x = Math.sin(t * 0.25) * TH.drift;
+    cam.position.y = 2.2 + (W.pulseKind === 'level' ? W.pulse * 0.8 : 0) + (W.pulseKind === 'bad' ? Math.sin(t * 60) * W.pulse * 0.05 : 0);
+    cam.lookAt(0, 1.2, 0);
+    r.render(scene, cam);
+  };
+  requestAnimationFrame(frame);
+}
+window.klWorldToggle = function () {
+  let off = false; try { off = localStorage.getItem('kanteon_world_off') === '1'; localStorage.setItem('kanteon_world_off', off ? '0' : '1'); } catch (e) {}
+  location.reload();
+};
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(klWorldStart, 300)); else setTimeout(klWorldStart, 300);
 
 window.showScreen = function(id) {
   if (typeof klCloseComposeSong === 'function') klCloseComposeSong(); // bug #6: never leave the composer open / time frozen across a screen change
@@ -30682,6 +30852,7 @@ function mtTimeout() {
 }
 
 function mtCorrect(opts) {
+  try { klWorldPulse('good'); } catch (e) {}
   if (mtState.practice) mtState._practiceDone = true;
   mtLogAnswer(true);
   mtState.rounds++;
@@ -30708,6 +30879,7 @@ function mtCorrect(opts) {
 // opts.replay(): optional "yours, then the target" playback for build rounds;
 // opts.replayMs: how long it runs, so the hold covers it.
 function mtWrong(opts) {
+  try { klWorldPulse('bad'); } catch (e) {}
   opts = opts || {};
   if (mtState.practice) { mtState._practiceDone = true; mtState.lives++; }   // practice never costs a life
   mtLogAnswer(false);
@@ -30896,6 +31068,7 @@ const MT_KIND_NAMES = {
   'notation': 'Read the Staff', 'al-tempo': 'Tempo', 'al-texture': 'Texture', 'al-dynamics': 'Dynamics',
 };
 function mtShowLevelUp(level, fresh, cont) {
+  try { klWorldPulse('level'); } catch (e) {}
   stopMtTimer();
   const old = document.getElementById('mt-levelup'); if (old) old.remove();
   const el = document.createElement('div');
