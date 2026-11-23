@@ -6160,11 +6160,9 @@
   /* HUD bars read as cockpit glass */
   #mixtape-session .mt-hud, .module-header { background: rgba(8,10,40,0.62) !important; border-bottom: 1px solid rgba(143,240,232,0.35) !important;
     box-shadow: 0 1px 0 rgba(78,205,196,0.15), 0 8px 20px -10px rgba(0,0,0,0.6); }
-  /* staff boxes keep a light glass for line contrast; grids sit straight on the world */
-  #mixtape-session .mt-staff-box, #notation-session .notation-visual {
-    background-color: rgba(6,8,34,0.55); border-radius: 12px;
-    box-shadow: 0 0 0 10px rgba(6,8,34,0.55), 0 0 0 11px rgba(143,240,232,0.22), 0 14px 30px -6px rgba(0,0,0,0.45);
-  }
+  /* staff + grids sit straight on the world; the staff gets a soft outline instead of a panel */
+  #mixtape-session .mt-staff-box, #notation-session .notation-visual { background: transparent !important; box-shadow: none !important; border-color: transparent !important; }
+  #mixtape-session .mt-staff-box svg, #notation-session .notation-visual svg { filter: drop-shadow(0 0 2px rgba(4,6,30,0.9)) drop-shadow(0 0 6px rgba(4,6,30,0.55)); }
   #mixtape-session .mt-tx-grid, #mixtape-session .mt-sg-grid, #mixtape-session .mt-rw-grid {
     background: transparent !important; box-shadow: none !important; }
   /* 3-D rooms */
@@ -6226,6 +6224,10 @@
   canvas.kl-sky3d, canvas.kl-machine3d { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; pointer-events: none; display: block; }
   #kidlab .kl-machine.kl-machine3d-on .kl-machine-svg { visibility: hidden; }
   #kidlab:has(.kl-sky3d-on)::before { display: none; }
+  /* builder questions sit straight on the world like the grids (no leftover dark panels) */
+  .build-strip-wrap, .build-scale-wrap { background: transparent !important; border-color: transparent !important; box-shadow: none !important; }
+  .build-ruler { background: rgba(255,255,255,0.04) !important; border: 1px solid rgba(143,180,255,0.2) !important; border-radius: 10px !important; }
+  .build-ruler-rail { background: linear-gradient(90deg, rgba(143,180,255,0.12) 0%, rgba(143,180,255,0.5) 50%, rgba(143,180,255,0.12) 100%) !important; }
   /* 3-D town */
 
   #kt-scene canvas.kt-3d { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; display: block; }
@@ -23550,7 +23552,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.23b'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.23d'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -30826,7 +30828,7 @@ function mtBuildPool(maxLevel) {
   // Ear Training presets — pull from existing EAR_PRESETS
   for (let lvl = 1; lvl <= maxLevel; lvl++) {
     if (typeof EAR_PRESETS !== 'undefined') {
-      (EAR_PRESETS.intervals?.[lvl] || []).forEach(id => pool.push({ kind: 'ear-interval', id, lvl }));
+      (EAR_PRESETS.intervals?.[lvl] || []).filter(id => id !== 'unison').concat(lvl === 1 ? ['P4', 'M3'] : []).forEach(id => pool.push({ kind: 'ear-interval', id, lvl }));
       (EAR_PRESETS.chords?.[lvl] || []).forEach(id => pool.push({ kind: 'ear-chord', id, lvl }));
       if (lvl >= 2) (EAR_PRESETS.scales?.[lvl] || []).forEach(id => pool.push({ kind: 'ear-scale', id, lvl }));
     }
@@ -30898,7 +30900,7 @@ function mtBuildPool(maxLevel) {
   // No unison here: the draggable dot STARTS on the root, so a unison was a free answer —
   // and with only 3 intervals at L1 it came up 1 time in 3. Keep at least 3 choices.
   let _bi = buildSet.filter(id => id !== 'unison');
-  if (_bi.length < 3) _bi = _bi.concat(['P4', 'M3'].filter(id => !_bi.includes(id))).slice(0, 3);
+  if (_bi.length < 4) _bi = _bi.concat(['P4', 'M3'].filter(id => !_bi.includes(id))).slice(0, 4);
   _bi.forEach(id => pool.push({ kind: 'build-interval', id, lvl: maxLevel }));
 
   // Build Mode — construct CHORDS by ear (multi-marker). Introduced at level 2+
@@ -30963,6 +30965,11 @@ function mtBuildPool(maxLevel) {
     } catch (e) { /* rhythm unavailable */ }
   }
 
+  // Each answer once: the ladders are cumulative (L3 already contains L1+L2), and
+  // stacking every level re-added the early answers again and again — at L5 the
+  // Octave/5th sat in the pool five times. Keep one entry per kind+answer.
+  { const seen = new Set(); for (let k = pool.length - 1; k >= 0; k--) { const key = pool[k].kind + '|' + pool[k].id;
+      if (seen.has(key)) pool.splice(k, 1); else seen.add(key); } }
   return pool;
 }
 
@@ -31421,7 +31428,14 @@ function pickWeighted(pool) {
   const kindsInFam = famKinds[chosenFam];
   const chosenKind = kindsInFam[Math.floor(Math.random() * kindsInFam.length)];
   const itemsInKind = byKind[chosenKind];
-  return itemsInKind[Math.floor(Math.random() * itemsInKind.length)];
+  // Don't repeat the same answer back-to-back (or within the last 2 when there are 4+ options).
+  const lastIds = (mtState.recentIds = mtState.recentIds || {})[chosenKind] || [];
+  const avoid = lastIds.slice(itemsInKind.length >= 4 ? -2 : -1);
+  const fresh = itemsInKind.filter(p => !avoid.includes(p.id));
+  const opts = fresh.length ? fresh : itemsInKind;
+  const item = opts[Math.floor(Math.random() * opts.length)];
+  mtState.recentIds[chosenKind] = lastIds.concat(item.id).slice(-3);
+  return item;
 }
 
 window.nextMtRound = function() {
