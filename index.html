@@ -14730,6 +14730,7 @@ function klTown3D(host, fallbackHTML) {
   klTownBld().forEach(b => {
     const P = KL_TOWN_PAL[b.kind], g = new T.Group(), x = b.side * 9.2, z = zOf(b.t);
     g.position.set(x, 0, z); g.userData = { b };
+    if (b.kind === 'plaza') g.position.set(-7.6, 0, 1.5);   // pulled in so it's on screen
     if (b.kind === 'plaza') {
       const pad = new T.Mesh(new T.CylinderGeometry(2.6, 3, 0.4, 10), lam(0x4a4660)); pad.position.y = 0.2; g.add(pad);
       const ring2 = new T.Mesh(new T.TorusGeometry(2.3, 0.12, 4, 14), glow(0x8ee8ff)); ring2.rotation.x = Math.PI / 2; ring2.position.y = 0.45; g.add(ring2);
@@ -14761,8 +14762,11 @@ function klTown3D(host, fallbackHTML) {
       // blade sign: sticks out over the sidewalk and faces down the street, so it reads from the camera
       const sw = 4.6, sh = 1.2;
       const sign = new T.Mesh(new T.PlaneGeometry(sw, sh), snap(new T.MeshBasicMaterial({ map: klTownSign(b.name, P.neon), side: T.DoubleSide })));
-      sign.position.set(facing * (w / 2 + sw / 2 - 0.4), Math.min(h - 0.6, 6.2), d / 2 + 0.15); g.add(sign);
-      const arm = box(0.12, 0.12, 0.6, lam(0x2a2440)); arm.position.set(facing * (w / 2 + 0.2), Math.min(h - 0.6, 6.2) + sh / 2 + 0.1, d / 2); g.add(arm);
+      // blade sign facing down the street; heights alternate high/low along each
+      // side so the far signs don't stack on top of each other
+      const sy = { waddy: 6.7, garage: 4.3, factory: 6.1, home: 7.0, neighbor: 7.0, venue: 6.1, shop: 4.6 }[b.kind] || Math.min(h - 0.6, 6.2);
+      sign.position.set(facing * (w / 2 + sw / 2 - 0.4), sy, d / 2 + 0.15); g.add(sign);
+      const arm = box(0.12, 0.12, 0.6, lam(0x2a2440)); arm.position.set(facing * (w / 2 + 0.2), sy + sh / 2 + 0.1, d / 2); g.add(arm);
       g.userData.sign = sign;
     }
     scene.add(g); picks.push(g);
@@ -14812,7 +14816,7 @@ function klTown3D(host, fallbackHTML) {
     requestAnimationFrame(loop);
     if (document.hidden || now - last < 33) return;
     const dt = Math.min(0.1, (now - last) / 1000 || 0.033); last = now; t += dt;
-    cam.position.set(Math.sin(t * 0.18) * 0.5, 4.2 + Math.sin(t * 0.3) * 0.12, 13);
+    cam.position.set(Math.sin(t * 0.18) * 0.5, 4.6 + Math.sin(t * 0.3) * 0.12, 16);
     cam.lookAt(0, 3.6, -14);
     planet.rotation.y = t * 0.1; ring.rotation.z = t * 0.12;
     picks.forEach(g => { const u = g.userData; if (u.spin) u.spin.rotation.y = t * 1.4; if (u.beam) u.beam.material.opacity = 0.16 + Math.sin(t * 3) * 0.06; if (u.blink) u.blink.visible = Math.sin(t * 4) > 0; });
@@ -16500,6 +16504,117 @@ function klRoomGo(fn) {
   const svg = h.innerHTML;
   try { if (fn(h)) h.classList.add('kt-room3d'); else h.innerHTML = svg; } catch (e) { console.warn(e); h.innerHTML = svg; }
 }
+// ── 3-D backdrops for the card interiors (Restaurant, Shop, Neighbor, Radio) ──
+// Same engine as the rooms; no click targets — the card in front stays the UI.
+function klInterior3D(id, host) {
+  const B = {
+    venue(c) {   // the last restaurant: candlelit tables, a little stage, the pass
+      const { T, at, box, lam, glow, scene } = c;
+      c.room({ wall: 0x3b2450, side: 0x301d44, floor: 0x2a1a22, planks: 0x1f1219, ceil: 0x1a1024, band: 0x5a3070 });
+      scene.add(new T.HemisphereLight(0xffd6f0, 0x201018, 0.85));
+      // stage + mic + spotlight cone (left)
+      at(box(6, 0.5, 3, lam(0x4a2a3a)), -7, 0.25, -4.6);
+      at(box(0.06, 1.7, 0.06, lam(0x9aa0b5)), -7, 1.35, -4); at(new T.Mesh(new T.SphereGeometry(0.14, 6, 4), lam(0x333344)), -7, 2.25, -4);
+      const cone = at(new T.Mesh(new T.ConeGeometry(1.8, 6.5, 10, 1, true), glow(0xff7ad9, 0.13)), -7, 3.9, -4.2);
+      const sl = new T.SpotLight(0xff9ae0, 1.2, 14, 0.5, 0.6); sl.position.set(-7, 7.2, -4); sl.target.position.set(-7, 0, -4); scene.add(sl, sl.target);
+      c.tick(t => { cone.material.opacity = 0.1 + Math.sin(t * 1.5) * 0.04; });
+      // kitchen pass with steam (right, back wall)
+      at(box(4.5, 2, 0.3, lam(0x1a0f14)), 6.5, 3.2, -6.2); at(box(4.2, 1.7, 0.05, glow(0xffb070, 0.6)), 6.5, 3.2, -6.0);
+      at(box(4.8, 0.2, 0.9, lam(0x9aa0b5)), 6.5, 2.1, -5.8);
+      const steam = []; for (let i = 0; i < 6; i++) steam.push(at(new T.Mesh(new T.IcosahedronGeometry(0.18, 0), glow(0xffffff, 0.3)), 6, 2.4, -5.7));
+      c.tick(t => steam.forEach((s, i) => { const k = (t * 0.35 + i / 6) % 1; s.position.set(5.2 + i * 0.5 + Math.sin(k * 5) * 0.2, 2.3 + k * 2.4, -5.7); s.scale.setScalar(0.6 + k * 1.8); s.material.opacity = 0.3 * (1 - k); }));
+      // tables with cloths + candles
+      const flames = [];
+      [[-3, -2.4], [1, -3.4], [4.5, -2], [-8.5, -0.5], [8.6, -0.2], [-1, 0.6]].forEach(([x, z], i) => {
+        at(new T.Mesh(new T.CylinderGeometry(0.9, 0.9, 1.1, 8), lam(i % 2 ? 0xe8e0f0 : 0xf0d8e8)), x, 0.55, z);
+        [-1, 1].forEach(s => at(box(0.5, 0.9, 0.5, lam(0x3a2418)), x + s * 1.3, 0.45, z));
+        at(new T.Mesh(new T.CylinderGeometry(0.06, 0.06, 0.3, 5), lam(0xfff4e0)), x, 1.25, z);
+        flames.push(at(new T.Mesh(new T.ConeGeometry(0.07, 0.18, 5), glow(0xffc040)), x, 1.48, z));
+        const pl = new T.PointLight(0xffa040, 0.35, 4); pl.position.set(x, 1.6, z); scene.add(pl);
+      });
+      c.tick(t => flames.forEach((f, i) => { f.scale.y = 1 + Math.sin(t * 11 + i * 3) * 0.25; }));
+      // string lights along the ceiling
+      for (let x = -10; x <= 10; x += 1.2) at(new T.Mesh(new T.SphereGeometry(0.09, 4, 3), glow([0xff7ad9, 0xf0c040, 0x4ecdc4][Math.round(x * 3) % 3 < 0 ? 0 : Math.round(x * 3) % 3])), x, 6.6 + Math.sin(x * 0.6) * 0.25, -5.6);
+    },
+    shop(c) {    // music shop: wall of guitars, amp stacks, counter, OPEN neon
+      const { T, at, box, lam, glow, scene } = c;
+      c.room({ wall: 0x24453a, side: 0x1d3a30, floor: 0x3a3028, planks: 0x2a221c, ceil: 0x15261f, band: 0x2f5a4a });
+      scene.add(new T.HemisphereLight(0xe8fff0, 0x201a14, 1.0));
+      [-5, 0, 5].forEach(x => { at(box(2.6, 0.12, 0.35, glow(0xf4fff8)), x, 7.3, -1); const pl = new T.PointLight(0xf0fff4, 0.45, 18); pl.position.set(x, 6.8, -1); scene.add(pl); });
+      const cols = [0xc0392b, 0xf0c040, 0x4ecdc4, 0x7c6ff7, 0xe0556a, 0x2f8a5a, 0xc98a3f, 0x1a1a22];
+      for (let i = 0; i < 8; i++) { const g = c.guitar(cols[i]); g.scale.setScalar(0.9); at(g, -8.6 + i * 2.45, 3.2, -6.05); at(box(0.08, 0.25, 0.3, lam(0x222222)), -8.6 + i * 2.45, 5.6, -6.15); }
+      // amps stacked on the right
+      [[7.6, 0.8, 1.6], [7.6, 2.4, 1.2], [9.2, 0.7, 1.4]].forEach(([x, y, s]) => { at(box(1.6 * s / 1.2, 1.4 * s / 1.2, 1, lam(0x1b1d22)), x, y, -4.2);
+        at(box(1.3 * s / 1.2, 0.5 * s / 1.2, 0.05, lam(0x2a2d33)), x, y + 0.2, -3.68); at(new T.Mesh(new T.SphereGeometry(0.05, 4, 3), glow(0x4ade80)), x + 0.5, y + 0.5, -3.66); });
+      // counter + register (center-right)
+      at(box(5, 1.6, 1.4, lam(0x6b4a2c)), 3.2, 0.8, -2.6); at(box(5.2, 0.12, 1.6, lam(0x8a6a44)), 3.2, 1.66, -2.6);
+      at(box(1, 0.6, 0.8, lam(0x2a2d33)), 4.6, 2.0, -2.7); at(box(0.8, 0.35, 0.05, glow(0x7affb0)), 4.6, 2.2, -2.28);
+      // OPEN neon in the window (left)
+      const open = at(new T.Mesh(new T.PlaneGeometry(2.4, 0.9), c.snap(new T.MeshBasicMaterial({ map: klTownSign('OPEN', '#7affb0', 160), transparent: true }))), -6.5, 5.6, -5.9);
+      c.tick(t => { open.visible = Math.sin(t * 1.3) > -0.85; });
+      // drum kit on a riser + keyboard stand (left floor)
+      at(box(3, 0.4, 2.6, lam(0x2a221c)), -9, 0.2, -4.4);
+      const kick = at(new T.Mesh(new T.CylinderGeometry(0.75, 0.75, 0.6, 12), lam(0x4ecdc4, 0x0a3a36)), -9, 1.15, -4.2); kick.rotation.x = Math.PI / 2;
+      at(new T.Mesh(new T.CylinderGeometry(0.55, 0.55, 0.04, 10), lam(0xf0c040, 0x3a2a00)), -9.8, 2.4, -4.6);
+    },
+    hater(c) {   // the neighbor's dim place: Velion-paste boxes, a couch, the TV glow
+      const { T, at, box, lam, glow, scene } = c;
+      c.room({ wall: 0x3a3236, side: 0x302a2e, floor: 0x2a2420, ceil: 0x161214, band: 0x4a3e40 });
+      scene.add(new T.HemisphereLight(0xb8b0c8, 0x2a2224, 0.95));
+      // big TV on the back wall: flickering static glow
+      at(box(5, 3, 0.3, lam(0x111114)), -6.8, 3.8, -6.2);
+      const scr = at(new T.Mesh(new T.PlaneGeometry(4.5, 2.5), c.snap(new T.MeshBasicMaterial({ color: 0x8ab0ff }))), -6.8, 3.8, -6.0);
+      const tvl = new T.PointLight(0x8ab0ff, 1.1, 14); tvl.position.set(-6.8, 3.6, -4.5); scene.add(tvl);
+      c.tick(t => { const k = 0.75 + Math.sin(t * 13) * 0.1 + Math.sin(t * 31) * 0.08; tvl.intensity = 1.1 * k; scr.material.color.setRGB(0.5 * k, 0.65 * k, 1 * k); });
+      // couch facing the TV
+      at(box(5, 0.9, 1.8, lam(0x5a4a3a)), -6.8, 0.45, -1.8); at(box(5, 1.4, 0.5, lam(0x4a3a2c)), -6.8, 1.2, -0.9);
+      [-1, 1].forEach(s => at(box(0.5, 1.2, 1.8, lam(0x4a3a2c)), -6.8 + s * 2.6, 0.6, -1.8));
+      // stacks of Velion paste boxes (right)
+      for (let i = 0; i < 9; i++) { const b = at(box(1.1, 0.8, 0.9, lam(i % 3 ? 0x9a9aa8 : 0xb8b0c0)), 5.5 + (i % 3) * 1.2, 0.4 + Math.floor(i / 3) * 0.82, -4.6); b.rotation.y = (i * 0.37) % 0.3 - 0.15; }
+      at(new T.Mesh(new T.PlaneGeometry(1, 0.3), glow(0x6a6aff)), 6.7, 2.2, -4.12);
+      // window with blinds, cool street light through it
+      at(box(3, 2.4, 0.2, lam(0x1a1a20)), 6, 4.6, -6.25);
+      for (let y = 3.6; y < 5.8; y += 0.3) at(box(2.8, 0.12, 0.05, lam(0xc8c0b0)), 6, y, -6.1);
+      const wl = new T.PointLight(0xa0a8ff, 0.4, 10); wl.position.set(6, 4.6, -5); scene.add(wl);
+      // floor clutter
+      at(box(1.4, 0.06, 1, lam(0x8a8270)), 1.5, 0.03, -0.5).rotation.y = 0.4;
+      at(new T.Mesh(new T.CylinderGeometry(0.15, 0.15, 0.4, 6), lam(0x7a8aa0)), 2.4, 0.2, 0.2);
+    },
+    radio(c) {   // broadcast booth: foam walls, console, boom mic, ON AIR, tower beacon
+      const { T, at, box, lam, glow, scene } = c;
+      c.room({ wall: 0x2a2640, side: 0x221f36, floor: 0x1c1a26, ceil: 0x121020, band: 0x3a3458 });
+      scene.add(new T.HemisphereLight(0xd0d0ff, 0x2a2440, 1.15));
+      // foam panels
+      for (let x = -9; x <= 9; x += 1.5) for (let y = 1.5; y < 6.5; y += 1.5) if ((x + y) % 3 !== 0)
+        at(box(1.3, 1.3, 0.15, lam(((x + y) * 2) % 2 ? 0x3a3458 : 0x332e50)), x, y, -6.25);
+      // window with the tower and its blinking beacon (center-back)
+      at(box(4, 2.6, 0.3, lam(0x111018)), 0, 4.6, -6.1);
+      at(new T.Mesh(new T.PlaneGeometry(3.6, 2.2), glow(0x0d0a3a)), 0, 4.6, -5.9);
+      for (let y = 3.6; y < 5.6; y += 0.4) at(box(0.5 - (y - 3.6) * 0.18, 0.05, 0.02, lam(0x8a84b0)), 0.8, y, -5.88);
+      const bcn = at(new T.Mesh(new T.CircleGeometry(0.12, 8), glow(0xff3030)), 0.8, 5.55, -5.87);
+      // ON AIR sign
+      const air = at(new T.Mesh(new T.PlaneGeometry(2.4, 0.8), c.snap(new T.MeshBasicMaterial({ map: klTownSign('ON AIR', '#ff5a5a', 180) }))), -5.5, 5.6, -6.05);
+      // console with meters + glowing faders
+      at(box(6, 1.1, 2, lam(0x22252a)), 3.5, 0.55, -3.6);
+      const desk = at(box(6, 0.2, 2.2, lam(0x2a2d33)), 3.5, 1.2, -3.6); desk.rotation.x = 0.25;
+      const meters = []; for (let i = 0; i < 12; i++) meters.push(at(box(0.14, 0.45, 0.05, glow(i < 8 ? 0x4ade80 : i < 10 ? 0xf0c040 : 0xe0556a)), 1.2 + i * 0.4, 1.7, -4.55));
+      for (let i = 0; i < 10; i++) at(box(0.12, 0.08, 0.3, glow([0x4ecdc4, 0x7c6ff7, 0xf0c040][i % 3])), 1.4 + i * 0.45, 1.36, -3.4 + (i % 2) * 0.1);
+      // boom mic arm + pop filter
+      at(box(0.12, 2.6, 0.12, lam(0x3a3f4a)), -1, 1.3, -3);
+      const arm = at(box(2.2, 0.1, 0.1, lam(0x3a3f4a)), 0, 2.7, -3); arm.rotation.z = -0.25;
+      at(new T.Mesh(new T.CylinderGeometry(0.2, 0.2, 0.7, 8), lam(0x1a1a22)), 1, 2.3, -3);
+      at(new T.Mesh(new T.CircleGeometry(0.35, 10), glow(0x333355, 0.6)), 1, 2.4, -2.5);
+      // record shelf (left)
+      for (let s = 0; s < 3; s++) { at(box(3.4, 0.1, 0.8, lam(0x4a3a5a)), -7.5, 1.2 + s * 1.3, -5.6);
+        for (let k = 0; k < 9; k++) at(box(0.08, 0.9, 0.7, lam([0xf0c040, 0x7c6ff7, 0x4ecdc4, 0xe0556a, 0x1a1a22][(k + s) % 5])), -8.9 + k * 0.33, 1.7 + s * 1.3, -5.6); }
+      c.tick(t => { bcn.visible = Math.sin(t * 4) > 0; air.visible = Math.sin(t * 1.7) > -0.7;
+        meters.forEach((m, i) => { m.visible = Math.sin(t * 9 + i * 0.6) + Math.sin(t * 2.7) > i * 0.18 - 0.9; }); });
+    },
+  };
+  const build = B[id]; if (!build || !host) return false;
+  return klRoom3D(host, { bg: 0x0d0a16, fog: [16, 34], cam: { pos: [0, 4.2, 10], look: [0, 2.6, -3] }, build });
+}
+
 function klRenderInterior(id) {
   klState.devRoom = id; // remembered so dev unlock toggles can re-render this room live
   document.getElementById('kidlab').classList.remove('kl-playing');
@@ -16739,6 +16854,7 @@ function klRenderInterior(id) {
         '<button class="kl-garage-back" onclick="klRenderTown()">← Back outside</button>' +
         (klIsDevAvailable() ? klDevBar() : '') +
       '</div>';
+    if (window.THREE) { const sa = wrap.querySelector('.kt-scene-art'), keep = sa.innerHTML; try { if (klInterior3D('shop', sa) === false) sa.innerHTML = keep; } catch (e) { sa.innerHTML = keep; } }
     return;
   }
   wrap.innerHTML =
@@ -16753,7 +16869,8 @@ function klRenderInterior(id) {
       '<button class="kl-garage-back" onclick="klRenderTown()">← Back outside</button>' +
       (klIsDevAvailable() ? klDevBar() : '') +
     '</div>';
-  if (id === 'waddy' && window.THREE) { const sa = wrap.querySelector('.kt-scene-art'); try { klWaddy3D(sa, klStudioUnlocked()); } catch (e) { console.warn(e); } }
+  if (window.THREE) { const sa = wrap.querySelector('.kt-scene-art'), keep = sa ? sa.innerHTML : '';
+    try { const ok = id === 'waddy' ? klWaddy3D(sa, klStudioUnlocked()) : klInterior3D(id, sa); if (ok === false && sa) sa.innerHTML = keep; } catch (e) { console.warn(e); if (sa) sa.innerHTML = keep; } }
   klFlushNotifications(() => klRenderInterior(id)); // level-up / cleared notices play here
 }
 window.klRenderInterior = klRenderInterior; // inline onclick handlers (avatar callback, room objects) need it global
@@ -22930,7 +23047,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.22o'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.22p'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
