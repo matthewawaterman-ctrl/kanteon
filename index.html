@@ -6160,13 +6160,34 @@
   /* HUD bars read as cockpit glass */
   #mixtape-session .mt-hud, .module-header { background: rgba(8,10,40,0.62) !important; border-bottom: 1px solid rgba(143,240,232,0.35) !important;
     box-shadow: 0 1px 0 rgba(78,205,196,0.15), 0 8px 20px -10px rgba(0,0,0,0.6); }
-  /* staff and grids sit on dark glass so the world never hurts readability */
-  #mixtape-session .mt-staff-box, #notation-session .notation-visual, #mixtape-session .mt-tx-grid, #mixtape-session .mt-sg-grid,
-  #mixtape-session .mt-rw-grid, #studio .studio-pianoroll, #studio .studio-view {
-    /* soft rounded glass that extends past the edges via shadow (no layout change) */
+  /* staff boxes keep a light glass for line contrast; grids sit straight on the world */
+  #mixtape-session .mt-staff-box, #notation-session .notation-visual {
     background-color: rgba(6,8,34,0.55); border-radius: 12px;
     box-shadow: 0 0 0 10px rgba(6,8,34,0.55), 0 0 0 11px rgba(143,240,232,0.22), 0 14px 30px -6px rgba(0,0,0,0.45);
   }
+  #mixtape-session .mt-tx-grid, #mixtape-session .mt-sg-grid, #mixtape-session .mt-rw-grid {
+    background: transparent !important; box-shadow: none !important; }
+  /* 3-D rooms */
+  .kl-garage-scene-wrap.kt-room3d { inset: 0; display: block; z-index: 0; }
+  .kt-room3d canvas.kt-3d, .kt-scene-art canvas.kt-3d { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; display: block; }
+  .kt-room3d .kt-3d-tip { position: absolute; display: none; pointer-events: none; padding: 5px 11px; border-radius: 6px; z-index: 3; max-width: 320px; white-space: normal;
+    background: rgba(10,12,48,0.9); border: 1px solid rgba(143,240,232,0.6); color: #d9fffb; font: 700 14px 'Barlow', sans-serif; box-shadow: 0 0 12px rgba(78,205,196,0.35); }
+  .kt-3d-lbl { position: absolute; transform: translateX(-50%); z-index: 2; cursor: pointer; white-space: nowrap; user-select: none;
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 17px; letter-spacing: 1px; color: #fff;
+    padding: 4px 12px; border-radius: 8px; background: rgba(10,12,48,0.72); border: 1px solid rgba(143,240,232,0.55);
+    box-shadow: 0 0 10px rgba(78,205,196,0.25); transition: background 0.12s, box-shadow 0.12s; }
+  .kt-3d-lbl.hot { background: rgba(40,30,90,0.9); border-color: #f0c040; box-shadow: 0 0 14px rgba(240,192,64,0.6); }
+  .kt-3d-lbl.warn { border-color: #e0556a; box-shadow: 0 0 12px rgba(224,85,106,0.5); }
+  .kt-3d-lbl.done { color: #b8f5c8; }
+  .kt-3d-lbl.locked { opacity: 0.6; cursor: default; color: #c8c4dc; }
+  html:has(#kidlab canvas.kt-3d) { background: #0d0a26 !important; }
+  /* 3-D town */
+
+  #kt-scene canvas.kt-3d { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; display: block; }
+  #kt-scene .kt-3d-tip { position: absolute; display: none; pointer-events: none; padding: 4px 10px; border-radius: 6px; z-index: 3;
+    background: rgba(10,12,48,0.86); border: 1px solid rgba(143,240,232,0.6); color: #d9fffb; font: 700 15px var(--font-display); letter-spacing: 1.5px;
+    box-shadow: 0 0 12px rgba(78,205,196,0.35); white-space: nowrap; }
+  html:has(#kt-scene canvas.kt-3d) { background: #0d0a26 !important; }
 </style>
 </head>
 <body>
@@ -14628,6 +14649,181 @@ function klRadioTowerSVG() {
 // emoji sign + label, mapped to an entry handler.
 // (KL_TOWN_BUILDINGS removed — buildings are now clickable hotspots inside KL_TOWN_SVG)
 
+// ══ 3-D TOWN (low-poly, late-90s console look) ══════════════════════════════
+// The hometown street as a real WebGL scene: same buildings, same order, same
+// click actions as the drawn town (klTownSVG), which stays as the fallback if
+// the 3-D engine can't load. Rendered at 640px wide with vertex snapping.
+function klTownBld() {
+  return [
+    {side:-1,t:0.00,act:"klBusk()",name:"PLAZA",kind:"plaza"},
+    {side:-1,t:0.30,act:"klEnterBuilding('master')",name:"WADDY'S",kind:"waddy"},
+    {side:-1,t:0.56,act:"klEnterBuilding('garage')",name:"GARAGE",kind:"garage"},
+    {side:1,t:0.30,act:"klEnterBuilding('hater')",name:"NEIGHBOR",kind:"neighbor"},
+    {side:1,t:0.00,act:"klEnterBuilding('home')",name:(klState.kid && !klState.guest && klState.kid.name ? klState.kid.name.toUpperCase()+"’S PLACE" : "YOUR PLACE"),kind:"home"},
+    {side:-1,t:0.80,act:"klOpenWorkPlan()",name:"FACTORY",kind:"factory"},
+    {side:1,t:0.56,act:"klEnterBuilding('venue')",name:"RESTAURANT",kind:"venue"},
+    {side:1,t:0.80,act:"klEnterBuilding('shop')",name:"SHOP",kind:"shop"},
+    {side:-1,t:1.05,act:"klEnterBuilding('radio')",name:"RADIO",kind:"radio"},
+  ];
+}
+const KL_TOWN_PAL = {
+  plaza:{body:0x4a4660,roof:0x6a6488,win:0xffe08a,neon:'#8ee8ff'}, waddy:{body:0x6a589c,roof:0x8a6cd0,win:0xffe8a2,neon:'#caa6ff'},
+  garage:{body:0x4f4a40,roof:0x5a5347,win:0x9fd3ff,neon:'#9fd3ff'}, neighbor:{body:0x5a4640,roof:0x7a5a50,win:0xcaa84a,neon:'#ff9a7a'},
+  home:{body:0x2f6f7a,roof:0x48aebe,win:0xffe08a,neon:'#6ff0e0'}, factory:{body:0x46423b,roof:0x37332d,win:0x7d8a6a,neon:'#a6ff7a'},
+  venue:{body:0x3b2f55,roof:0xffd97a,win:0xff7ad9,neon:'#ff7ad9'}, shop:{body:0x3f5a4e,roof:0x7ab98a,win:0xffe0a0,neon:'#7affb0'},
+  radio:{body:0x55506e,roof:0x55506e,win:0xff4040,neon:'#ff6a6a'},
+};
+function klTownSky(h) {          // sky color by the day clock (8AM → midnight)
+  if (h == null) h = 20;
+  if (h < 11) return [0x6aa0e8, 0xffd9a0];
+  if (h < 16) return [0x3f7fe0, 0xbfe0ff];
+  if (h < 19) return [0x3a2f8a, 0xff9a6a];
+  return [0x0d0a3a, 0x2a1f6a];
+}
+function klTownSign(text, color, w) {
+  const c = document.createElement('canvas'); c.width = w || 256; c.height = 64;
+  const g = c.getContext('2d');
+  g.fillStyle = '#0a0820'; g.fillRect(0, 0, c.width, c.height);
+  g.strokeStyle = color; g.lineWidth = 4; g.strokeRect(4, 4, c.width - 8, c.height - 8);
+  g.font = '700 34px "Barlow Condensed", "Arial Narrow", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.shadowColor = color; g.shadowBlur = 10; g.fillStyle = color;
+  let fs = 34; while (g.measureText(text).width > c.width - 24 && fs > 14) { fs -= 2; g.font = '700 ' + fs + 'px "Barlow Condensed", sans-serif'; }
+  g.fillText(text, c.width / 2, c.height / 2 + 2);
+  const T = window.THREE, tx = new T.CanvasTexture(c); tx.magFilter = T.NearestFilter; tx.minFilter = T.LinearFilter;
+  return tx;
+}
+function klTown3D(host, fallbackHTML) {
+  const T = window.THREE;
+  if (!T) { host.innerHTML = fallbackHTML; return; }
+  host.innerHTML = '<canvas class="kt-3d"></canvas><div class="kt-3d-tip"></div>';
+  const cv = host.querySelector('canvas'), tip = host.querySelector('.kt-3d-tip');
+  let r;
+  try { r = new T.WebGLRenderer({ canvas: cv, antialias: false, powerPreference: 'low-power' }); }
+  catch (e) { host.innerHTML = fallbackHTML; return; }
+  r.setPixelRatio(1);
+  const [skyTop, skyLow] = klTownSky(klState && klState.hour);
+  const scene = new T.Scene(); scene.background = new T.Color(skyTop);
+  scene.fog = new T.Fog(new T.Color(skyTop).lerp(new T.Color(skyLow), 0.4), 14, 46);
+  const cam = new T.PerspectiveCamera(58, 16 / 9, 0.1, 120);
+  const night = !klState || klState.hour == null || klState.hour >= 19;
+  scene.add(new T.HemisphereLight(night ? 0x8a8cff : 0xdfefff, 0x20183a, night ? 0.75 : 1.05));
+  const sun = new T.DirectionalLight(night ? 0x9fb0ff : 0xfff2d8, night ? 0.45 : 0.9); sun.position.set(-6, 12, 8); scene.add(sun);
+  const U = { value: new T.Vector2(320, 180) };
+  const snap = m => { m.onBeforeCompile = s => { s.uniforms.uRes = U; s.vertexShader = 'uniform vec2 uRes;\n' + s.vertexShader.replace('#include <project_vertex>',
+    '#include <project_vertex>\n gl_Position.xy = floor(gl_Position.xy / gl_Position.w * uRes + 0.5) / uRes * gl_Position.w;'); }; return m; };
+  const lam = (c, e) => snap(new T.MeshLambertMaterial({ color: c, emissive: e || 0, flatShading: true }));
+  const glow = c => snap(new T.MeshBasicMaterial({ color: c }));
+  const box = (w, h, d, m) => new T.Mesh(new T.BoxGeometry(w, h, d), m);
+  // ground: road, sidewalks, lane dashes, far horizon
+  const road = box(7, 0.1, 80, lam(0x5a5048)); road.position.set(0, -0.05, -25); scene.add(road);
+  [-1, 1].forEach(sd => { const sw = box(3, 0.25, 80, lam(0x7a7468)); sw.position.set(sd * 5, 0.07, -25); scene.add(sw);
+    const lot = box(30, 0.05, 80, lam(0x2a2440)); lot.position.set(sd * 21, -0.1, -25); scene.add(lot); });
+  for (let z = 6; z > -60; z -= 4) { const d = box(0.18, 0.02, 1.6, glow(0xf4e9c8)); d.position.set(0, 0.02, z); scene.add(d); }
+  // planet + ring in the sky (matches the drawn town)
+  const planet = new T.Mesh(new T.IcosahedronGeometry(3.2, 1), lam(0x7c6ff7, 0x2a1a70)); planet.position.set(0, 16, -60); scene.add(planet);
+  const ring = new T.Mesh(new T.TorusGeometry(5, 0.25, 4, 20), lam(0xd9ccff, 0x302060)); ring.position.copy(planet.position); ring.rotation.set(1.25, 0.2, 0); scene.add(ring);
+  // stars at night
+  if (night) { const sg = new T.BufferGeometry(), pts = []; for (let i = 0; i < 160; i++) pts.push((Math.random() - 0.5) * 140, 12 + Math.random() * 40, -40 - Math.random() * 30);
+    sg.setAttribute('position', new T.Float32BufferAttribute(pts, 3)); scene.add(new T.Points(sg, new T.PointsMaterial({ color: 0xffffff, size: 1.5, sizeAttenuation: false }))); }
+  const picks = [];
+  const zOf = t => 3 - t * 30;
+  klTownBld().forEach(b => {
+    const P = KL_TOWN_PAL[b.kind], g = new T.Group(), x = b.side * 9.2, z = zOf(b.t);
+    g.position.set(x, 0, z); g.userData = { b };
+    if (b.kind === 'plaza') {
+      const pad = new T.Mesh(new T.CylinderGeometry(2.6, 3, 0.4, 10), lam(0x4a4660)); pad.position.y = 0.2; g.add(pad);
+      const ring2 = new T.Mesh(new T.TorusGeometry(2.3, 0.12, 4, 14), glow(0x8ee8ff)); ring2.rotation.x = Math.PI / 2; ring2.position.y = 0.45; g.add(ring2);
+      const beam = new T.Mesh(new T.CylinderGeometry(1.1, 1.8, 5, 8, 1, true), snap(new T.MeshBasicMaterial({ color: 0x8ee8ff, transparent: true, opacity: 0.22, side: T.DoubleSide })));
+      beam.position.y = 2.9; g.add(beam); g.userData.beam = beam;
+      const n = new T.Group(); const h1 = new T.Mesh(new T.SphereGeometry(0.4, 6, 4), glow(0xbff8ff)); h1.scale.set(1.25, 0.85, 0.85); n.add(h1);
+      const st = box(0.09, 1.4, 0.09, glow(0xbff8ff)); st.position.set(0.45, 0.7, 0); n.add(st); n.position.y = 2.4; g.add(n); g.userData.spin = n;
+    } else if (b.kind === 'radio') {
+      g.position.set(-16, 0, -30);
+      for (let k = 0; k < 4; k++) { const leg = box(0.14, 15, 0.14, lam(0x8a84b0)); leg.position.set((k % 2 ? 1 : -1) * (1.1 - 0), 7.5, (k < 2 ? 1 : -1)); leg.rotation.z = (k % 2 ? -1 : 1) * 0.07; leg.rotation.x = (k < 2 ? 1 : -1) * 0.07; g.add(leg); }
+      for (let y = 2; y < 15; y += 2.2) { const ringb = box(2.2 - y * 0.06, 0.1, 0.1, lam(0x8a84b0)); ringb.position.y = y; g.add(ringb); }
+      const tipL = new T.Mesh(new T.SphereGeometry(0.35, 6, 4), glow(0xff3030)); tipL.position.y = 15.4; g.add(tipL); g.userData.blink = tipL;
+      const hut = box(3, 2, 2.4, lam(0x3a3458)); hut.position.y = 1; g.add(hut);
+    } else {
+      const w = 6.2, d = 6, h = { waddy: 8.5, garage: 5.5, factory: 9, neighbor: 7, home: 10, venue: 7.5, shop: 6.5 }[b.kind] || 7;
+      const body = box(w, h, d, lam(P.body)); body.position.y = h / 2; g.add(body);
+      const facing = -b.side;                       // street-facing side
+      if (['waddy', 'home', 'neighbor'].includes(b.kind)) {
+        const roof = new T.Mesh(new T.ConeGeometry(w * 0.78, 2.4, 4), lam(P.roof)); roof.rotation.y = Math.PI / 4; roof.position.y = h + 1.2; g.add(roof);
+      } else { const lip = box(w + 0.4, 0.5, d + 0.4, lam(P.roof)); lip.position.y = h + 0.25; g.add(lip); }
+      if (b.kind === 'factory') { [-1.4, 1.2].forEach(zz => { const st = new T.Mesh(new T.CylinderGeometry(0.4, 0.5, 4, 6), lam(0x37332d)); st.position.set(0.8, h + 2, zz); g.add(st); }); }
+      // windows + door on the street face
+      const winM = glow(P.win);
+      for (let row = 0; row < Math.floor((h - 2.5) / 2.2); row++) for (let k = -1; k <= 1; k += 2) {
+        const wdw = box(0.05, 1.1, 1.3, winM); wdw.position.set(facing * (w / 2 + 0.03), 3 + row * 2.2, k * 1.5); g.add(wdw);
+      }
+      const door = box(0.05, 2.2, 1.4, lam(0x1a1428)); door.position.set(facing * (w / 2 + 0.03), 1.1, 0); g.add(door);
+      // neon sign facing the street
+      // blade sign: sticks out over the sidewalk and faces down the street, so it reads from the camera
+      const sw = 4.6, sh = 1.2;
+      const sign = new T.Mesh(new T.PlaneGeometry(sw, sh), snap(new T.MeshBasicMaterial({ map: klTownSign(b.name, P.neon), side: T.DoubleSide })));
+      sign.position.set(facing * (w / 2 + sw / 2 - 0.4), Math.min(h - 0.6, 6.2), d / 2 + 0.15); g.add(sign);
+      const arm = box(0.12, 0.12, 0.6, lam(0x2a2440)); arm.position.set(facing * (w / 2 + 0.2), Math.min(h - 0.6, 6.2) + sh / 2 + 0.1, d / 2); g.add(arm);
+      g.userData.sign = sign;
+    }
+    scene.add(g); picks.push(g);
+  });
+  // pedestrians: little low-poly people walking the sidewalks
+  const peds = [];
+  const shirt = [0xff7a59, 0x4ecdc4, 0xf0c040, 0xcaa6ff, 0x7affb0];
+  for (let i = 0; i < 6; i++) {
+    const p = new T.Group(); const sd = i % 2 ? 1 : -1;
+    const legs = box(0.45, 0.8, 0.3, lam(0x2a2440)); legs.position.y = 0.4; p.add(legs);
+    const torso = box(0.55, 0.75, 0.35, lam(shirt[i % 5])); torso.position.y = 1.15; p.add(torso);
+    const head = new T.Mesh(new T.IcosahedronGeometry(0.26, 0), lam(0xe8b48a)); head.position.y = 1.75; p.add(head);
+    p.position.set(sd * (4.6 + Math.random() * 0.6), 0.2, 4 - Math.random() * 30);
+    p.userData = { sd, v: (0.8 + Math.random() * 0.7) * (Math.random() < 0.5 ? 1 : -1), ped: i };
+    scene.add(p); peds.push(p); picks.push(p);
+  }
+  // a car drifting down the street now and then
+  const car = new T.Group(); const cb = box(1.8, 0.8, 3.4, lam(0xd04060)); cb.position.y = 0.6; car.add(cb);
+  const cab = box(1.5, 0.6, 1.8, lam(0x2a2440)); cab.position.set(0, 1.25, -0.2); car.add(cab);
+  [-1, 1].forEach(sx => { const hl = box(0.3, 0.2, 0.05, glow(0xfff2b0)); hl.position.set(sx * 0.55, 0.65, 1.73); car.add(hl); });
+  car.position.set(1.7, 0, -70); scene.add(car);
+  // size, hover, click
+  const fit = () => { const rc = host.getBoundingClientRect(); const w = 640, h = Math.max(1, Math.round(w * rc.height / Math.max(1, rc.width)));
+    r.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); U.value.set(w / 2, h / 2); };
+  fit(); const ro = new ResizeObserver(fit); ro.observe(host);
+  const ray = new T.Raycaster(), mv = new T.Vector2();
+  const pickAt = e => { const rc = cv.getBoundingClientRect(); mv.set((e.clientX - rc.left) / rc.width * 2 - 1, -((e.clientY - rc.top) / rc.height) * 2 + 1);
+    ray.setFromCamera(mv, cam); const hit = ray.intersectObjects(picks, true)[0]; if (!hit) return null;
+    let o = hit.object; while (o && !picks.includes(o)) o = o.parent; return o; };
+  let hover = null;
+  cv.addEventListener('pointermove', e => {
+    const o = pickAt(e); if (o === hover) { if (o) { tip.style.left = (e.offsetX + 14) + 'px'; tip.style.top = (e.offsetY - 10) + 'px'; } return; }
+    if (hover) hover.scale.setScalar(1); hover = o; cv.style.cursor = o ? 'pointer' : 'default';
+    if (o) { o.scale.setScalar(o.userData.b ? 1.04 : 1.15); tip.textContent = o.userData.b ? o.userData.b.name : 'say hi'; tip.style.display = 'block'; tip.style.left = (e.offsetX + 14) + 'px'; tip.style.top = (e.offsetY - 10) + 'px'; }
+    else tip.style.display = 'none';
+  });
+  cv.addEventListener('pointerleave', () => { if (hover) hover.scale.setScalar(1); hover = null; tip.style.display = 'none'; });
+  cv.addEventListener('click', e => {
+    const o = pickAt(e); if (!o) return;
+    if (o.userData.b) { try { (new Function(o.userData.b.act))(); } catch (err) { console.warn(err); } }
+    else if (typeof klPedSay === 'function') klPedSay(o.userData.ped);
+  });
+  // loop (30fps, stops when the town is left)
+  let t = 0, last = 0;
+  const loop = now => {
+    if (!cv.isConnected) { ro.disconnect(); try { r.dispose(); } catch (e) {} return; }
+    requestAnimationFrame(loop);
+    if (document.hidden || now - last < 33) return;
+    const dt = Math.min(0.1, (now - last) / 1000 || 0.033); last = now; t += dt;
+    cam.position.set(Math.sin(t * 0.18) * 0.5, 4.2 + Math.sin(t * 0.3) * 0.12, 13);
+    cam.lookAt(0, 3.6, -14);
+    planet.rotation.y = t * 0.1; ring.rotation.z = t * 0.12;
+    picks.forEach(g => { const u = g.userData; if (u.spin) u.spin.rotation.y = t * 1.4; if (u.beam) u.beam.material.opacity = 0.16 + Math.sin(t * 3) * 0.06; if (u.blink) u.blink.visible = Math.sin(t * 4) > 0; });
+    peds.forEach(p => { p.position.z += p.userData.v * dt; if (p.position.z > 6) p.position.z = -26; if (p.position.z < -26) p.position.z = 6;
+      p.rotation.y = p.userData.v > 0 ? 0 : Math.PI; p.children[0].scale.y = 1 + Math.sin(t * 9 + p.userData.ped) * 0.08; });
+    car.position.z += dt * 9; if (car.position.z > 16) car.position.z = -70 - Math.random() * 40;
+    r.render(scene, cam);
+  };
+  requestAnimationFrame(loop);
+}
+
 function klRenderTown() {
   document.getElementById('kidlab').classList.remove('kl-playing');
   klCloseComposeSong(); // bug #6: leaving via "Back outside" must close the composer AND unfreeze the day clock
@@ -14652,11 +14848,12 @@ function klRenderTown() {
     : '';
   wrap.innerHTML =
     '<div class="kl-stage kt-stage">' +
-      '<div class="kl-scene">' + klTownSVG() + '</div>' +
+      '<div class="kl-scene" id="kt-scene">' + (window.THREE ? '' : klTownSVG()) + '</div>' +
       klHudMarkup() +
       '<div class="kt-town-title-top">HOMETOWN</div>' +
       (klIsDevAvailable() ? klDevBar() : '') +
     '</div>';
+  if (window.THREE) { try { klTown3D(document.getElementById('kt-scene'), klTownSVG()); } catch (e) { console.warn('town3d', e); document.getElementById('kt-scene').innerHTML = klTownSVG(); } }
   klFlushNotifications(klRenderTown); // any queued rent/promo notices play as cutscenes
 }
 window.klRenderTown = klRenderTown; // inline onclick handlers need it global
@@ -15929,6 +16126,380 @@ function klHomeScene() {
   '</svg>';
 }
 
+// ══ 3-D ROOMS (low-poly, same engine look as the 3-D town) ══════════════════
+// klRoom3D(host, spec) turns a host element into a 640px WebGL room with vertex
+// snapping. spec.build(ctx) adds meshes; ctx.add(group, meta) makes a group
+// clickable: meta = {name, act, label, locked, reason, warn, lx, ly, lz}.
+// Labels are crisp HTML tags pinned to 3-D points, so text stays readable.
+// Returns false (caller keeps the drawn SVG) if WebGL / Three isn't available.
+function klRoom3D(host, spec) {
+  const T = window.THREE;
+  if (!T) return false;
+  const prev = host.innerHTML;
+  host.innerHTML = '<canvas class="kt-3d"></canvas><div class="kt-3d-tip"></div>';
+  const cv = host.querySelector('canvas'), tip = host.querySelector('.kt-3d-tip');
+  let r;
+  try { r = new T.WebGLRenderer({ canvas: cv, antialias: false, powerPreference: 'low-power' }); }
+  catch (e) { host.innerHTML = prev; return false; }
+  r.setPixelRatio(1);
+  const scene = new T.Scene(); scene.background = new T.Color(spec.bg || 0x0d0a26);
+  if (spec.fog) scene.fog = new T.Fog(spec.bg || 0x0d0a26, spec.fog[0], spec.fog[1]);
+  const cam = new T.PerspectiveCamera(spec.fov || 50, 16 / 9, 0.1, 80);
+  const U = { value: new T.Vector2(320, 180) };
+  const snap = m => { m.onBeforeCompile = s => { s.uniforms.uRes = U; s.vertexShader = 'uniform vec2 uRes;\n' + s.vertexShader.replace('#include <project_vertex>',
+    '#include <project_vertex>\n gl_Position.xy = floor(gl_Position.xy / gl_Position.w * uRes + 0.5) / uRes * gl_Position.w;'); }; return m; };
+  const lam = (c, e) => snap(new T.MeshLambertMaterial({ color: c, emissive: e || 0, flatShading: true }));
+  const glow = (c, o) => snap(new T.MeshBasicMaterial(o == null ? { color: c } : { color: c, transparent: true, opacity: o, depthWrite: false }));
+  const box = (w, h, d, m) => new T.Mesh(new T.BoxGeometry(w, h, d), m);
+  const at = (o, x, y, z, parent) => { o.position.set(x, y, z); (parent || scene).add(o); return o; };
+  const texOf = (w, h, draw) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), c);
+    const tx = new T.CanvasTexture(c); tx.magFilter = T.NearestFilter; tx.minFilter = T.LinearFilter; return tx; };
+  const picks = [], tickers = [];
+  const ctx = {
+    T, scene, snap, lam, glow, box, at, texOf,
+    tick(fn) { tickers.push(fn); },
+    // room shell: floor, back + side walls, ceiling, baseboard trim
+    room(o) {
+      const W = o.w || 21, D = o.d || 6.5, H = o.h || 7.5;
+      at(box(W + 2, 0.2, D + 20, lam(o.floor)), 0, -0.1, 4);
+      if (o.planks) for (let x = -W / 2; x <= W / 2; x += 1.4) at(box(0.05, 0.02, D + 20, lam(o.planks)), x, 0.01, 4);
+      at(box(W + 2, H, 0.3, lam(o.wall)), 0, H / 2, -D);
+      [-1, 1].forEach(sd => at(box(0.3, H, D + 14, lam(o.side || o.wall)), sd * (W / 2), H / 2, 1));
+      at(box(W + 2, 0.3, D + 14, lam(o.ceil || 0x111018)), 0, H, 1);
+      at(box(W, 0.35, 0.12, lam(o.trim || 0x0a0a12)), 0, 0.18, -D + 0.2);
+      if (o.band) at(box(W, 0.12, 0.08, lam(o.band)), 0, 2.8, -D + 0.2);
+    },
+    guitar(body, neck) {
+      const g = new T.Group();
+      const lo = new T.Mesh(new T.IcosahedronGeometry(0.55, 1), lam(body)); lo.scale.set(1, 1.05, 0.28); g.add(lo);
+      const up = new T.Mesh(new T.IcosahedronGeometry(0.42, 1), lam(body)); up.scale.set(1, 1, 0.28); up.position.y = 0.62; g.add(up);
+      at(new T.Mesh(new T.CylinderGeometry(0.16, 0.16, 0.04, 8), lam(0x1a120c)), 0, 0.35, 0.16, g).rotation.x = Math.PI / 2;
+      at(box(0.14, 1.5, 0.07, lam(neck || 0x5b3f26)), 0, 1.55, 0.05, g);
+      at(box(0.2, 0.3, 0.07, lam(0x2a1a0e)), 0, 2.42, 0.05, g);
+      at(box(0.025, 1.9, 0.02, glow(0xd8d8d8)), 0, 1.3, 0.12, g);
+      return g;
+    },
+    stand(sheetTilt) {
+      const g = new T.Group(), metal = lam(0x7b8190);
+      at(box(0.07, 2.1, 0.07, metal), 0, 1.05, 0, g);
+      [0, 2.1, 4.2].forEach(a => { const l = at(box(0.06, 0.06, 0.8, metal), Math.sin(a) * 0.3, 0.05, Math.cos(a) * 0.3, g); l.rotation.y = a; });
+      const sheet = at(new T.Mesh(new T.PlaneGeometry(1.5, 1.05), snap(new T.MeshBasicMaterial({ map: texOf(96, 64, gg => {
+        gg.fillStyle = '#fbfaf5'; gg.fillRect(0, 0, 96, 64); gg.strokeStyle = '#9aa0b5'; gg.lineWidth = 1;
+        for (let i = 0; i < 5; i++) { gg.beginPath(); gg.moveTo(8, 18 + i * 7); gg.lineTo(88, 18 + i * 7); gg.stroke(); }
+        gg.fillStyle = '#f0c040'; gg.font = '34px Georgia,serif'; gg.fillText('𝄞', 8, 52);
+        gg.fillStyle = '#2dd4bf'; gg.beginPath(); gg.ellipse(62, 35, 5, 4, -0.3, 0, 7); gg.fill(); gg.fillRect(66, 12, 2, 23);
+      }) }))), 0, 2.35, 0.08, g);
+      sheet.rotation.x = -(sheetTilt == null ? 0.35 : sheetTilt);
+      at(box(1.55, 0.08, 0.12, metal), 0, 1.86, 0.2, g);
+      return g;
+    },
+    person(shirt, skin, extras) {
+      const p = new T.Group();
+      at(box(0.5, 0.9, 0.32, lam(0x2a2440)), 0, 0.45, 0, p);
+      at(box(0.62, 0.85, 0.38, lam(shirt)), 0, 1.32, 0, p);
+      at(new T.Mesh(new T.IcosahedronGeometry(0.3, 0), lam(skin || 0xe8b48a)), 0, 2.0, 0, p);
+      if (extras) extras(p);
+      return p;
+    },
+    add(group, meta) {
+      group.userData.meta = meta; scene.add(group); picks.push(group);
+      // generous invisible hit-box so small parts are easy to tap
+      const bb = new T.Box3().setFromObject(group), sz = new T.Vector3(), c = new T.Vector3();
+      bb.getSize(sz); bb.getCenter(c); group.worldToLocal(c);
+      const hit = box(sz.x + 0.4, sz.y + 0.3, sz.z + 0.4, new T.MeshBasicMaterial()); hit.visible = false; hit.position.copy(c); group.add(hit);
+      if (meta.locked) group.traverse(o => { if (o.isMesh && o !== hit && o.material && o.material.color) {
+        o.material = o.material.clone(); o.material.color.lerp(new T.Color(0x8a88a0), 0.55).multiplyScalar(0.8); if (o.material.emissive) o.material.emissive.setHex(0); } });
+      if (meta.label) {
+        const el = document.createElement('div');
+        el.className = 'kt-3d-lbl' + (meta.locked ? ' locked' : '') + (meta.warn ? ' warn' : '') + (meta.done ? ' done' : '');
+        el.textContent = meta.label; host.appendChild(el);
+        el.addEventListener('click', ev => { ev.stopPropagation(); fire(group, ev); });
+        el.addEventListener('pointerenter', () => setHover(group));
+        el.addEventListener('pointerleave', () => setHover(null));
+        group.userData.lbl = el;
+        group.userData.anchor = new T.Vector3(meta.lx != null ? meta.lx : c.x, meta.ly != null ? meta.ly : 0, meta.lz != null ? meta.lz : c.z + sz.z / 2 + 0.3);
+      }
+      return group;
+    },
+  };
+  spec.build(ctx);
+  const fit = () => { const rc = host.getBoundingClientRect(); const w = 640, h = Math.max(1, Math.round(w * rc.height / Math.max(1, rc.width)));
+    r.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); U.value.set(w / 2, h / 2); };
+  fit(); const ro = new ResizeObserver(fit); ro.observe(host);
+  const ray = new T.Raycaster(), mv = new T.Vector2();
+  const pickAt = e => { const rc = cv.getBoundingClientRect(); mv.set((e.clientX - rc.left) / rc.width * 2 - 1, -((e.clientY - rc.top) / rc.height) * 2 + 1);
+    ray.setFromCamera(mv, cam); const hit = ray.intersectObjects(picks, true)[0]; if (!hit) return null;
+    let o = hit.object; while (o && !picks.includes(o)) o = o.parent; return o; };
+  let hover = null;
+  function setHover(o) {
+    if (o === hover) return;
+    if (hover) { hover.scale.setScalar(1); if (hover.userData.lbl) hover.userData.lbl.classList.remove('hot'); }
+    hover = o; cv.style.cursor = o && !o.userData.meta.locked ? 'pointer' : 'default';
+    if (o) { if (!o.userData.meta.locked) o.scale.setScalar(1.05); if (o.userData.lbl) o.userData.lbl.classList.add('hot'); }
+    else tip.style.display = 'none';
+  }
+  function showTip(o, x, y) {
+    const m = o.userData.meta, txt = m.locked ? (m.reason || 'Locked') : (m.name || m.label || '');
+    if (!txt || (m.label && !m.locked)) { tip.style.display = 'none'; return; }
+    tip.textContent = txt; tip.style.display = 'block'; tip.style.left = Math.min(x + 14, host.clientWidth - tip.offsetWidth - 8) + 'px'; tip.style.top = (y - 10) + 'px';
+  }
+  function fire(o, e) {
+    const m = o.userData.meta;
+    if (m.locked) { const rc = host.getBoundingClientRect(); showTip(o, e.clientX - rc.left, e.clientY - rc.top); return; }
+    if (m.act) { try { (typeof m.act === 'function' ? m.act : new Function(m.act))(); } catch (err) { console.warn(err); } }
+  }
+  cv.addEventListener('pointermove', e => { const o = pickAt(e); setHover(o); if (o) showTip(o, e.offsetX, e.offsetY); });
+  cv.addEventListener('pointerleave', () => setHover(null));
+  cv.addEventListener('click', e => { const o = pickAt(e); if (o) fire(o, e); });
+  const cp = spec.cam || { pos: [0, 4.4, 10.5], look: [0, 2.1, -2] };
+  const v = new T.Vector3();
+  let t = 0, last = 0;
+  const loop = now => {
+    if (!cv.isConnected) { ro.disconnect(); try { r.dispose(); } catch (e) {} return; }
+    requestAnimationFrame(loop);
+    if (document.hidden || now - last < 33) return;
+    const dt = Math.min(0.1, (now - last) / 1000 || 0.033); last = now; t += dt;
+    cam.position.set(cp.pos[0] + Math.sin(t * 0.16) * 0.35, cp.pos[1] + Math.sin(t * 0.27) * 0.08, cp.pos[2]);
+    cam.lookAt(cp.look[0], cp.look[1], cp.look[2]);
+    tickers.forEach(fn => fn(t, dt));
+    r.render(scene, cam);
+    // pin HTML labels to their 3-D anchor points
+    const hw = host.clientWidth, hh = host.clientHeight;
+    picks.forEach(g => { const el = g.userData.lbl; if (!el) return;
+      v.copy(g.userData.anchor); g.localToWorld(v); v.project(cam);
+      el.style.left = ((v.x + 1) / 2 * hw).toFixed(0) + 'px';
+      el.style.top = Math.min(hh - el.offsetHeight - 26, (1 - v.y) / 2 * hh).toFixed(0) + 'px'; });
+  };
+  requestAnimationFrame(loop);
+  return true;
+}
+
+// ── YOUR PLACE in 3-D: same four objects + handlers as klHomeScene ──
+function klHome3D(host) {
+  const sip = klState.songInProgress;
+  const writeLabel = (sip && sip.hoursDone) ? 'FINISH DEMO · ' + Math.round(sip.hoursDone / KL_SONG_HOURS * 100) + '%' : 'WRITE A SONG';
+  const nSongs = (klState.songs || []).length;
+  const rentOwed = klRentOwed(), rentDaysLeft = klRentDaysLeft(), owed = rentOwed > 0;
+  const rentLabel = owed ? 'PAY RENT · $' + rentOwed + (rentDaysLeft != null ? ' · ' + Math.max(0, rentDaysLeft) + 'd' : '') : 'PAY RENT';
+  const hr = klState.hour == null ? 20 : klState.hour;
+  const [skyTop, skyLow] = klTownSky(hr);
+  const night = hr >= 19 || hr < 8;
+  return klRoom3D(host, {
+    bg: 0x0b1a1f,
+    build(c) {
+      const { T, at, box, lam, glow, scene } = c;
+      c.room({ wall: 0x1f4a54, side: 0x183c44, floor: 0x3a2a1e, planks: 0x2a1e15, ceil: 0x10262b, trim: 0x0c1a1e, band: 0x163a42 });
+      scene.add(new T.HemisphereLight(0xcfefff, 0x2a2018, 1.0));
+      const lamp = new T.PointLight(0xffd8a0, 1.1, 26); lamp.position.set(0, 6.2, 1); scene.add(lamp);
+      at(new T.Mesh(new T.ConeGeometry(0.8, 0.6, 8, 1, true), lam(0xf0c040, 0x6a4a10)), 0, 6.9, 1);
+      at(new T.Mesh(new T.SphereGeometry(0.22, 6, 4), glow(0xfff0c0)), 0, 6.6, 1);
+      // window: sky follows the day clock
+      const wx = -0.2, wy = 4.6, wz = -6.3;
+      at(box(4.4, 2.8, 0.2, lam(0x2a4a55)), wx, wy, wz);
+      const skyTex = c.texOf(4, 64, g => { const gr = g.createLinearGradient(0, 0, 0, 64); gr.addColorStop(0, '#' + new T.Color(skyTop).getHexString()); gr.addColorStop(1, '#' + new T.Color(skyLow).getHexString()); g.fillStyle = gr; g.fillRect(0, 0, 4, 64); });
+      at(new T.Mesh(new T.PlaneGeometry(4, 2.4), c.snap(new T.MeshBasicMaterial({ map: skyTex }))), wx, wy, wz + 0.12);
+      if (night) {
+        const moon = at(new T.Mesh(new T.CircleGeometry(0.28, 10), glow(0xe8f4ff)), wx + 1.1, wy + 0.6, wz + 0.14);
+        for (let i = 0; i < 12; i++) at(box(0.05, 0.05, 0.01, glow(0xffffff)), wx - 1.8 + Math.random() * 3.6, wy - 1 + Math.random() * 2, wz + 0.14);
+        moon.scale.setScalar(1);
+      } else at(new T.Mesh(new T.CircleGeometry(0.32, 10), glow(hr >= 17 ? 0xffa060 : 0xfff2b0)), wx - 1, wy + (hr >= 11 && hr < 17 ? 0.7 : -0.5), wz + 0.14);
+      at(box(0.12, 2.4, 0.06, lam(0x2a4a55)), wx, wy, wz + 0.16); at(box(4, 0.12, 0.06, lam(0x2a4a55)), wx, wy, wz + 0.16);
+      at(box(4.8, 0.18, 0.5, lam(0x2a4a55)), wx, wy - 1.45, wz + 0.25);
+      // decor: rug, poster, plant, bed
+      const rug = at(new T.Mesh(new T.CylinderGeometry(1, 1, 0.04, 10), lam(0x1a4a52)), 0, 0.03, -1); rug.scale.set(6.5, 1, 2.4);
+      const poster = at(new T.Mesh(new T.PlaneGeometry(1.5, 2.1), c.snap(new T.MeshBasicMaterial({ map: c.texOf(48, 64, g => {
+        g.fillStyle = '#2a1f5a'; g.fillRect(0, 0, 48, 64); g.fillStyle = '#7c6ff7'; g.beginPath(); g.arc(24, 26, 13, 0, 7); g.fill();
+        g.strokeStyle = '#f0c040'; g.lineWidth = 2; g.beginPath(); g.ellipse(24, 26, 20, 5, -0.3, 0, 7); g.stroke();
+        g.fillStyle = '#4ecdc4'; g.font = 'bold 9px sans-serif'; g.textAlign = 'center'; g.fillText('KANTEON', 24, 56); }) }))), -5.2, 4.4, -6.3);
+      poster.rotation.z = 0.03;
+      const pot = at(new T.Mesh(new T.CylinderGeometry(0.35, 0.28, 0.6, 7), lam(0xb0603a)), 9.3, 0.3, -5.4);
+      at(new T.Mesh(new T.IcosahedronGeometry(0.75, 0), lam(0x2f8a5a)), 9.3, 1.2, -5.4).scale.set(1, 1.4, 1);
+      at(box(3.2, 0.6, 1.8, lam(0x2a3a6a)), -8.6, 0.3, -5.4); at(box(3.2, 0.22, 1.7, lam(0xe0e4f0)), -8.6, 0.7, -5.4);
+      at(box(0.9, 0.28, 1.3, lam(0xf4f4ff)), -9.7, 0.95, -5.4); at(box(0.2, 1.4, 1.8, lam(0x22305a)), -10.2, 0.7, -5.4);
+      void pot;
+      // 1 — guitar + music stand → songwriter
+      const sw = new T.Group(); sw.position.set(-6.4, 0, -0.9);
+      at(c.stand(), -0.6, 0, 0, sw);
+      const gt = at(c.guitar(0xc0392b), 0.9, 0.6, 0.1, sw); gt.rotation.z = -0.24;
+      c.add(sw, { label: writeLabel, act: 'klOpenSongwriter()' });
+      // 2 — record crate → song bank
+      const cr = new T.Group(); cr.position.set(-2.4, 0, -1.2);
+      const wood = lam(0x4a3826);
+      at(box(1.9, 0.9, 0.12, wood), 0, 0.45, 0.6, cr); at(box(1.9, 0.9, 0.12, wood), 0, 0.45, -0.6, cr);
+      at(box(0.12, 0.9, 1.3, wood), -0.9, 0.45, 0, cr); at(box(0.12, 0.9, 1.3, wood), 0.9, 0.45, 0, cr); at(box(1.9, 0.1, 1.3, wood), 0, 0.05, 0, cr);
+      [[0xf0c040, -0.5, -0.1], [0x7c6ff7, 0, 0.05], [0x4ecdc4, 0.5, -0.05]].forEach(([col, x, rz]) => {
+        const rec = at(box(0.06, 1.2, 1.15, lam(0x18181f)), x, 0.95, 0, cr); rec.rotation.z = rz;
+        const lb = at(new T.Mesh(new T.CylinderGeometry(0.22, 0.22, 0.08, 8), glow(col)), x, 1.05, 0, cr); lb.rotation.z = Math.PI / 2 + rz; });
+      c.add(cr, { label: 'SONG BANK' + (nSongs ? ' · ' + nSongs : ''), act: 'klOpenSongBank()' });
+      // 3 — standing mirror with your avatar → style
+      const mr = new T.Group(); mr.position.set(2.6, 0, -2.2);
+      const frame = at(new T.Mesh(new T.CylinderGeometry(1, 1, 0.16, 14), lam(0x3a2614)), 0, 2.7, 0, mr); frame.rotation.x = Math.PI / 2; frame.scale.set(1.15, 1, 2.05);
+      const avTex = c.texOf(128, 224, g => { g.fillStyle = '#16323a'; g.fillRect(0, 0, 128, 224); });
+      const glass = at(new T.Mesh(new T.CircleGeometry(1, 16), c.snap(new T.MeshBasicMaterial({ map: avTex }))), 0, 2.7, 0.1, mr); glass.scale.set(1.0, 1.9, 1);
+      try {
+        const img = new Image();
+        img.onload = () => { const cc = avTex.image, g = cc.getContext('2d'); g.drawImage(img, -36, 22, 200, 200);
+          g.fillStyle = 'rgba(255,255,255,0.10)'; g.fillRect(14, 0, 14, 224); avTex.needsUpdate = true; };
+        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(klAvatarSVG(klState.avatar || klAvatarDefault(), 200));
+      } catch (e) {}
+      at(box(0.12, 0.7, 0.12, lam(0x3a2614)), -0.5, 0.35, 0.3, mr); at(box(0.12, 0.7, 0.12, lam(0x3a2614)), 0.5, 0.35, 0.3, mr);
+      c.add(mr, { label: 'STYLE', act: () => klOpenAvatar('edit', function () { klRenderInterior('home'); }) });
+      // 4 — desk + bills + lamp → rent
+      const dk = new T.Group(); dk.position.set(7, 0, -1.8);
+      at(box(3.4, 0.18, 1.5, lam(0x6b4a2c)), 0, 1.6, 0, dk);
+      [[-1.5, -0.6], [1.5, -0.6], [-1.5, 0.6], [1.5, 0.6]].forEach(([x, z]) => at(box(0.16, 1.6, 0.16, lam(0x4a3320)), x, 0.8, z, dk));
+      at(box(0.06, 0.9, 0.06, lam(0x3a3f4a)), 1.2, 2.15, -0.3, dk);
+      at(new T.Mesh(new T.ConeGeometry(0.35, 0.4, 6, 1, true), lam(0xf0c040, 0x6a4a10)), 1.2, 2.7, -0.3, dk);
+      const dl = new T.PointLight(0xffd080, 0.6, 5); dl.position.set(1.2, 2.4, 0); dk.add(dl);
+      const b1 = at(box(1, 0.03, 0.7, lam(0xfbfaf5)), -0.7, 1.71, 0.1, dk); b1.rotation.y = 0.15;
+      at(box(1, 0.035, 0.18, glow(owed ? 0xe0556a : 0x7c9c8c)), -0.7, 1.72, -0.15, dk).rotation.y = 0.15;
+      const b2 = at(box(1, 0.03, 0.7, lam(0xf3eee2)), 0.25, 1.73, 0.15, dk); b2.rotation.y = -0.1;
+      at(box(0.9, 0.3, 0.6, lam(0x3a5a8a)), 0.4, 1.86, -0.35, dk);
+      if (owed) { const halo = at(new T.Mesh(new T.CylinderGeometry(2.2, 2.2, 0.02, 12), glow(0xe0556a, 0.28)), 0, 0.03, 0, dk); halo.scale.z = 0.6;
+        c.tick(t => { halo.material.opacity = 0.18 + Math.sin(t * 3) * 0.1; }); }
+      c.add(dk, { label: rentLabel, act: 'klOpenRentDesk()', warn: owed });
+    },
+  });
+}
+
+// ── THE GARAGE in 3-D: each module is a piece of gear, same lock rules ──
+function klGarage3D(host) {
+  return klRoom3D(host, {
+    bg: 0x0e0f12,
+    cam: { pos: [0, 4.8, 11.5], look: [0, 2.0, -2] },
+    build(c) {
+      const { T, at, box, lam, glow, scene } = c;
+      c.room({ wall: 0x3a3e46, side: 0x30333a, floor: 0x2a2622, ceil: 0x141518, trim: 0x101114, band: 0x24262a });
+      scene.add(new T.HemisphereLight(0xdfefff, 0x2a2620, 1.15));
+      [-5, 0, 5].forEach(x => { at(box(3, 0.12, 0.35, glow(0xe8f6ff)), x, 7.3, -1);
+        const pl = new T.PointLight(0xdcefff, 0.7, 20); pl.position.set(x, 6.8, -1); scene.add(pl); });
+      // roll-up door on the back wall
+      for (let y = 0.4; y < 5.4; y += 0.5) at(box(7.6, 0.4, 0.1, lam(0x3a3d43)), 0, y, -6.3);
+      at(box(8, 0.3, 0.2, lam(0x1a1b1e)), 0, 5.6, -6.3);
+      // pegboard + tools (right wall area)
+      at(box(3, 2.4, 0.08, lam(0x5a4632)), 7.6, 4.4, -6.3);
+      [[6.8, 4.9, 0xe0556a], [7.6, 5, 0xf0c040], [8.4, 4.6, 0x4ecdc4], [7.2, 3.8, 0x9aa0b5]].forEach(([x, y, col]) => at(box(0.12, 0.8, 0.06, lam(col)), x, y, -6.2));
+      // left amp stack (decor — Jam guitar leans on it)
+      at(box(2.2, 3.2, 1.3, lam(0x15171a)), -8.8, 1.6, -2.6);
+      at(box(1.9, 1.4, 0.05, lam(0x2a2d31)), -8.8, 2.4, -1.93); at(box(1.9, 1.1, 0.05, lam(0x232629)), -8.8, 0.9, -1.93);
+      at(new T.Mesh(new T.SphereGeometry(0.07, 5, 3), glow(0xe0556a)), -9.6, 3.0, -1.9);
+      // cable on the floor
+      const cable = new T.Mesh(new T.TorusGeometry(3, 0.06, 3, 18, Math.PI), lam(0x0c0c0e)); cable.rotation.x = -Math.PI / 2; at(cable, -2, 0.04, 0.6);
+      const mod = (id, x, z, label, build, labelUp) => {
+        const m = klModuleDef(id); if (!m) return;
+        const done = klModuleIsDone(id), unlocked = klModuleUnlocked(m);
+        const g = new T.Group(); g.position.set(x, 0, z); build(g);
+        c.add(g, { label: (unlocked ? '' : '🔒 ') + label + (done ? ' ✓' : ''), act: "klEnterModule('" + id + "')",
+          locked: !unlocked, reason: unlocked ? '' : klModuleLockReason(m), done: done, ly: labelUp || 0 });
+      };
+      // back row
+      mod('garage:ear', -5.6, -3.6, 'EAR', g => {
+        at(box(1.9, 1.3, 1, lam(0x1b1d22)), 0, 0.65, 0, g); at(box(1.5, 0.6, 0.05, lam(0x2a2d33)), 0, 0.8, 0.51, g);
+        at(new T.Mesh(new T.SphereGeometry(0.06, 4, 3), glow(0x4ade80)), 0.7, 0.3, 0.52, g);
+        const band = at(new T.Mesh(new T.TorusGeometry(0.45, 0.07, 4, 10, Math.PI), lam(0xcbd5e1)), 0, 1.35, 0, g); band.rotation.y = 0.2;
+        [-0.45, 0.45].forEach(x => at(box(0.22, 0.4, 0.3, lam(0x7c6ff7, 0x1a1050)), x, 1.38, 0, g));
+      }, 0);
+      mod('garage:tap', 0.6, -3.8, 'RHYTHM', g => {
+        const kick = at(new T.Mesh(new T.CylinderGeometry(0.85, 0.85, 0.7, 12), lam(0xc084fc, 0x2a0a50)), 0, 0.85, 0.2, g); kick.rotation.x = Math.PI / 2;
+        at(new T.Mesh(new T.CylinderGeometry(0.3, 0.3, 0.72, 10), lam(0x6a1aa8)), 0, 0.85, 0.22, g).rotation.x = Math.PI / 2;
+        at(new T.Mesh(new T.CylinderGeometry(0.4, 0.4, 0.35, 10), lam(0x5d7fc0)), -0.5, 1.9, 0, g);
+        at(new T.Mesh(new T.CylinderGeometry(0.42, 0.42, 0.35, 10), lam(0xe0556a)), 0.55, 1.85, 0, g);
+        at(new T.Mesh(new T.CylinderGeometry(0.5, 0.5, 0.3, 10), lam(0xd0d4e0)), -1.3, 1.25, 0.5, g);
+        [[-1.6, 2.7, -0.3], [1.5, 2.9, -0.2]].forEach(([x, y, z]) => { at(box(0.05, y, 0.05, lam(0x888888)), x, y / 2, z, g);
+          const cy = at(new T.Mesh(new T.CylinderGeometry(0.65, 0.65, 0.04, 12), lam(0xf0c040, 0x3a2a00)), x, y, z, g); cy.rotation.z = 0.15; });
+      }, 0);
+      mod('garage:anatomy', 6.2, -3.6, 'ANATOMY', g => {
+        at(box(3.2, 0.2, 1.3, lam(0x6b513a)), 0, 1.5, 0, g);
+        [[-1.4, -0.5], [1.4, -0.5], [-1.4, 0.5], [1.4, 0.5]].forEach(([x, z]) => at(box(0.15, 1.5, 0.15, lam(0x43331f)), x, 0.75, z, g));
+        const gl = at(c.guitar(0xc98a3f), -0.3, 1.66, 0, g); gl.rotation.set(-Math.PI / 2, 0, -Math.PI / 2);
+        at(box(0.5, 0.08, 0.1, lam(0x9aa0b5)), 1.2, 1.65, 0.3, g); at(box(0.08, 0.08, 0.5, lam(0x9aa0b5)), 1.3, 1.65, -0.2, g);
+      }, 0);
+      // front row
+      mod('garage:jam', -7.2, -1.1, 'JAM', g => { const gt = at(c.guitar(0xc0392b), 0, 0.6, 0, g); gt.rotation.z = 0.28; });
+      mod('garage:build', -2.6, -0.6, 'CHORD', g => {
+        [-1, 1].forEach(s => { const leg = at(box(0.12, 1.9, 0.12, lam(0x33373f)), 0, 0.85, s * 0.25, g); leg.rotation.x = s * 0.5; });
+        [-0.8, 0.8].forEach(x => { [-1, 1].forEach(s => { const l = at(box(0.1, 1.9, 0.1, lam(0x33373f)), x, 0.85, 0, g); l.rotation.z = s * 0.35; }); });
+        at(box(3, 0.28, 0.9, lam(0x33384a)), 0, 1.75, 0, g);
+        at(box(2.7, 0.1, 0.5, lam(0xedeef2)), 0, 1.92, 0.12, g);
+        for (let i = 0; i < 12; i++) if ([1, 3, 6, 8, 10].includes(i % 12)) at(box(0.1, 0.08, 0.3, lam(0x1a1a22)), -1.3 + i * 0.22, 1.99, 0.03, g);
+        at(new T.Mesh(new T.SphereGeometry(0.05, 4, 3), glow(0x7c6ff7)), -1.3, 1.92, -0.35, g); at(new T.Mesh(new T.SphereGeometry(0.05, 4, 3), glow(0x2dd4bf)), -1.1, 1.92, -0.35, g);
+      });
+      mod('garage:notation', 2.6, -0.8, 'NOTATION', g => { g.add(c.stand()); });
+      mod('garage:listen', 7.8, -0.8, 'LISTEN', g => {
+        at(box(0.1, 2.4, 0.1, lam(0x3a3f4a)), 0, 1.2, 0, g);
+        [0, 2.1, 4.2].forEach(a => { const l = at(box(0.07, 0.07, 1, lam(0x3a3f4a)), Math.sin(a) * 0.4, 0.05, Math.cos(a) * 0.4, g); l.rotation.y = a; });
+        at(box(1.4, 2, 1.1, lam(0x15171c)), 0, 3.3, 0, g);
+        at(new T.Mesh(new T.CylinderGeometry(0.45, 0.45, 0.06, 10), lam(0x26292f)), 0, 3.0, 0.56, g).rotation.x = Math.PI / 2;
+        at(new T.Mesh(new T.CylinderGeometry(0.15, 0.15, 0.08, 8), lam(0x0c0c10)), 0, 3.0, 0.58, g).rotation.x = Math.PI / 2;
+        at(box(0.7, 0.4, 0.05, lam(0x26292f)), 0, 3.85, 0.56, g);
+        at(new T.Mesh(new T.SphereGeometry(0.05, 4, 3), glow(0x4ade80)), -0.55, 4.15, 0.57, g);
+      });
+    },
+  });
+}
+
+// ── SWEET WADDY'S in 3-D: a warm workshop behind the station card ──
+function klWaddy3D(host, studio) {
+  return klRoom3D(host, {
+    bg: 0x140b06, fog: [16, 34],
+    cam: { pos: [0, 4.2, 10], look: [0, 2.6, -3] },
+    build(c) {
+      const { T, at, box, lam, glow, scene } = c;
+      c.room({ wall: 0x4a2e1c, side: 0x3c2416, floor: 0x2a1a10, planks: 0x1e120a, ceil: 0x1a0f08, trim: 0x140a05, band: 0x3a2214 });
+      scene.add(new T.HemisphereLight(0xffd8a8, 0x2a1608, 0.95));
+      // hanging bulbs
+      const bulbs = [];
+      [-6.5, -2, 2.5, 7].forEach((x, i) => { at(box(0.03, 1.4, 0.03, lam(0x111111)), x, 6.8, -2 + (i % 2));
+        const b = at(new T.Mesh(new T.SphereGeometry(0.2, 6, 4), glow(0xffc070)), x, 6.0, -2 + (i % 2));
+        const pl = new T.PointLight(0xffa850, 0.7, 12); pl.position.copy(b.position); scene.add(pl); bulbs.push([b, pl, i]); });
+      c.tick(t => bulbs.forEach(([b, pl, i]) => { pl.intensity = 0.62 + Math.sin(t * 7 + i * 2) * 0.05 + (Math.sin(t * 23 + i) > 0.97 ? -0.3 : 0); }));
+      // left: workbench with a half-gutted amp, soldering iron + smoke, and Waddy
+      at(box(4.5, 0.22, 1.6, lam(0x6b4a2c)), -7.2, 1.7, -3.6); at(box(3.6, 0.12, 1, lam(0x5a3a22)), 7.6, 5.9, -4.8);
+      [[-9.2, -4.2], [-5.2, -4.2], [-9.2, -3], [-5.2, -3]].forEach(([x, z]) => at(box(0.18, 1.7, 0.18, lam(0x40291a)), x, 0.85, z));
+      at(box(1.6, 1, 0.9, lam(0x1b1d22)), -7.8, 2.3, -3.8);
+      at(box(1.3, 0.7, 0.05, lam(0x0e0f12)), -7.8, 2.3, -3.33);
+      [0xf0c040, 0x4ecdc4, 0xe0556a].forEach((col, i) => at(box(0.12, 0.12, 0.12, glow(col)), -8.2 + i * 0.4, 2.1, -3.3));
+      const iron = at(box(0.9, 0.08, 0.08, lam(0x9aa0b5)), -6, 1.86, -3.2); iron.rotation.y = 0.5;
+      const smoke = [];
+      for (let i = 0; i < 5; i++) { const s = at(new T.Mesh(new T.IcosahedronGeometry(0.12, 0), glow(0xd8c8b0, 0.35)), -5.7, 2, -3.4); smoke.push(s); }
+      c.tick(t => smoke.forEach((s, i) => { const k = (t * 0.4 + i / 5) % 1; s.position.set(-5.7 + Math.sin(k * 6 + i) * 0.2, 2 + k * 2.2, -3.4); s.scale.setScalar(0.6 + k * 1.6); s.material.opacity = 0.35 * (1 - k); }));
+      const w = c.person(0x6a589c, 0xe8b48a, p => {
+        for (let i = 0; i < 7; i++) at(new T.Mesh(new T.IcosahedronGeometry(0.16, 0), lam(0xe6e6ee)), Math.cos(i) * 0.28, 2.2 + Math.sin(i * 2) * 0.1, Math.sin(i) * 0.2, p);
+        const gog = at(new T.Mesh(new T.TorusGeometry(0.26, 0.05, 4, 10), lam(0x4ecdc4, 0x0a4a44)), 0, 2.15, 0.1, p); gog.rotation.x = 0.4;
+      });
+      at(w, -8.4, 0, -2.2); w.rotation.y = 0.5;
+      w.scale.setScalar(1.35); c.tick(t => { w.rotation.y = 0.5 + Math.sin(t * 0.7) * 0.25; w.children[2].position.y = 2.0 + Math.abs(Math.sin(t * 1.3)) * 0.04; });
+      // back wall: hanging guitars
+      [[-6.4, 0xc0392b], [-4.9, 0x4ecdc4], [4.9, 0xf0c040], [6.4, 0x7c6ff7]].forEach(([x, col]) => { const g = c.guitar(col); g.scale.setScalar(0.95); at(g, x, 3.4, -6.1); at(box(0.08, 0.3, 0.3, lam(0x222222)), x, 5.95, -6.15); });
+      // right: shelves of tubes + amps
+      for (let s = 0; s < 3; s++) {
+        at(box(3.6, 0.12, 1, lam(0x5a3a22)), 7.6, 1.4 + s * 1.5, -4.8);
+        for (let k = 0; k < 4; k++) {
+          if ((s + k) % 2) at(box(0.7, 0.8, 0.6, lam([0x22252a, 0x3a2a1a, 0x2a2d33][s])), 6.2 + k * 0.9, 1.86 + s * 1.5, -4.8);
+          else at(new T.Mesh(new T.CylinderGeometry(0.12, 0.12, 0.5, 6), glow(0xffb060, 0.85)), 6.2 + k * 0.9, 1.72 + s * 1.5, -4.8);
+        }
+      }
+      // floor clutter: speaker cab + cable coil
+      at(box(1.6, 1.6, 1.2, lam(0x1b1d22)), 4.2, 0.8, -4.4);
+      at(new T.Mesh(new T.CylinderGeometry(0.5, 0.5, 0.05, 10), lam(0x2a2d33)), 4.2, 0.9, -3.78).rotation.x = Math.PI / 2;
+      const coil = at(new T.Mesh(new T.TorusGeometry(0.5, 0.08, 3, 12), lam(0x0c0c0e)), -2.5, 0.06, -3.5); coil.rotation.x = -Math.PI / 2;
+      if (studio) {   // studio: a console with blinking meters + an ON AIR light
+        at(box(3.2, 0.9, 1.3, lam(0x22252a)), 1, 0.9, -4.6);
+        const meters = []; for (let i = 0; i < 10; i++) meters.push(at(box(0.12, 0.3, 0.05, glow(i < 7 ? 0x4ade80 : 0xe0556a)), -0.3 + i * 0.28, 1.5, -3.94));
+        c.tick(t => meters.forEach((m, i) => { m.visible = Math.sin(t * 8 + i * 0.7) + Math.sin(t * 3.3) > i * 0.2 - 0.8; }));
+        const air = at(box(1.6, 0.5, 0.1, glow(0xe0303a)), 1, 4.6, -6.25);
+        c.tick(t => { air.visible = Math.sin(t * 2) > -0.6; });
+      }
+    },
+  });
+}
+
+// mounts a 3-D room into #kt-room; the drawn SVG stays if 3-D can't run
+function klRoomGo(fn) {
+  const h = document.getElementById('kt-room'); if (!h || !window.THREE) return;
+  const svg = h.innerHTML;
+  try { if (fn(h)) h.classList.add('kt-room3d'); else h.innerHTML = svg; } catch (e) { console.warn(e); h.innerHTML = svg; }
+}
 function klRenderInterior(id) {
   klState.devRoom = id; // remembered so dev unlock toggles can re-render this room live
   document.getElementById('kidlab').classList.remove('kl-playing');
@@ -15942,10 +16513,11 @@ function klRenderInterior(id) {
         klHudMarkup() +
         '<div class="kl-garage-head"><div class="kl-garage-title">THE GARAGE</div>' +
         '<div class="kl-garage-sub">Waddy\u2019s lab — he tossed you a key. Click any piece of gear to train on it.</div></div>' +
-        '<div class="kl-garage-scene-wrap">' + klGarageScene() + '</div>' +
+        '<div class="kl-garage-scene-wrap" id="kt-room">' + klGarageScene() + '</div>' +
         '<button class="kl-garage-back" onclick="klRenderTown()">← Back outside</button>' +
         (klIsDevAvailable() ? klDevBar() : '') +
       '</div>';
+    klRoomGo(klGarage3D);
     klFlushNotifications(() => klRenderInterior('garage'));
     return;
   }
@@ -16141,10 +16713,11 @@ function klRenderInterior(id) {
         klHudMarkup() +
         '<div class="kl-garage-head"><div class="kl-garage-title">YOUR PLACE</div>' +
         '<div class="kl-garage-sub">Home base \u2014 write songs, switch up your look, keep the landlord happy.</div></div>' +
-        '<div class="kl-garage-scene-wrap">' + klHomeScene() + '</div>' +
+        '<div class="kl-garage-scene-wrap" id="kt-room">' + klHomeScene() + '</div>' +
         '<button class="kl-garage-back" onclick="klRenderTown()">\u2190 Back outside</button>' +
         (klIsDevAvailable() ? klDevBar() : '') +
       '</div>';
+    klRoomGo(klHome3D);
     klFlushNotifications(() => klRenderInterior('home'));
     return;
   }
@@ -16180,6 +16753,7 @@ function klRenderInterior(id) {
       '<button class="kl-garage-back" onclick="klRenderTown()">← Back outside</button>' +
       (klIsDevAvailable() ? klDevBar() : '') +
     '</div>';
+  if (id === 'waddy' && window.THREE) { const sa = wrap.querySelector('.kt-scene-art'); try { klWaddy3D(sa, klStudioUnlocked()); } catch (e) { console.warn(e); } }
   klFlushNotifications(() => klRenderInterior(id)); // level-up / cleared notices play here
 }
 window.klRenderInterior = klRenderInterior; // inline onclick handlers (avatar callback, room objects) need it global
@@ -22356,7 +22930,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.22m'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.22o'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -23528,7 +24102,7 @@ const KL_WORLD_THEMES = {
 };
 function klWorldTheme() {
   const a = document.querySelector('.screen.active'); const id = a ? a.id : '';
-  if (id === 'kidlab') { const ms = document.querySelector('#kidlab .kl-modeselect'); return (ms && ms.offsetParent) ? 'base' : 'story'; }
+  if (id === 'kidlab') { const ms = document.querySelector('#kidlab .kl-modeselect'); if (ms && ms.offsetParent) return 'base'; return document.querySelector('#kidlab canvas.kt-3d') ? null : 'story'; }
   if (/^mixtape/.test(id)) return 'arcade';
   if (id === 'studio') return 'studio';
   if (/(ear|al|build|notation|theory|anatomy)-(config|session)|^home$|level-select|tx-index|session-complete/.test(id)) return 'lesson';
@@ -29620,7 +30194,7 @@ const MT_TUNE = {
   MIN_TIMER:    5,    // s — floor the window tightens toward
   TIMER_STEP: 1.4,    // s shaved off the window per level reached
   MAX_LEVEL:    5,    // pool ceiling (matches mtBuildPool levels 1–5)
-  LEVEL_MOMENTUM: 8,  // momentum needed to advance one level (was 4 — L5 arrived after ~10 answers)
+  LEVEL_MOMENTUM: 14, // momentum needed to advance one level (was 8 — leveled every 4–8 answers; now ~9–14)
   BASE_PTS:    10,    // per-level base; points = level × BASE_PTS × speed × streak
   SPEED_BONUS: 1.0,   // max EXTRA multiplier at an instant answer → score 1×…2× on speed
 };
@@ -30866,8 +31440,8 @@ function mtCorrect(opts) {
   mtState.correctCount++;
   mtState.streak++;
   if (mtState.streak > mtState.bestStreak) mtState.bestStreak = mtState.streak;
-  // Fast answers accelerate the ramp (1.0 slow … 2.0 instant added to momentum).
-  mtState.momentum += 1 + mtState.lastSpeedFrac;
+  // Fast answers accelerate the ramp a little (1.0 slow … 1.5 instant added to momentum).
+  mtState.momentum += 1 + 0.5 * mtState.lastSpeedFrac;
   // Points: harder level = more base; faster = up to 2×; streak combo on top.
   const streakMult = mtStreakMult();
   const speedMult = 1 + MT_TUNE.SPEED_BONUS * mtState.lastSpeedFrac;
