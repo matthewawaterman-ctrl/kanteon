@@ -21190,6 +21190,8 @@ function klDevBarMarkup() {
   // ── DATA — Arcade answer analytics ──
   s += lbl('nav', '📊 QUESTION DATA');
   s += btn("klDevQStats()", '📊 Question Stats', 'Arcade answer analytics — accuracy, answer time vs. timer, easiest→hardest (⬇ CSV inside)');
+  s += btn("klDevCalibrate()", '🎯 Calibration Run', 'Arcade with every question type + difficulty mixed — no lives lost, no level-ups, roomy timers. Answer at your natural pace; feeds the ranking.');
+  s += btn("klDevCalRank()", '🎯 Difficulty Ranking', 'Ranks questions WITHIN each type by your calibration answers (time + misses) and suggests a tier 1-5 (⬇ CSV inside)');
 
   // ── GO TO — real screens / station-select menus ──
   s += lbl('nav', '📍 GO TO');
@@ -23552,7 +23554,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.23d'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.23e'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -30814,7 +30816,7 @@ const MT_DIFFICULTIES = [
 const MT_TUNE = {
   START_TIMER: KANTEON_CONFIG.arcadeStartSeconds,    // s — lenient answer window at the start
   MIN_TIMER:    5,    // s — floor the window tightens toward
-  TIMER_STEP: 1.4,    // s shaved off the window per level reached
+  TIMER_STEP: 0.9,    // s shaved off the window per level reached (was 1.4 — L2 felt like a cliff)
   MAX_LEVEL:    5,    // pool ceiling (matches mtBuildPool levels 1–5)
   LEVEL_MOMENTUM: 14, // momentum needed to advance one level (was 8 — leveled every 4–8 answers; now ~9–14)
   BASE_PTS:    10,    // per-level base; points = level × BASE_PTS × speed × streak
@@ -30822,21 +30824,44 @@ const MT_TUNE = {
 };
 
 // ── Arcade pool by difficulty (1-5) ─────────────────────────────────────────
+// ══ ARCADE DIFFICULTY TIERS ══════════════════════════════════════════════
+// Every question TYPE shows up as early as possible; LEVELS make each type harder.
+// Tier N items unlock at level N. (Lesson mode keeps its own KANTEON_LADDER.)
+// Re-tune from Matt's calibration runs: DEV → 🎯 Difficulty Ranking.
+const MT_TIERS = {
+  'ear-interval':   { 1: ['P4', 'P5', 'P8', 'M3'], 2: ['m3', 'M6'], 3: ['M2', 'm6', 'm7'], 4: ['m2', 'M7', 'TT'], 5: ['m9', 'M9'] },
+  'build-interval': { 1: ['P4', 'P5', 'P8', 'M3'], 2: ['m3', 'M6'], 3: ['M2', 'm6', 'm7'], 4: ['m2', 'M7', 'TT'] },
+  'ear-chord':      { 1: ['major', 'minor'], 2: ['sus4'], 3: ['sus2', 'dom7'], 4: ['maj7', 'min7', 'dim', 'aug'], 5: ['dim7', 'half_dim', 'maj6', 'min6'] },
+  'build-chord':    { 1: ['major', 'minor'], 2: ['sus4'], 3: ['sus2', 'dom7'], 4: ['maj7', 'min7'], 5: ['dim', 'aug'] },
+  'ear-scale':      { 1: ['major', 'natural_minor'], 2: ['major_pent', 'minor_pent'], 3: ['dorian', 'mixolydian', 'blues'], 4: ['lydian', 'phrygian', 'harmonic_minor'], 5: ['melodic_minor', 'locrian', 'whole_tone'] },
+  'build-scale':    { 2: ['major_pent', 'minor_pent'], 3: ['major', 'natural_minor'], 4: ['dorian', 'mixolydian'], 5: ['lydian', 'phrygian'] },
+  'al-texture':     { 1: ['mono', 'homo'], 4: ['poly'], 5: ['hetero'] },
+};
+// first level each generated question type appears
+const MT_UNLOCK = { 'ear-progression': 1, 'al-tempo': 1, 'rhythm-write': 1, 'transcription': 1, 'notation-treble': 1,
+  'notation-bass': 2, 'ear-scaleDegree': 3, 'theory': 4 };
+function mtTierOf(kind, id) { const t = MT_TIERS[kind]; if (!t) return 1; for (const k in t) if (t[k].includes(id)) return +k; return 5; }
+// Answer choices come from what's unlocked (padded with the next tier up), so a
+// level-1 player never sees "Octatonic" or "Minor 9th" as a distractor.
+function mtTierCatalog(kind, catalog, lvl) {
+  const t = MT_TIERS[kind]; if (!t) return catalog;
+  const ids = []; for (let k = 1; k <= 5; k++) { if (k > lvl && ids.length >= 4) break; (t[k] || []).forEach(id => ids.push(id)); }
+  const out = catalog.filter(c => ids.includes(c.id));
+  return out.length >= 4 ? out : catalog;
+}
 function mtBuildPool(maxLevel) {
   const pool = [];
 
   // Ear Training presets — pull from existing EAR_PRESETS
   for (let lvl = 1; lvl <= maxLevel; lvl++) {
     if (typeof EAR_PRESETS !== 'undefined') {
-      (EAR_PRESETS.intervals?.[lvl] || []).filter(id => id !== 'unison').concat(lvl === 1 ? ['P4', 'M3'] : []).forEach(id => pool.push({ kind: 'ear-interval', id, lvl }));
-      (EAR_PRESETS.chords?.[lvl] || []).forEach(id => pool.push({ kind: 'ear-chord', id, lvl }));
-      if (lvl >= 2) (EAR_PRESETS.scales?.[lvl] || []).forEach(id => pool.push({ kind: 'ear-scale', id, lvl }));
+      ['ear-interval', 'ear-chord', 'ear-scale'].forEach(kind => (MT_TIERS[kind][lvl] || []).forEach(id => pool.push({ kind, id, lvl, tier: lvl })));
     }
   }
   // Toned Ear-style functional ear training (see MT_PROG / MT_DEG below). One pool
   // entry each — the round reads the current level for its chord/degree set.
-  if (maxLevel >= 2) pool.push({ kind: 'ear-progression', id: 'prog', lvl: maxLevel });
-  if (maxLevel >= 4) pool.push({ kind: 'ear-scaleDegree', id: 'deg', lvl: maxLevel });   // upper levels only
+  if (maxLevel >= MT_UNLOCK['ear-progression']) pool.push({ kind: 'ear-progression', id: 'prog', lvl: maxLevel });
+  if (maxLevel >= MT_UNLOCK['ear-scaleDegree']) pool.push({ kind: 'ear-scaleDegree', id: 'deg', lvl: maxLevel });
 
   // Active Listening — gradient sets per category
   const instSets = {
@@ -30866,9 +30891,7 @@ function mtBuildPool(maxLevel) {
   // Texture only — "solo"/"ensemble" are about HOW MANY INSTRUMENTS, not texture, and
   // overlapped with monophonic (a solo melody IS monophonic), so they're out of Arcade.
   const texSets = {
-    3: ['mono', 'homo'],
-    4: ['mono', 'homo'],
-    5: ['mono', 'homo', 'poly', 'hetero'],
+    1: MT_TIERS['al-texture'][1], 4: MT_TIERS['al-texture'][4], 5: MT_TIERS['al-texture'][5],
   };
 
   const MT_INSTRUMENT_QUESTIONS_ON = false;   // off until real instrument recordings land
@@ -30885,51 +30908,29 @@ function mtBuildPool(maxLevel) {
       }
     });
     // Tempo = pure BPM question from L3 (no feels / time signatures).
-    if (lvl >= 3 && !pool.find(p => p.kind === 'al-tempo')) pool.push({ kind: 'al-tempo', id: 'bpm', lvl });
+    if (lvl >= MT_UNLOCK['al-tempo'] && !pool.find(p => p.kind === 'al-tempo')) pool.push({ kind: 'al-tempo', id: 'bpm', lvl });
     (texSets[lvl] || []).forEach(id => {
       if (!pool.find(p => p.kind === 'al-texture' && p.id === id)) {
-        pool.push({ kind: 'al-texture', id, lvl });
+        pool.push({ kind: 'al-texture', id, lvl, tier: lvl });
       }
     });
   }
 
   // Build Mode — construct intervals on the ruler
   // Use a curated set of common intervals by level
-  const buildIntervalSets = KANTEON_LADDER.intervals;   // unified ladder
-  const buildSet = buildIntervalSets[Math.min(maxLevel, 5)] || buildIntervalSets[1];
-  // No unison here: the draggable dot STARTS on the root, so a unison was a free answer —
-  // and with only 3 intervals at L1 it came up 1 time in 3. Keep at least 3 choices.
-  let _bi = buildSet.filter(id => id !== 'unison');
-  if (_bi.length < 4) _bi = _bi.concat(['P4', 'M3'].filter(id => !_bi.includes(id))).slice(0, 4);
-  _bi.forEach(id => pool.push({ kind: 'build-interval', id, lvl: maxLevel }));
+  // (No unison: the draggable dot STARTS on the root, so it'd be a free answer.)
+  for (let k = 1; k <= Math.min(maxLevel, 5); k++) (MT_TIERS['build-interval'][k] || []).forEach(id => pool.push({ kind: 'build-interval', id, lvl: maxLevel, tier: k }));
 
   // Build Mode — construct CHORDS by ear (multi-marker). Introduced at level 2+
   // so the first level stays interval-only. Harder chords unlock with level.
   // Arcade's own BUILD-a-chord ladder — gentler than Lesson's KANTEON_LADDER.chords.
   // Building by ear is much harder than naming, so exotic chords (aug7, dim7, half-dim,
   // 6ths) stay out of Arcade entirely; they live in Lesson mode.
-  const buildChordSets = {
-    2: ['major', 'minor'],
-    3: ['major', 'minor', 'sus4'],
-    4: ['major', 'minor', 'sus2', 'sus4', 'dom7'],
-    5: ['major', 'minor', 'sus2', 'sus4', 'dom7', 'maj7', 'min7', 'dim', 'aug'],
-  };
-  if (maxLevel >= 2) {
-    const cset = buildChordSets[Math.min(maxLevel, 5)] || buildChordSets[2];
-    cset.forEach(id => { if (EAR_CHORDS.find(c => c.id === id)) pool.push({ kind: 'build-chord', id, lvl: maxLevel }); });
-  }
+  for (let k = 1; k <= Math.min(maxLevel, 5); k++) (MT_TIERS['build-chord'][k] || []).forEach(id => { if (EAR_CHORDS.find(c => c.id === id)) pool.push({ kind: 'build-chord', id, lvl: maxLevel, tier: k }); });
 
   // Build Mode — construct SCALES by ear (multi-marker, like chords but more
   // notes). Level 3+; pentatonics first (fewer notes), full 7-note modes later.
-  const buildScaleSets = {
-    3: ['major_pent', 'minor_pent'],
-    4: ['major_pent', 'minor_pent', 'major', 'natural_minor'],
-    5: ['major_pent', 'minor_pent', 'major', 'natural_minor', 'dorian', 'mixolydian'],
-  };
-  if (maxLevel >= 3) {
-    const sset = buildScaleSets[Math.min(maxLevel, 5)] || buildScaleSets[3];
-    sset.forEach(id => { if (EAR_SCALES.find(s => s.id === id)) pool.push({ kind: 'build-scale', id, lvl: maxLevel }); });
-  }
+  for (let k = 1; k <= Math.min(maxLevel, 5); k++) (MT_TIERS['build-scale'][k] || []).forEach(id => { if (EAR_SCALES.find(c => c.id === id)) pool.push({ kind: 'build-scale', id, lvl: maxLevel, tier: k }); });
 
   // Transcription — generated melodic dictation. Available from level 1 (short,
   // few pitches) and scales up. Several instances per level so it recurs.
@@ -30942,19 +30943,19 @@ function mtBuildPool(maxLevel) {
   {
     pool.push({ kind: 'notation', id: 'not-tr', mode: 'treble', lvl: maxLevel });
     pool.push({ kind: 'notation', id: 'not-tr2', mode: 'treble', lvl: maxLevel });
-    if (maxLevel >= 3) pool.push({ kind: 'notation', id: 'not-bs', mode: 'bass', lvl: maxLevel });
+    if (maxLevel >= MT_UNLOCK['notation-bass']) pool.push({ kind: 'notation', id: 'not-bs', mode: 'bass', lvl: maxLevel });
   }
 
   // Theory — modes & keys MCQ. This is genuinely advanced (parent-major / modal
   // degree naming). Gated to L5 only so it doesn't ambush early players.
-  if (maxLevel >= 5) {
+  if (maxLevel >= MT_UNLOCK['theory']) {
     pool.push({ kind: 'theory', id: 'th0', lvl: maxLevel });
     pool.push({ kind: 'theory', id: 'th1', lvl: maxLevel });
   }
 
   // Rhythm — beginner patterns from existing JSON
   // "Tap the pattern" is retired from Arcade (replaced by Write the Rhythm below).
-  if (maxLevel >= 2) pool.push({ kind: 'rhythm-write', id: 'gen', lvl: maxLevel });
+  if (maxLevel >= MT_UNLOCK['rhythm-write']) pool.push({ kind: 'rhythm-write', id: 'gen', lvl: maxLevel });
   if (false && typeof kanteon !== 'undefined' && kanteon.loaded) {
     try {
       const rPool = kanteon._pool('rhythm_comprehension');
@@ -30970,6 +30971,7 @@ function mtBuildPool(maxLevel) {
   // Octave/5th sat in the pool five times. Keep one entry per kind+answer.
   { const seen = new Set(); for (let k = pool.length - 1; k >= 0; k--) { const key = pool[k].kind + '|' + pool[k].id;
       if (seen.has(key)) pool.splice(k, 1); else seen.add(key); } }
+  pool.forEach(p => { p.w = (p.tier && p.tier === Math.min(maxLevel, 5) && maxLevel > 1) ? 2 : 1; });
   return pool;
 }
 
@@ -31259,7 +31261,7 @@ window.mtTryTutorial = function (i) {
   const t = MT_TUTORIALS[i]; if (!t) return;
   mtCloseTutorials();
   getAudio();
-  Object.assign(mtState, { practice: true, _practiceDone: false, level: t.lvl, momentum: 0, currentPoolLevel: t.lvl,
+  Object.assign(mtState, { practice: true, calibrate: false, _practiceDone: false, level: t.lvl, momentum: 0, currentPoolLevel: t.lvl,
     lives: KANTEON_CONFIG.arcadeLives, streak: 0, bestStreak: 0, score: 0, rounds: 0, correctCount: 0,
     lastSpeedFrac: 0.5, difficulty: 'practice', recentKinds: [], history: [], histPos: -1 });
   mtState.pool = mtBuildPool(t.lvl).filter(p => p.kind === t.kind);
@@ -31288,6 +31290,10 @@ window.startMixtape = function() {
   mtState.pool = mtBuildPool(1);
 
   mtState.lives = KANTEON_CONFIG.arcadeLives;
+  // DEV calibration run: every type + every tier mixed, no level-ups, no lives lost,
+  // roomy timers; answers go to a separate log for the Difficulty Ranking panel.
+  mtState.calibrate = !!mtState._calNext; mtState._calNext = false;
+  if (mtState.calibrate) mtState.pool = mtBuildPool(5);
   mtState.streak = 0;
   mtState.bestStreak = 0;
   mtState.score = 0;
@@ -31433,7 +31439,8 @@ function pickWeighted(pool) {
   const avoid = lastIds.slice(itemsInKind.length >= 4 ? -2 : -1);
   const fresh = itemsInKind.filter(p => !avoid.includes(p.id));
   const opts = fresh.length ? fresh : itemsInKind;
-  const item = opts[Math.floor(Math.random() * opts.length)];
+  let tw = opts.reduce((a, p) => a + (p.w || 1), 0) * Math.random(), item = opts[opts.length - 1];
+  for (const o of opts) { tw -= (o.w || 1); if (tw <= 0) { item = o; break; } }
   mtState.recentIds[chosenKind] = lastIds.concat(item.id).slice(-3);
   return item;
 }
@@ -31451,7 +31458,7 @@ window.nextMtRound = function() {
   klMarkDailyActivity();  // tick the daily streak on real Arcade practice (once/day)
   // Level is driven by MOMENTUM (fast answers accumulate it faster → reach hard puzzles sooner).
   const newLevel = Math.min(MT_TUNE.MAX_LEVEL, 1 + Math.floor(mtState.momentum / MT_TUNE.LEVEL_MOMENTUM));
-  if (newLevel > mtState.level && !mtState.practice) {
+  if (newLevel > mtState.level && !mtState.practice && !mtState.calibrate) {
     const oldKinds = new Set((mtState.pool || []).map(p => p.kind));
     mtState.level = newLevel;
     mtState.currentPoolLevel = newLevel;
@@ -31473,6 +31480,7 @@ window.nextMtRound = function() {
   if (mtState.recentKinds.length > 5) mtState.recentKinds.shift();
   // Defensive: if a pool item is broken (e.g. stale id after a catalog rename),
   // prune it and redraw instead of freezing the game mid-run.
+  if (mtState.calibrate) mtState.level = pick.tier || (1 + Math.floor(Math.random() * 5));   // each question at its own difficulty
   let attempt = pick, round = null, guard = 0;
   for (;;) {
     try { round = buildMtRound(attempt); } catch (e) { round = null; }
@@ -31484,9 +31492,12 @@ window.nextMtRound = function() {
   const _bs = KANTEON_CONFIG.arcadeBuildSeconds && KANTEON_CONFIG.arcadeBuildSeconds[attempt.kind];
   if (_bs) mtState.currentTimer = _bs[Math.max(0, Math.min(_bs.length - 1, mtState.level - 1))];   // roomy per-level window for build/transcription
   else mtState.currentTimer *= (KIND_TIME_MULT[attempt.kind] || 1);   // extend window for the round we actually drew
+  if (mtState.calibrate) mtState.currentTimer *= 2.5;                 // calibration: answer at your own pace
   if (round) {
     const _item = attempt.kind === 'notation' ? round.correctId : attempt.id;
     round._statKey = attempt.kind + '|' + _item + '|L' + mtState.level;
+    round._calKey = attempt.kind + '|' + (attempt.tier || attempt.kind === 'notation' ? _item : 'L' + mtState.level);
+    round._calTier = attempt.tier || mtState.level;
     round._statKind = attempt.kind; round._statItem = String(_item); round._statLvl = mtState.level;
     round._limitMs = Math.round(mtState.currentTimer * 1000);
   }
@@ -31527,7 +31538,7 @@ function buildMtRound(pick) {
       typeLabel: dir === 'ascending' ? 'INTERVAL (ASC)' : 'INTERVAL (DESC)',
       prompt: 'Identify the interval',
       correctId: def.id,
-      answers: pickAnswerSet(EAR_INTERVALS, def, 4),
+      answers: pickAnswerSet(mtTierCatalog('ear-interval', EAR_INTERVALS, Math.max(mtState.level || 1, mtTierOf('ear-interval', def.id))), def, 4),
       audio: (ctx, t0) => earVoice(ctx, t0, vq),
     };
   }
@@ -31540,7 +31551,7 @@ function buildMtRound(pick) {
       typeLabel: 'CHORD QUALITY',
       prompt: 'Identify the chord',
       correctId: def.id,
-      answers: pickAnswerSet(EAR_CHORDS, def, 4),
+      answers: pickAnswerSet(mtTierCatalog('ear-chord', EAR_CHORDS, Math.max(mtState.level || 1, mtTierOf('ear-chord', def.id))), def, 4),
       audio: (ctx, t0) => earVoice(ctx, t0, vq),
     };
   }
@@ -31555,14 +31566,14 @@ function buildMtRound(pick) {
       typeLabel: 'SCALE',
       prompt: 'Identify the scale',
       correctId: def.id,
-      answers: pickAnswerSet(EAR_SCALES, def, 4),
+      answers: pickAnswerSet(mtTierCatalog('ear-scale', EAR_SCALES, Math.max(mtState.level || 1, mtTierOf('ear-scale', def.id))), def, 4),
       audio: (ctx, t0) => earVoice(ctx, t0, vq),
     };
   }
   if (pick.kind === 'ear-progression') {
     // Toned Ear chord-progressions: chord 1 is always I (given); chords 2..N are
     // drawn from the level's set (repeats allowed); root-position block chords.
-    const lvl = Math.max(2, Math.min(5, mtState.level || pick.lvl || 2));
+    const lvl = Math.max(1, Math.min(5, mtState.level || pick.lvl || 1));
     const set = MT_PROG.sets[lvl].map(id => EAR_PROGRESSION_CHORDS.find(c => c.id === id)).filter(Boolean);
     const len = MT_PROG.length[lvl];
     // Draw a progression that wasn't used in the last few rounds.
@@ -31649,7 +31660,7 @@ function buildMtRound(pick) {
   }
   if (pick.kind === 'al-tempo') {
     // Pure tempo: four BPM choices. Easy levels space them far apart, hard levels close.
-    const lvl = Math.max(3, Math.min(5, mtState.level || pick.lvl || 3));
+    const lvl = Math.max(1, Math.min(5, mtState.level || pick.lvl || 1));
     const gap = MT_TEMPO_GAP[lvl];
     const k = Math.floor(Math.random() * 4);                       // where the right answer sits
     let lo = 56 + Math.round(Math.random() * (180 - 56 - 3 * gap) / 2) * 2;
@@ -32100,7 +32111,7 @@ function mtWrong(opts) {
   mtLogAnswer(false);
   mtState.rounds++;
   mtState.streak = 0;
-  mtState.lives--;
+  if (!mtState.calibrate) mtState.lives--;
   renderMtHud();
   mtFlash('×', 'wrong');
   let why = opts.why || '';
@@ -32135,6 +32146,14 @@ function mtLogAnswer(correct) {
     const r = mtState.currentRound;
     if (!r || !r._statKey || mtState.histPos !== -1) return;   // skip dev history replays
     if (mtState._pausedThisRound) return;
+    if (mtState.calibrate) {                                      // DEV calibration → its own log only
+      const ms = mtState._timedOut ? (r._limitMs || 0) : Math.round(mtState._roundShownAt ? performance.now() - mtState._roundShownAt : 0);
+      const log = JSON.parse(localStorage.getItem('kanteon_callog') || '[]');
+      log.push({ k: r._calKey, tier: r._calTier, c: correct ? 1 : 0, t: mtState._timedOut ? 1 : 0, ms, at: Date.now() });
+      while (log.length > 4000) log.shift();
+      localStorage.setItem('kanteon_callog', JSON.stringify(log));
+      return;
+    }
     if (mtState.practice) return;                                 // tutorial practice isn't real play                         // timer was paused (dev) — answer time is meaningless
     const timedOut = !!mtState._timedOut;
     const limit = r._limitMs || 0;
@@ -32217,6 +32236,49 @@ window.klDevQStats = async function () {
   let box = document.getElementById('kl-qs');
   if (!box) { box = document.createElement('div'); box.id = 'kl-qs'; box.className = 'kl-qs'; document.body.appendChild(box); }
   box.innerHTML = rows.length ? html : html + '<div class="kl-qs-note">No answers logged yet — play some Arcade.</div>';
+};
+
+// ── DEV: calibration run + difficulty ranking (within each question type) ──
+window.klDevCalibrate = function () {
+  mtState._calNext = true;
+  try { document.querySelectorAll('.kl-dev-menu.open, #kl-dev-menu').forEach(m => m.classList && m.classList.remove('open')); } catch (e) {}
+  startMixtape();
+};
+window.klDevCalRank = function () {
+  const log = JSON.parse(localStorage.getItem('kanteon_callog') || '[]');
+  const agg = {};
+  log.forEach(ev => { const a = agg[ev.k] = agg[ev.k] || { key: ev.k, kind: ev.k.split('|')[0], item: ev.k.split('|').slice(1).join('|'), tier: ev.tier, n: 0, correct: 0, times: [] };
+    a.n++; a.correct += ev.c; if (ev.c && !ev.t) a.times.push(ev.ms); a.tier = ev.tier; });
+  const rows = Object.values(agg);
+  rows.forEach(r => { const t = r.times.slice().sort((a, b) => a - b); r.med = t.length ? t[Math.floor(t.length / 2)] / 1000 : null;
+    r.acc = r.n ? r.correct / r.n : 0;
+    r.score = (r.med == null ? 99 : r.med) * (1 + 1.5 * (1 - r.acc)); });   // slow answers + misses = harder
+  const byKind = {}; rows.forEach(r => (byKind[r.kind] = byKind[r.kind] || []).push(r));
+  Object.values(byKind).forEach(list => { list.sort((a, b) => a.score - b.score);
+    list.forEach((r, i) => { r.rank = i + 1; r.suggest = list.length >= 3 ? 1 + Math.floor(i / list.length * 5) : r.tier; }); });
+  window._klCalRows = rows;
+  const pct = x => Math.round(x * 100) + '%';
+  let html = '<div class="kl-qs-head">DIFFICULTY RANKING — ' + log.length + ' calibration answers' +
+    '<span style="flex:1"></span><button class="kl-dev-btn" onclick="klDevCalCSV()">⬇ CSV</button>' +
+    '<button class="kl-dev-btn" onclick="if(confirm(\'Clear calibration data?\')){localStorage.removeItem(\'kanteon_callog\');klDevCalRank();}">clear</button>' +
+    '<button class="kl-dev-btn" onclick="document.getElementById(\'kl-qs\').remove()">✕</button></div>' +
+    '<div class="kl-qs-note">Within each type, easiest → hardest by your median answer time on right answers, plus misses. Compare inside a type only. Aim for 3+ answers per row.</div>';
+  Object.keys(byKind).sort().forEach(kind => {
+    html += '<table class="kl-qs-table"><tr><th colspan="7" style="text-align:left">' + (MT_KIND_NAMES[kind] || kind) + '</th></tr><tr><th>#</th><th>question</th><th>answers</th><th>right</th><th>median time</th><th>tier now</th><th>suggested</th></tr>';
+    byKind[kind].forEach(r => { const moved = r.suggest !== r.tier && r.n >= 3;
+      html += '<tr><td>' + r.rank + '</td><td>' + r.item + '</td><td>' + r.n + '</td><td>' + pct(r.acc) + '</td><td>' + (r.med == null ? '—' : r.med.toFixed(1) + 's') + '</td><td>' + r.tier + '</td><td class="' + (moved ? 'flag' : '') + '">' + r.suggest + (r.n < 3 ? ' (few)' : '') + '</td></tr>'; });
+    html += '</table>';
+  });
+  let box = document.getElementById('kl-qs');
+  if (!box) { box = document.createElement('div'); box.id = 'kl-qs'; box.className = 'kl-qs'; document.body.appendChild(box); }
+  box.innerHTML = rows.length ? html : html + '<div class="kl-qs-note">No calibration answers yet — DEV → 🎯 Calibration Run.</div>';
+};
+window.klDevCalCSV = function () {
+  const rows = window._klCalRows || [];
+  const cols = ['kind', 'item', 'n', 'correct', 'acc', 'med', 'score', 'rank', 'tier', 'suggest'];
+  const csv = [cols.join(',')].concat(rows.map(r => cols.map(c => JSON.stringify(r[c] == null ? '' : r[c])).join(','))).join('\n');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = 'kanteon_difficulty_ranking.csv'; a.click();
 };
 window.klDevQStatsCSV = function () {
   const rows = window._klQStatsRows || [];
@@ -32581,13 +32643,14 @@ function renderMtBuildRound(r) {
 // chromatic. Edit the sets here.
 const MT_PROG = {
   sets: {
+    1: ['I', 'IV', 'V'],
     2: ['I', 'IV', 'V'],
     3: ['I', 'IV', 'V', 'vi'],
     4: ['I', 'ii', 'iii', 'IV', 'V', 'vi'],
     5: ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'Imaj7', 'iim7', 'V7', 'vim7'],
   },
-  length: { 2: 4, 3: 4, 4: 4, 5: 5 },   // L2 was 3 chords → only 4 possible progressions, so repeats were constant          // chords per progression (incl. the given I)
-  beat:   { 2: 0.9, 3: 0.9, 4: 0.75, 5: 0.6 },  // seconds per chord (Toned Ear medium = 0.9)
+  length: { 1: 3, 2: 4, 3: 4, 4: 4, 5: 5 },   // L2 was 3 chords → only 4 possible progressions, so repeats were constant          // chords per progression (incl. the given I)
+  beat:   { 1: 1.0, 2: 0.9, 3: 0.9, 4: 0.75, 5: 0.6 },  // seconds per chord (Toned Ear medium = 0.9)
 };
 const MT_DEG = {
   sets: {
@@ -32598,7 +32661,7 @@ const MT_DEG = {
     5: ['1', '2', '3', '4', '5', '6', '7'],
   },
 };
-const MT_TEMPO_GAP = { 3: 36, 4: 22, 5: 12 };   // BPM between the four answer choices
+const MT_TEMPO_GAP = { 1: 40, 2: 34, 3: 28, 4: 20, 5: 12 };   // BPM between the four answer choices
 
 // I-IV-V-I cadence (Toned Ear voicings: I=0,4,7  IV=5,9,12  V=7,11,14), then the note.
 function mtPlayCadence(ctx, t0, root, step) {
@@ -32729,8 +32792,8 @@ function renderMtProgressionRound(r) {
 // note without dragging to delete it. Graded exactly (start + length) on SUBMIT.
 const MT_RW = {
   // level → generator vocabulary + grid resolution (beats per cell)
-  vocab: { 2: 'beginner', 3: 'intermediate', 4: 'intermediate', 5: 'advanced' },
-  minStep: { 2: 0.5, 3: 0.5, 4: 0.5, 5: 0.25 },
+  vocab: { 1: 'beginner', 2: 'beginner', 3: 'intermediate', 4: 'intermediate', 5: 'advanced' },
+  minStep: { 1: 0.5, 2: 0.5, 3: 0.5, 4: 0.5, 5: 0.25 },
 };
 function mtRwGenerate(lvl) {
   const meter = 4, ts = [4, 4];
