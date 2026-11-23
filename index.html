@@ -6215,6 +6215,13 @@
     box-shadow: inset 2px 2px 0 rgba(255,224,138,0.55), inset -2px -2px 0 rgba(20,10,0,0.6), 4px 4px 0 rgba(0,0,10,0.45); }
   .kl-modeselect .kl-tools-link:hover { transform: translate(-1px,-1px); box-shadow: inset 2px 2px 0 #ffe08a, inset -2px -2px 0 rgba(60,30,0,0.7), 5px 5px 0 rgba(0,0,10,0.45); }
   .kl-modeselect .kl-mode-badge { border-radius: 2px; box-shadow: 2px 2px 0 rgba(0,0,10,0.5); }
+  /* interiors: HUD keeps a clear lane for "Back outside"; pills squeeze instead of sliding under it */
+  #kidlab:has(.kl-garage-back) .kt-hud { padding-left: 196px; }
+  #kidlab:has(.kl-garage-back) .kt-hud > * { flex-shrink: 1; min-width: 0; }
+  #kidlab:has(.kl-garage-back) .kt-hud-item { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .kt-keeper.kl-keeper3d-on { position: relative; }
+  .kt-keeper.kl-keeper3d-on .kt-keeper-svg { visibility: hidden; }
+  canvas.kl-keeper3d { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; display: block; }
   /* 3-D town */
 
   #kt-scene canvas.kt-3d { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; display: block; }
@@ -14772,13 +14779,34 @@ function klTown3D(host, fallbackHTML) {
     const P = KL_TOWN_PAL[b.kind], g = new T.Group(), x = b.side * 9.2, z = zOf(b.t);
     g.position.set(x, 0, z); g.userData = { b };
     if (b.kind === 'plaza') g.position.set(-7.6, 0, 1.5);   // pulled in so it's on screen
-    if (b.kind === 'plaza') {
-      const pad = new T.Mesh(new T.CylinderGeometry(2.6, 3, 0.4, 10), lam(0x4a4660)); pad.position.y = 0.2; g.add(pad);
-      const ring2 = new T.Mesh(new T.TorusGeometry(2.3, 0.12, 4, 14), glow(0x8ee8ff)); ring2.rotation.x = Math.PI / 2; ring2.position.y = 0.45; g.add(ring2);
-      const beam = new T.Mesh(new T.CylinderGeometry(1.1, 1.8, 5, 8, 1, true), snap(new T.MeshBasicMaterial({ color: 0x8ee8ff, transparent: true, opacity: 0.22, side: T.DoubleSide })));
-      beam.position.y = 2.9; g.add(beam); g.userData.beam = beam;
-      const n = new T.Group(); const h1 = new T.Mesh(new T.SphereGeometry(0.4, 6, 4), glow(0xbff8ff)); h1.scale.set(1.25, 0.85, 0.85); n.add(h1);
-      const st = box(0.09, 1.4, 0.09, glow(0xbff8ff)); st.position.set(0.45, 0.7, 0); n.add(st); n.position.y = 2.4; g.add(n); g.userData.spin = n;
+    if (b.kind === 'plaza') {   // the glowing hologram fountain (as in the drawn town), plus the busker
+      const paving = new T.Mesh(new T.CylinderGeometry(3.6, 3.8, 0.12, 12), lam(0x3e3a56)); paving.position.y = 0.06; g.add(paving);
+      const basin = new T.Mesh(new T.CylinderGeometry(2.5, 2.7, 0.7, 12), lam(0x1d3340)); basin.position.y = 0.45; g.add(basin);
+      const rim = new T.Mesh(new T.TorusGeometry(2.5, 0.11, 4, 16), glow(0x5ce8ff)); rim.rotation.x = Math.PI / 2; rim.position.y = 0.82; g.add(rim);
+      const pool = new T.Mesh(new T.CircleGeometry(2.35, 14), glow(0x46e8ff, 0.5)); pool.rotation.x = -Math.PI / 2; pool.position.y = 0.72; g.add(pool);
+      const col = new T.Mesh(new T.CylinderGeometry(0.22, 0.34, 2.3, 7), lam(0x1d3340)); col.position.y = 1.9; g.add(col);
+      const bowl = new T.Mesh(new T.CylinderGeometry(0.95, 0.5, 0.35, 10), lam(0x1d3340)); bowl.position.y = 3.1; g.add(bowl);
+      const brim = new T.Mesh(new T.TorusGeometry(0.95, 0.06, 4, 12), glow(0x38e0ff)); brim.rotation.x = Math.PI / 2; brim.position.y = 3.28; g.add(brim);
+      const top = new T.Mesh(new T.CircleGeometry(0.85, 12), glow(0x7af0ff, 0.65)); top.rotation.x = -Math.PI / 2; top.position.y = 3.25; g.add(top);
+      const curtain = new T.Mesh(new T.CylinderGeometry(0.88, 1.15, 2.45, 12, 1, true), snap(new T.MeshBasicMaterial({ color: 0x96f2ff, transparent: true, opacity: 0.3, side: T.DoubleSide, depthWrite: false })));
+      curtain.position.y = 2.0; g.add(curtain); g.userData.beam = curtain;
+      const jet = new T.Mesh(new T.ConeGeometry(0.14, 0.9, 6), glow(0xc8faff, 0.8)); jet.position.y = 3.7; g.add(jet);
+      const drops = new T.Group(); g.add(drops); g.userData.drops = drops;
+      for (let k = 0; k < 14; k++) { const dd = new T.Mesh(new T.BoxGeometry(0.06, 0.18, 0.06), glow(0xc8faff)); dd.userData.a = k / 14 * Math.PI * 2; dd.userData.o = Math.random(); drops.add(dd); }
+      // busker on the rim with an open guitar case (Plaza = busk)
+      const bk = new T.Group();
+      const legs = box(0.45, 0.25, 0.7, lam(0x3a4a7a)); legs.position.set(0, 0.95, 0.25); bk.add(legs);
+      const torso = box(0.55, 0.75, 0.35, lam(0xe0556a)); torso.position.set(0, 1.4, 0); bk.add(torso);
+      const hd = new T.Mesh(new T.IcosahedronGeometry(0.26, 0), lam(0xcaa37a)); hd.position.set(0, 2.0, 0); bk.add(hd);
+      const gt = new T.Group(); const gb = new T.Mesh(new T.IcosahedronGeometry(0.32, 0), lam(0xc98a3f)); gb.scale.set(1, 1.1, 0.35); gt.add(gb);
+      const gn = box(0.08, 0.9, 0.06, lam(0x5b3f26)); gn.position.y = 0.6; gt.add(gn); gt.position.set(0.1, 1.35, 0.3); gt.rotation.z = -1.0; bk.add(gt);
+      bk.position.set(1.6, 0, 2.1); bk.rotation.y = 0.5; g.add(bk); g.userData.busker = bk;
+      const cs = box(1.1, 0.18, 0.5, lam(0x8a5a2a)); cs.position.set(2.9, 0.18, 2.6); cs.rotation.y = 0.4; g.add(cs);
+      const lid = box(1.1, 0.06, 0.5, lam(0x5a3a1a)); lid.position.set(3.05, 0.5, 2.3); lid.rotation.set(-1.0, 0.4, 0); g.add(lid);
+      // lamp posts
+      [[-3.3, -2.2], [3.3, -2.6]].forEach(([x, z]) => { const p = box(0.12, 3.6, 0.12, lam(0x2a2440)); p.position.set(x, 1.8, z); g.add(p);
+        const l = new T.Mesh(new T.SphereGeometry(0.26, 6, 4), glow(0xffe8a2)); l.position.set(x, 3.7, z); g.add(l); });
+      const fl = new T.PointLight(0x5ce8ff, 0.9, 9); fl.position.set(0, 1.6, 0.8); g.add(fl);
     } else if (b.kind === 'radio') {
       g.position.set(-16, 0, -30);
       for (let k = 0; k < 4; k++) { const leg = box(0.14, 15, 0.14, lam(0x8a84b0)); leg.position.set((k % 2 ? 1 : -1) * (1.1 - 0), 7.5, (k < 2 ? 1 : -1)); leg.rotation.z = (k % 2 ? -1 : 1) * 0.07; leg.rotation.x = (k < 2 ? 1 : -1) * 0.07; g.add(leg); }
@@ -14802,7 +14830,7 @@ function klTown3D(host, fallbackHTML) {
       // neon sign facing the street
       // blade sign: sticks out over the sidewalk and faces down the street, so it reads from the camera
       const sw = 4.6, sh = 1.2;
-      const sign = new T.Mesh(new T.PlaneGeometry(sw, sh), snap(new T.MeshBasicMaterial({ map: klTownSign(b.name, P.neon), side: T.DoubleSide })));
+      const sign = new T.Mesh(new T.PlaneGeometry(sw, sh), snap(new T.MeshBasicMaterial({ map: klTownSign(b.name, P.neon), side: T.DoubleSide, fog: false })));
       // blade sign facing down the street; heights alternate high/low along each
       // side so the far signs don't stack on top of each other
       const sy = { waddy: 6.7, garage: 4.3, factory: 6.1, home: 7.0, neighbor: 7.0, venue: 6.1, shop: 4.6 }[b.kind] || Math.min(h - 0.6, 6.2);
@@ -14860,7 +14888,9 @@ function klTown3D(host, fallbackHTML) {
     cam.position.set(Math.sin(t * 0.18) * 0.5, 4.6 + Math.sin(t * 0.3) * 0.12, 16);
     cam.lookAt(0, 3.6, -14);
     planet.rotation.y = t * 0.1; ring.rotation.z = t * 0.12;
-    picks.forEach(g => { const u = g.userData; if (u.spin) u.spin.rotation.y = t * 1.4; if (u.beam) u.beam.material.opacity = 0.16 + Math.sin(t * 3) * 0.06; if (u.blink) u.blink.visible = Math.sin(t * 4) > 0; });
+    picks.forEach(g => { const u = g.userData; if (u.spin) u.spin.rotation.y = t * 1.4; if (u.beam) u.beam.material.opacity = 0.16 + Math.sin(t * 3) * 0.06; if (u.drops) u.drops.children.forEach(d => { const k = (t * 0.9 + d.userData.o) % 1, a = d.userData.a + t * 0.2;
+        d.position.set(Math.cos(a) * (0.9 + k * 0.5), 3.4 - k * k * 2.7, Math.sin(a) * (0.9 + k * 0.5)); });
+      if (u.busker) u.busker.children[2].rotation.z = Math.sin(t * 3.5) * 0.12; if (u.blink) u.blink.visible = Math.sin(t * 4) > 0; });
     peds.forEach(p => { p.position.z += p.userData.v * dt; if (p.position.z > 6) p.position.z = -26; if (p.position.z < -26) p.position.z = 6;
       p.rotation.y = p.userData.v > 0 ? 0 : Math.PI; p.children[0].scale.y = 1 + Math.sin(t * 9 + p.userData.ped) * 0.08; });
     car.position.z += dt * 9; if (car.position.z > 16) car.position.z = -70 - Math.random() * 40;
@@ -16898,6 +16928,7 @@ function klRenderInterior(id) {
         (klIsDevAvailable() ? klDevBar() : '') +
       '</div>';
     if (window.THREE) { const sa = wrap.querySelector('.kt-scene-art'), keep = sa.innerHTML; try { if (klInterior3D('shop', sa) === false) sa.innerHTML = keep; } catch (e) { sa.innerHTML = keep; } }
+    try { klKeeper3D(wrap.querySelector('.kt-keeper')); } catch (e) { console.warn(e); }
     return;
   }
   wrap.innerHTML =
@@ -19048,7 +19079,9 @@ function klMini3D(host, cls, renderW, build) {
   host.appendChild(cv);
   const fit = () => { const rc = host.getBoundingClientRect(); if (!rc.width || !rc.height) return;
     const w = klRes3D(rc.width, renderW), h = Math.max(1, Math.round(w * rc.height / rc.width));
-    r.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); klSnapSet(K.U, w, h); if (api.fit) api.fit(w, h); };
+    r.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix();
+    if (api.fineSnap) K.U.value.set(w / 2, h / 2); else klSnapSet(K.U, w, h);   // fine grid keeps thin detail (logo stripes) apart
+    if (api.fit) api.fit(w, h); };
   fit(); const ro = new ResizeObserver(fit); ro.observe(host);
   let t = 0, last = 0;
   const loop = now => {
@@ -19068,7 +19101,7 @@ function klLogo3D(el) {
   if (!el || !window.THREE || el.querySelector('canvas.kl-logo3d')) return;
   const go = () => {
     if (!el.isConnected) return;
-    const ok = klMini3D(el, 'kl-logo3d', 1280, (T, K, scene, cam) => {
+    const ok = klMini3D(el, 'kl-logo3d', 2048, (T, K, scene, cam) => {
       const fs = 100, c = document.createElement('canvas'), g = c.getContext('2d');
       g.font = fs + 'px Monoton'; const tw = Math.ceil(g.measureText('KANTEON').width + 12 * 4);
       c.width = tw + 8; c.height = Math.ceil(fs * 1.25);
@@ -19080,25 +19113,26 @@ function klLogo3D(el) {
           if (on && s < 0) s = xx; if (!on && s >= 0) { runs.push([s, xx - 1, y]); s = -1; } } }
       if (runs.length < 120) return null;           // font not ready → keep the drawn logo
       const W = c.width, H = c.height;
-      const face = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1), K.lam(0x5cf0d0, 0x0f5a4a), runs.length);
-      const back = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1), K.lam(0x1c6f5e, 0x062a22), runs.length);
+      const face = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1), K.lam(0x62f2d8, 0x06302a), runs.length);
+      const back = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1), K.lam(0x0d3d36, 0x020c0a), runs.length);
       const m = new T.Matrix4(), q = new T.Quaternion();
       runs.forEach(([a, b, y], i) => {
         const len = b - a + 1, cx = (a + b) / 2 - W / 2, cy = H / 2 - y;
-        m.compose(new T.Vector3(cx, cy, 0), q, new T.Vector3(len, 1, 7)); face.setMatrixAt(i, m);
-        m.compose(new T.Vector3(cx + 3.2, cy - 3.6, -7.5), q, new T.Vector3(len, 1, 8)); back.setMatrixAt(i, m);
+        m.compose(new T.Vector3(cx, cy, 0), q, new T.Vector3(len, 1, 2.2)); face.setMatrixAt(i, m);
+        m.compose(new T.Vector3(cx + 3.2, cy - 3.6, -9), q, new T.Vector3(len, 1, 2.2)); back.setMatrixAt(i, m);
       });
       const logo = new T.Group(); logo.add(back, face); scene.add(logo);
-      scene.add(new T.HemisphereLight(0xdffff8, 0x0a2a30, 0.9));
-      const key = new T.DirectionalLight(0xffffff, 0.8); key.position.set(-0.4, 0.6, 1); scene.add(key);
-      const sweep = new T.PointLight(0xbffff0, 1.6, 0); scene.add(sweep);
+      scene.add(new T.HemisphereLight(0xdffff8, 0x0a2a30, 0.75));
+      const key = new T.DirectionalLight(0xffffff, 0.45); key.position.set(-0.4, 0.6, 1); scene.add(key);
+      const sweep = new T.PointLight(0xbffff0, 0.55, 0); scene.add(sweep);
       let span = W;
       return {
         fit(w, h) { const vh = 2 * 100 * Math.tan(15 * Math.PI / 180), vw = vh * w / h;
           // fill the element's content box (it has 47px padding of its ~box)
           const sc = Math.min(vw * 0.78 / W, vh * 0.62 / H); logo.scale.setScalar(sc); span = W * sc;
           cam.position.set(0, 0, 100); cam.lookAt(0, 0, 0); },
-        tick(t) { logo.rotation.y = Math.sin(t * 0.6) * 0.18; logo.rotation.x = Math.sin(t * 0.45) * 0.08;
+        fineSnap: true,
+        tick(t) { logo.rotation.y = Math.sin(t * 0.6) * 0.13; logo.rotation.x = Math.sin(t * 0.45) * 0.06;
           sweep.position.set(Math.sin(t * 0.8) * span * 0.6, 4, 30 * W / 300); },
       };
     });
@@ -19263,6 +19297,58 @@ function klModeIcons(root) {
     });
   };
   requestAnimationFrame(loop);
+}
+
+// ── SHOPKEEPER in 3-D: same guy (spikes, shades, hoop, mustache, leather + red tee,
+// pick pendant) behind the counter. The SVG stays in place, invisible, to keep his
+// exact size in the layout; the canvas sits on top of it.
+function klKeeper3D(el) {
+  if (!el || !window.THREE || el.querySelector('canvas')) return;
+  const ok = klMini3D(el, 'kl-keeper3d', 520, (T, K, scene, cam) => {
+    const { lam, glow, box } = K;
+    const at = (o, x, y, z, p) => { o.position.set(x, y, z); (p || scene).add(o); return o; };
+    scene.add(new T.HemisphereLight(0xfff0e0, 0x201420, 0.85));
+    const key = new T.DirectionalLight(0xffffff, 0.75); key.position.set(-3, 5, 6); scene.add(key);
+    const fig = new T.Group(); scene.add(fig);
+    const skin = 0xf0c39d, hair = 0x3a2a40;
+    // body: jacket, red tee, lapels, chain + pick
+    const jk = at(new T.Mesh(new T.CylinderGeometry(1.55, 2.0, 2.6, 8), lam(0x24242c)), 0, 1.5, 0, fig); jk.scale.z = 0.62;
+    const tee = at(box(1.6, 2.4, 0.3, lam(0x7a1f2b, 0x1a0408)), 0, 1.55, 0.95, fig);
+    [-1, 1].forEach(s => { const lp = at(box(0.45, 1.6, 0.12, lam(0x15151a)), s * 0.78, 2.0, 1.12, fig); lp.rotation.z = s * 0.22; });
+    at(box(0.05, 1.0, 0.05, glow(0xc8c8d0)), 0, 2.2, 1.14, fig);
+    const pick = at(new T.Mesh(new T.ConeGeometry(0.16, 0.3, 3), lam(0xd6d6de, 0x202024)), 0, 1.62, 1.16, fig); pick.rotation.z = Math.PI;
+    at(new T.Mesh(new T.CylinderGeometry(0.32, 0.36, 0.5, 7), lam(0xe3b58f)), 0, 2.95, 0, fig);
+    // head
+    const hd = new T.Group(); at(hd, 0, 4.25, 0.1, fig);
+    const head = at(new T.Mesh(new T.IcosahedronGeometry(1.2, 1), lam(skin)), 0, 0, 0, hd); head.scale.set(1, 1.02, 0.92);
+    [-1, 1].forEach(s => at(new T.Mesh(new T.IcosahedronGeometry(0.24, 0), lam(0xe3b58f)), s * 1.2, -0.05, 0, hd));
+    const hoop = at(new T.Mesh(new T.TorusGeometry(0.11, 0.035, 4, 8), glow(0xd9b44a)), -1.24, -0.32, 0.05, hd); hoop.rotation.y = Math.PI / 2;
+    const cap = at(new T.Mesh(new T.SphereGeometry(1.24, 9, 5, 0, Math.PI * 2, 0, 1.25), lam(hair)), 0, 0.08, -0.04, hd);
+    [-0.66, -0.22, 0.22, 0.66].forEach((x, i) => { const sp = at(new T.Mesh(new T.ConeGeometry(0.2, 0.75, 4), lam(hair)), x, 1.25 + (i % 3 ? 0.12 : 0), -0.05, hd); sp.rotation.z = -x * 0.35; });
+    [-1, 1].forEach(s => at(box(0.25, 0.7, 0.6, lam(hair)), s * 1.08, 0.35, -0.1, hd));
+    // shades + brows + nose + mustache + grin
+    [-1, 1].forEach(s => at(box(0.6, 0.36, 0.1, lam(0x0c0c10)), s * 0.44, -0.08, 1.1, hd));
+    at(box(0.3, 0.07, 0.08, lam(0x0c0c10)), 0, -0.02, 1.12, hd);
+    const glint = at(box(0.16, 0.06, 0.02, glow(0xffffff)), -0.56, 0.0, 1.16, hd);
+    [-1, 1].forEach(s => at(box(0.5, 0.1, 0.08, lam(hair)), s * 0.44, 0.24, 1.08, hd));
+    at(new T.Mesh(new T.ConeGeometry(0.16, 0.38, 4), lam(0xe0a87e)), 0, -0.36, 1.12, hd).rotation.x = Math.PI / 2 + 0.3;
+    [-1, 1].forEach(s => { const m = at(box(0.6, 0.17, 0.12, lam(0x5a3a22)), s * 0.3, -0.66, 1.0, hd); m.rotation.z = -s * 0.25; });
+    const grin = at(box(0.5, 0.06, 0.06, glow(0x8a5a3a)), 0, -0.9, 0.98, hd);
+    // counter in front
+    at(box(7, 1.4, 1.2, lam(0x3a2a1c)), 0, 0.05, 1.9);
+    at(box(7.1, 0.16, 1.3, lam(0x54402a)), 0, 0.82, 1.9);
+    return {
+      fit(w, h) { const vh = 7.5; const d = vh / 2 / Math.tan(15 * Math.PI / 180); cam.position.set(0, 3.25, d); cam.lookAt(0, 3.25, 0); },
+      tick(t) {
+        fig.position.y = Math.sin(t * 1.85) * 0.07;
+        hd.rotation.y = Math.sin(t * 0.5) * 0.28 + (Math.sin(t * 0.21) > 0.85 ? 0.35 : 0);
+        hd.rotation.z = Math.sin(t * 0.9) * 0.04;
+        glint.visible = (t % 4.5) < 0.35; glint.position.x = -0.75 + ((t % 4.5) / 0.35) * 0.4;
+        grin.scale.x = 1 + Math.max(0, Math.sin(t * 0.7)) * 0.25;
+      },
+    };
+  });
+  if (ok) el.classList.add('kl-keeper3d-on');
 }
 
 function klTitle3D(tries) {
@@ -23346,7 +23432,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.22t'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.23a'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
