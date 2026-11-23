@@ -6181,6 +6181,10 @@
   .kt-3d-lbl.done { color: #b8f5c8; }
   .kt-3d-lbl.locked { opacity: 0.6; cursor: default; color: #c8c4dc; }
   html:has(#kidlab canvas.kt-3d) { background: #0d0a26 !important; }
+  /* 3-D title art */
+  canvas.kl-hero3d, canvas.kl-logo3d { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; pointer-events: none; display: block; }
+  .kl-scene.kl-hero3d-on > svg { display: none; }
+  .kl-logo3d-on { background-image: none !important; text-shadow: none !important; -webkit-text-fill-color: transparent !important; color: transparent !important; filter: none !important; }
   /* 3-D town */
 
   #kt-scene canvas.kt-3d { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; display: block; }
@@ -18978,7 +18982,192 @@ window.klShowModeSelect = function() {
       '</div>' +
       (klIsDevAvailable() ? klDevBar() : '') +
     '</div>';
+  klTitle3D();
 };
+
+// ══ 3-D TITLE ART (logo + hero hill/rocket/avatars) ═════════════════════════
+// Same low-poly look as the town: 640-wide render, vertex snapping, pixelated
+// upscale. Transparent canvases sit exactly where the drawn art was, so every
+// tuned position/size stays put; the drawn versions remain as the fallback.
+function klSnapKit(T) {
+  const U = { value: new T.Vector2(320, 180) };
+  const snap = m => { m.onBeforeCompile = s => { s.uniforms.uRes = U; s.vertexShader = 'uniform vec2 uRes;\n' + s.vertexShader.replace('#include <project_vertex>',
+    '#include <project_vertex>\n gl_Position.xy = floor(gl_Position.xy / gl_Position.w * uRes + 0.5) / uRes * gl_Position.w;'); }; return m; };
+  return { U, snap,
+    lam: (c, e) => snap(new T.MeshLambertMaterial({ color: c, emissive: e || 0, flatShading: true })),
+    glow: (c, o) => snap(new T.MeshBasicMaterial(o == null ? { color: c } : { color: c, transparent: true, opacity: o, depthWrite: false })),
+    box: (w, h, d, m) => new T.Mesh(new T.BoxGeometry(w, h, d), m) };
+}
+function klMini3D(host, cls, renderW, build) {
+  const T = window.THREE; if (!T || !host) return false;
+  const cv = document.createElement('canvas'); cv.className = cls; cv.setAttribute('aria-hidden', 'true');
+  let r;
+  try { r = new T.WebGLRenderer({ canvas: cv, antialias: false, alpha: true, powerPreference: 'low-power' }); } catch (e) { return false; }
+  r.setPixelRatio(1); r.setClearColor(0x000000, 0);
+  const K = klSnapKit(T), scene = new T.Scene(), cam = new T.PerspectiveCamera(30, 1.6, 0.5, 200);
+  const api = build(T, K, scene, cam); if (!api) return false;
+  host.appendChild(cv);
+  const fit = () => { const rc = host.getBoundingClientRect(); if (!rc.width || !rc.height) return;
+    const w = renderW, h = Math.max(1, Math.round(w * rc.height / rc.width));
+    r.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); K.U.value.set(w / 2, h / 2); if (api.fit) api.fit(w, h); };
+  fit(); const ro = new ResizeObserver(fit); ro.observe(host);
+  let t = 0, last = 0;
+  const loop = now => {
+    if (!cv.isConnected) { ro.disconnect(); try { r.dispose(); } catch (e) {} return; }
+    requestAnimationFrame(loop);
+    if (document.hidden || now - last < 33) return;
+    const dt = Math.min(0.1, (now - last) / 1000 || 0.033); last = now; t += dt;
+    api.tick(t, dt); r.render(scene, cam);
+  };
+  requestAnimationFrame(loop);
+  return true;
+}
+
+// KANTEON logo: the real Monoton lettering sampled to a pixel mask, each row of
+// lit pixels extruded into a block — a chunky neon-tube 3-D logo.
+function klLogo3D(el) {
+  if (!el || !window.THREE || el.querySelector('canvas.kl-logo3d')) return;
+  const go = () => {
+    if (!el.isConnected) return;
+    const ok = klMini3D(el, 'kl-logo3d', 560, (T, K, scene, cam) => {
+      const fs = 44, c = document.createElement('canvas'), g = c.getContext('2d');
+      g.font = fs + 'px Monoton'; const tw = Math.ceil(g.measureText('KANTEON').width + 12 * 2);
+      c.width = tw + 8; c.height = Math.ceil(fs * 1.25);
+      g.font = fs + 'px Monoton'; g.textBaseline = 'middle'; g.fillStyle = '#fff';
+      let x = 4; for (const ch of 'KANTEON') { g.fillText(ch, x, c.height / 2); x += g.measureText(ch).width + 2; }
+      const d = g.getImageData(0, 0, c.width, c.height).data, runs = [];
+      for (let y = 0; y < c.height; y++) { let s = -1;
+        for (let xx = 0; xx <= c.width; xx++) { const on = xx < c.width && d[(y * c.width + xx) * 4 + 3] > 110;
+          if (on && s < 0) s = xx; if (!on && s >= 0) { runs.push([s, xx - 1, y]); s = -1; } } }
+      if (runs.length < 50) return null;           // font not ready → keep the drawn logo
+      const W = c.width, H = c.height;
+      const face = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1), K.lam(0x5cf0d0, 0x0f5a4a), runs.length);
+      const back = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1), K.lam(0x1c6f5e, 0x062a22), runs.length);
+      const m = new T.Matrix4(), q = new T.Quaternion();
+      runs.forEach(([a, b, y], i) => {
+        const len = b - a + 1, cx = (a + b) / 2 - W / 2, cy = H / 2 - y;
+        m.compose(new T.Vector3(cx, cy, 0), q, new T.Vector3(len, 1, 3)); face.setMatrixAt(i, m);
+        m.compose(new T.Vector3(cx + 1.4, cy - 1.6, -3.4), q, new T.Vector3(len, 1, 3.6)); back.setMatrixAt(i, m);
+      });
+      const logo = new T.Group(); logo.add(back, face); scene.add(logo);
+      scene.add(new T.HemisphereLight(0xdffff8, 0x0a2a30, 0.9));
+      const key = new T.DirectionalLight(0xffffff, 0.8); key.position.set(-0.4, 0.6, 1); scene.add(key);
+      const sweep = new T.PointLight(0xbffff0, 1.6, 120); scene.add(sweep);
+      let span = W;
+      return {
+        fit(w, h) { const vh = 2 * 100 * Math.tan(15 * Math.PI / 180), vw = vh * w / h;
+          // fill the element's content box (it has 47px padding of its ~box)
+          const sc = Math.min(vw * 0.78 / W, vh * 0.62 / H); logo.scale.setScalar(sc); span = W * sc;
+          cam.position.set(0, 0, 100); cam.lookAt(0, 0, 0); },
+        tick(t) { logo.rotation.y = Math.sin(t * 0.6) * 0.18; logo.rotation.x = Math.sin(t * 0.45) * 0.08;
+          sweep.position.set(Math.sin(t * 0.8) * span * 0.6, 4, 30); },
+      };
+    });
+    if (ok) el.classList.add('kl-logo3d-on');
+  };
+  if (document.fonts && document.fonts.load) document.fonts.load('44px Monoton').then(go, go); else go();
+}
+
+// Player-select hero: hill, rocket, three little low-poly avatars, floating notes.
+// Laid out in the drawn hero's own frame (400×640, anchored bottom-right) so it
+// lands exactly where the old art was.
+function klHero3D(host, avatars) {
+  if (!host || !window.THREE) return false;
+  const ok = klMini3D(host, 'kl-hero3d', 640, (T, K, scene, cam) => {
+    const { lam, glow, box } = K;
+    const at = (o, x, y, z, p) => { o.position.set(x, y, z); (p || hero).add(o); return o; };
+    const hero = new T.Group(); scene.add(hero);
+    scene.add(new T.HemisphereLight(0xd8d0ff, 0x1a1040, 0.9));
+    const sun = new T.DirectionalLight(0xfff4e0, 0.85); sun.position.set(-4, 6, 8); scene.add(sun);
+    const rim = new T.PointLight(0x8ee8ff, 0.9, 12); rim.position.set(6, 5, 2); hero.add(rim);
+    // HILL — big faceted planet cap
+    const hill = new T.Mesh(new T.IcosahedronGeometry(14, 2), lam(0x3a2584, 0x0e0630)); at(hill, 3, -12.4, -4);
+    [[0.2, 1.62, 0.6], [3.6, 1.6, 0.9], [-1.6, 1.45, 0.3]].forEach(([x, y, z], i) => { const rk = new T.Mesh(new T.DodecahedronGeometry(0.16 + i * 0.05, 0), lam(0x6a50c0)); at(rk, x, y, z); });
+    const cry = new T.Mesh(new T.OctahedronGeometry(0.22, 0), lam(0x8ee8ff, 0x1a5a70)); at(cry, 5.9, 1.7, 0.4); cry.scale.y = 1.8;
+    // ROCKET — lathed body, porthole, fins, flag
+    const rk = new T.Group(); at(rk, 4.7, 1.55, 0);
+    const prof = [[0, 0], [0.62, 0.05], [0.72, 0.8], [0.74, 2.2], [0.66, 3.2], [0.42, 3.95], [0.16, 4.3], [0, 4.4]].map(p => new T.Vector2(p[0], p[1]));
+    rk.add(new T.Mesh(new T.LatheGeometry(prof, 9), lam(0xe8ecf8, 0x1a1a30)));
+    const port = new T.Mesh(new T.TorusGeometry(0.3, 0.07, 4, 10), lam(0x8a90b0)); port.position.set(0, 2.85, 0.7); rk.add(port);
+    const glass = new T.Mesh(new T.CircleGeometry(0.27, 10), lam(0x2dd4bf, 0x0a6a5a)); glass.position.set(0, 2.85, 0.72); rk.add(glass);
+    const dot = new T.Mesh(new T.SphereGeometry(0.09, 6, 4), glow(0xf0c040)); dot.position.set(0, 1.9, 0.74); rk.add(dot);
+    [1.05, 3.14, 5.24].forEach(a => { const fin = box(0.08, 1.2, 0.75, lam(0x7c6ff7, 0x1a1050)); fin.position.set(Math.sin(a) * 0.85, 0.55, Math.cos(a) * 0.85); fin.rotation.y = a + Math.PI / 2; rk.add(fin); });
+    const pole = box(0.04, 0.6, 0.04, lam(0x9aa0b5)); pole.position.y = 4.7; rk.add(pole);
+    const flag = new T.Mesh(new T.BufferGeometry().setFromPoints([new T.Vector3(0, 0, 0), new T.Vector3(0.5, -0.15, 0), new T.Vector3(0, -0.3, 0)]), glow(0xf0c040));
+    flag.material.side = T.DoubleSide; flag.position.set(0.02, 5.0, 0); rk.add(flag);
+    const exh = new T.Mesh(new T.ConeGeometry(0.4, 0.6, 8, 1, true), glow(0x8ee8ff, 0.35)); exh.rotation.x = Math.PI; exh.position.y = -0.1; rk.add(exh);
+    rk.rotation.y = -0.35;
+    // AVATARS — low-poly versions of the player avatar
+    const col = (arr, i) => new T.Color(arr[(i || 0) % arr.length]);
+    const instr = [
+      p => { const gt = new T.Group(); const bd = new T.Mesh(new T.IcosahedronGeometry(0.2, 0), lam(0xc0392b)); bd.scale.set(1, 1.1, 0.4); gt.add(bd);
+        const nk = box(0.05, 0.55, 0.04, lam(0x5b3f26)); nk.position.y = 0.4; gt.add(nk); gt.position.set(0.05, 0.62, 0.22); gt.rotation.z = -1.1; p.add(gt); return gt; },
+      p => { const mic = new T.Group(); mic.add(box(0.05, 0.25, 0.05, lam(0x33373f))); const hd = new T.Mesh(new T.SphereGeometry(0.07, 6, 4), lam(0xb8c0d0)); hd.position.y = 0.15; mic.add(hd);
+        mic.position.set(0.18, 0.98, 0.18); p.add(mic); return mic; },
+      p => { const tb = new T.Mesh(new T.TorusGeometry(0.15, 0.035, 4, 10), lam(0xf0c040, 0x3a2a00)); tb.position.set(0.32, 1.32, 0.05); p.add(tb); return tb; },
+    ];
+    const figs = [];
+    avatars.slice(0, 3).forEach((cfg, i) => {
+      const p = new T.Group(), sk = col(AV_SKIN, cfg.skin), sh = col(AV_SHIRT, cfg.shirt), pa = col(AV_PANTS, cfg.pants), shoe = col(AV_SHOES, cfg.shoes), hc = col(AV_HAIRCOL, cfg.hairColor);
+      [-1, 1].forEach(s => { at(box(0.15, 0.4, 0.17, lam(pa)), s * 0.1, 0.27, 0, p); at(box(0.17, 0.08, 0.24, lam(shoe)), s * 0.1, 0.04, 0.03, p); });
+      at(box(0.4, 0.42, 0.24, lam(sh)), 0, 0.68, 0, p);
+      const armL = at(box(0.11, 0.38, 0.13, lam(sh)), -0.26, 0.7, 0, p), armR = at(box(0.11, 0.38, 0.13, lam(sh)), 0.26, 0.7, 0, p);
+      const head = at(new T.Mesh(new T.IcosahedronGeometry(0.21, 1), lam(sk)), 0, 1.08, 0, p);
+      [-1, 1].forEach(s => at(box(0.035, 0.05, 0.02, glow(0x1a1a22)), s * 0.07, 1.1, 0.2, p));
+      const style = AV_HAIR[(cfg.hair || 0) % AV_HAIR.length];
+      if (style !== 'bald') {
+        const cap = at(new T.Mesh(new T.SphereGeometry(0.225, 7, 4, 0, Math.PI * 2, 0, style === 'buzz' ? 1.1 : 1.5), lam(hc)), 0, 1.1, -0.01, p);
+        if (style === 'spiky' || style === 'mohawk') for (let k = -2; k <= 2; k++) { const sp = at(new T.Mesh(new T.ConeGeometry(0.06, 0.18, 4), lam(hc)), style === 'mohawk' ? 0 : k * 0.07, 1.33, style === 'mohawk' ? k * 0.06 : 0, p); sp.rotation.z = style === 'mohawk' ? 0 : -k * 0.25; }
+        if (style === 'long' || style === 'ponytail') at(box(0.38, 0.35, 0.12, lam(hc)), 0, 0.95, -0.15, p);
+        if (style === 'curly') for (let k = 0; k < 6; k++) at(new T.Mesh(new T.IcosahedronGeometry(0.08, 0), lam(hc)), Math.cos(k) * 0.18, 1.22 + Math.sin(k * 2) * 0.05, Math.sin(k) * 0.12, p);
+        void cap;
+      }
+      const it = instr[i](p);
+      p.scale.setScalar(1.12);
+      at(p, [0.35, 1.55, 2.75][i], 1.6 + [0.02, 0.05, 0.04][i], 0.6);
+      p.rotation.y = [0.35, 0.1, -0.15][i];
+      figs.push({ p, armL, armR, head, it, i });
+    });
+    // floating notes
+    const note = (x, y, c) => { const n = new T.Group(); const hd = new T.Mesh(new T.SphereGeometry(0.16, 6, 4), lam(c, 0x0a3a40)); hd.scale.set(1.3, 0.9, 0.9); n.add(hd);
+      const st = box(0.05, 0.7, 0.05, lam(c)); st.position.set(0.18, 0.35, 0); n.add(st); const fl = box(0.25, 0.06, 0.05, lam(c)); fl.position.set(0.3, 0.66, 0); fl.rotation.z = -0.5; n.add(fl);
+      at(n, x, y, 0.3); return n; };
+    const notes = [note(0.6, 4.2, 0x8ee8ff), note(3.1, 2.9, 0x4ecdc4)];
+    return {
+      fit(w, h) {
+        const dist = 60, vh = 2 * dist * Math.tan(15 * Math.PI / 180), vw = vh * w / h, s = vh / 10;
+        cam.position.set(0, 0, dist); cam.lookAt(0, 0, 0);
+        hero.scale.setScalar(s); hero.position.set(vw / 2 - 6.25 * s, -vh / 2, 0);
+      },
+      tick(t) {
+        hero.rotation.y = Math.sin(t * 0.25) * 0.04;
+        exh.material.opacity = 0.2 + Math.sin(t * 9) * 0.1; dot.material.color.setHex(Math.sin(t * 3) > 0 ? 0xf0c040 : 0xffe08a);
+        cry.rotation.y = t * 1.2;
+        figs.forEach(f => { const b = t * 4.2 + f.i * 1.3;           // dance on the beat
+          f.p.position.y = 1.6 + [0.02, 0.05, 0.04][f.i] + Math.abs(Math.sin(b)) * 0.08;
+          f.armL.rotation.z = 0.3 + Math.sin(b) * 0.3; f.armR.rotation.z = -0.3 - Math.sin(b + 1) * (f.i === 2 ? 0.9 : 0.3);
+          f.head.rotation.z = Math.sin(b) * 0.12;
+          if (f.i === 2) f.it.position.set(0.32 + Math.sin(b) * 0.05, 1.32 + Math.sin(b + 1) * 0.08, 0.05); });
+        notes.forEach((n, i) => { n.position.y = [4.2, 2.9][i] + Math.sin(t * 1.1 + i * 2) * 0.18; n.rotation.y = Math.sin(t * 0.9 + i) * 0.6; });
+      },
+    };
+  });
+  if (ok) host.classList.add('kl-hero3d-on');
+  return ok;
+}
+// Mounts the 3-D title art on whatever screen just rendered (needs Three; it
+// loads with the world backdrop, so retry briefly if it isn't there yet).
+function klTitle3D(tries) {
+  const wrap = document.getElementById('kl-wrap'); if (!wrap) return;
+  if (!window.THREE) { if ((tries || 0) < 40) setTimeout(() => klTitle3D((tries || 0) + 1), 150); return; }
+  try { wrap.querySelectorAll('.kl-scene-logo').forEach(klLogo3D); } catch (e) { console.warn(e); }
+  const sc = wrap.querySelector('.kl-scene');
+  if (sc && sc.querySelector('svg') && !sc.querySelector('canvas.kl-hero3d')) {
+    const players = (typeof klLoadPlayers === 'function' ? klLoadPlayers() : []).filter(p => p.avatar).map(p => p.avatar);
+    const presets = [{ skin: 1, hair: 3, hairColor: 5, shirt: 4, pants: 0, shoes: 2 }, { skin: 3, hair: 4, hairColor: 0, shirt: 1, pants: 4, shoes: 3 }, { skin: 0, hair: 7, hairColor: 6, shirt: 2, pants: 5, shoes: 4 }];
+    try { klHero3D(sc, players.concat(presets).slice(0, 3)); } catch (e) { console.warn(e); }
+  }
+}
 
 function klRenderPlayerSelect() {
   document.getElementById('kidlab').classList.remove('kl-playing');
@@ -19022,6 +19211,7 @@ function klRenderPlayerSelect() {
       '</div>' +
       (klIsDevAvailable() ? klDevBar() : '') +
     '</div>';
+  klTitle3D();
 }
 window.klRenderPlayerSelect = klRenderPlayerSelect; // inline onclick handlers need it global
 // Fullscreen toggle (desktop browsers; iOS uses Add-to-Home-Screen for fullscreen).
@@ -23047,7 +23237,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.22p'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.22q'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
