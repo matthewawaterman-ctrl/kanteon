@@ -6124,7 +6124,10 @@
   /* every non-Story screen is see-through so the 3-D world shows behind it */
   #studio.screen, #home.screen, #level-select.screen, #tx-index.screen, #session-complete.screen, #ear-config.screen, #ear-session.screen, #al-config.screen, #al-session.screen, #build-config.screen, #build-session.screen, #anatomy-config.screen, #anatomy-session.screen, #theory-config.screen, #theory-session.screen, #notation-config.screen, #notation-session.screen, #question-screen.screen, #mixtape-start.screen, #mixtape-session.screen, #mixtape-over.screen { background: var(--space-bg) !important; }
   #kidlab { isolation: isolate; }
+  /* Story: the old flat night-sky becomes a see-through tint so the 3-D world is the sky (and fills the side bands) */
+  #kidlab { background: linear-gradient(180deg, rgba(10,8,34,0.55), rgba(24,18,60,0.35) 60%, rgba(40,30,80,0.25)) !important; }
   #kidlab:has(.kl-modeselect) { background: linear-gradient(180deg, rgba(8,8,40,0.30), rgba(8,8,40,0.6)) !important; }
+  #loading.screen { background: linear-gradient(180deg, rgba(8,8,40,0.35), rgba(8,8,40,0.6)) !important; }
   #kidlab:has(.kl-modeselect)::before, #kidlab:has(.kl-modeselect) .kl-machine, #kidlab:has(.kl-modeselect) .kl-nebula { opacity: 0.35; }
   /* hologram panels: see-through teal/violet glass + scanlines + cyan edge */
   .mt-tut-card, .kl-mode, .studio-panel, .studio-seq-track, .mt-board-box, .mt-tut-box,
@@ -6160,7 +6163,9 @@
   /* staff and grids sit on dark glass so the world never hurts readability */
   #mixtape-session .mt-staff-box, #notation-session .notation-visual, #mixtape-session .mt-tx-grid, #mixtape-session .mt-sg-grid,
   #mixtape-session .mt-rw-grid, #studio .studio-pianoroll, #studio .studio-view {
-    background-color: rgba(6,8,34,0.78);
+    /* soft rounded glass that extends past the edges via shadow (no layout change) */
+    background-color: rgba(6,8,34,0.55); border-radius: 12px;
+    box-shadow: 0 0 0 10px rgba(6,8,34,0.55), 0 0 0 11px rgba(143,240,232,0.22), 0 14px 30px -6px rgba(0,0,0,0.45);
   }
 </style>
 </head>
@@ -22351,7 +22356,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.22l'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.22m'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -23519,10 +23524,11 @@ const KL_WORLD_THEMES = {
   arcade: { bg: 0x1030b4, fog: [5, 24], speed: 2.2,  drift: 0.9, accent: 0xf0c040 },
   lesson: { bg: 0x0f3a9e, fog: [7, 28], speed: 0.0,  drift: 0.4, accent: 0x4ecdc4 },
   studio: { bg: 0x2a1f9a, fog: [6, 25], speed: 0.6,  drift: 0.7, accent: 0xff7ad9 },
+  story:  { bg: 0x120c44, fog: [8, 30], speed: 0.0,  drift: 0.35, accent: 0xf0c040, sky: true },
 };
 function klWorldTheme() {
   const a = document.querySelector('.screen.active'); const id = a ? a.id : '';
-  if (id === 'kidlab') { const ms = document.querySelector('#kidlab .kl-modeselect'); return (ms && ms.offsetParent) ? 'base' : null; }
+  if (id === 'kidlab') { const ms = document.querySelector('#kidlab .kl-modeselect'); return (ms && ms.offsetParent) ? 'base' : 'story'; }
   if (/^mixtape/.test(id)) return 'arcade';
   if (id === 'studio') return 'studio';
   if (/(ear|al|build|notation|theory|anatomy)-(config|session)|^home$|level-select|tx-index|session-complete/.test(id)) return 'lesson';
@@ -23617,7 +23623,8 @@ function klWorldBuild(cv) {
     shapes.forEach(c => { c.rotation.x += c.userData.s; c.rotation.y += c.userData.s * 1.3; if (TH.speed) { c.position.z += dt * TH.speed; if (c.position.z > 6) c.position.z -= 26; } });
     cam.position.x = Math.sin(t * 0.25) * TH.drift;
     cam.position.y = 2.2 + (W.pulseKind === 'level' ? W.pulse * 0.8 : 0) + (W.pulseKind === 'bad' ? Math.sin(t * 60) * W.pulse * 0.05 : 0);
-    cam.lookAt(0, 1.2, 0);
+    ground.visible = !TH.sky;                       // Story: sky only — the town art is the ground
+    cam.lookAt(0, TH.sky ? 4.2 : 1.2, 0);
     r.render(scene, cam);
   };
   requestAnimationFrame(frame);
