@@ -6185,6 +6185,36 @@
   canvas.kl-hero3d, canvas.kl-logo3d { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; pointer-events: none; display: block; }
   .kl-scene.kl-hero3d-on > svg { display: none; }
   .kl-logo3d-on { background-image: none !important; text-shadow: none !important; -webkit-text-fill-color: transparent !important; color: transparent !important; filter: none !important; }
+  /* ── MODE SELECT: late-90s console menu panels (bevel via inset shadows — no size change) ── */
+  .kl-modeselect .kl-mode {
+    border-radius: 3px !important; border-color: #070920 !important;
+    background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.16) 0 1px, transparent 1px 3px),
+      linear-gradient(180deg, #3a3fb4 0%, #262a92 47%, #191c6c 53%, #13155a 100%) !important;
+    background-color: #191c6c !important;
+    box-shadow: inset 2px 2px 0 rgba(170,236,255,0.6), inset -2px -2px 0 rgba(0,0,24,0.65), 5px 5px 0 rgba(0,0,10,0.5) !important;
+    transition: transform 0.06s steps(2), box-shadow 0.06s steps(2) !important;
+  }
+  .kl-modeselect .kl-mode.kl-mode-story { background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.16) 0 1px, transparent 1px 3px),
+      linear-gradient(180deg, #4a3cb8 0%, #33279a 47%, #241b74 53%, #1b145e 100%) !important; }
+  .kl-modeselect .kl-mode.kl-mode-studio { background-image: repeating-linear-gradient(0deg, rgba(0,0,0,0.16) 0 1px, transparent 1px 3px),
+      linear-gradient(180deg, #1f6f86 0%, #175a70 47%, #0f4152 53%, #0b3242 100%) !important; }
+  .kl-modeselect .kl-mode:hover { transform: translate(-2px,-2px) !important;
+    box-shadow: inset 2px 2px 0 #ffe08a, inset -2px -2px 0 rgba(60,30,0,0.7), 7px 7px 0 rgba(0,0,10,0.5) !important; }
+  .kl-modeselect .kl-mode:active { transform: translate(3px,3px) !important;
+    box-shadow: inset 2px 2px 0 rgba(0,0,24,0.65), inset -2px -2px 0 rgba(170,236,255,0.5), 1px 1px 0 rgba(0,0,10,0.5) !important; }
+  .kl-modeselect .kl-mode-name { text-shadow: 2px 2px 0 #05061a, 0 0 6px rgba(0,0,0,0.3) !important; }
+  .kl-modeselect .kl-mode-sub { color: #c8cdf0; text-shadow: 1px 1px 0 #05061a; }
+  .kl-mode-icon canvas.kl-mode-icon3d { width: 1.2em; height: 1.2em; margin: -0.1em; display: block; image-rendering: pixelated; filter: drop-shadow(3px 3px 0 rgba(0,0,10,0.45)); }
+  .kl-modeselect .kl-mode-icon { filter: none; }
+  .kl-modeselect .kl-tools-link, .kl-modeselect .kl-streak-badge {
+    border-radius: 3px; border-color: #070920;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,0.16) 0 1px, transparent 1px 3px), linear-gradient(180deg, #2c2f8e, #15175e);
+    box-shadow: inset 2px 2px 0 rgba(170,236,255,0.45), inset -2px -2px 0 rgba(0,0,24,0.6), 4px 4px 0 rgba(0,0,10,0.45);
+  }
+  .kl-modeselect .kl-streak-badge { background: repeating-linear-gradient(0deg, rgba(0,0,0,0.16) 0 1px, transparent 1px 3px), linear-gradient(180deg, #5a4614, #2e2408);
+    box-shadow: inset 2px 2px 0 rgba(255,224,138,0.55), inset -2px -2px 0 rgba(20,10,0,0.6), 4px 4px 0 rgba(0,0,10,0.45); }
+  .kl-modeselect .kl-tools-link:hover { transform: translate(-1px,-1px); box-shadow: inset 2px 2px 0 #ffe08a, inset -2px -2px 0 rgba(60,30,0,0.7), 5px 5px 0 rgba(0,0,10,0.45); }
+  .kl-modeselect .kl-mode-badge { border-radius: 2px; box-shadow: 2px 2px 0 rgba(0,0,10,0.5); }
   /* 3-D town */
 
   #kt-scene canvas.kt-3d { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; display: block; }
@@ -19166,10 +19196,80 @@ function klHero3D(host, avatars) {
 }
 // Mounts the 3-D title art on whatever screen just rendered (needs Three; it
 // loads with the world backdrop, so retry briefly if it isn't there yet).
+// ── LOW-POLY MODE ICONS: one shared WebGL renderer draws each little model, then
+// copies it into a plain 2-D canvas per icon (one GPU context for all four).
+function klModeIcons(root) {
+  const T = window.THREE; if (!T || !root) return;
+  const slots = [...root.querySelectorAll('.kl-mode-icon')].filter(el => !el.querySelector('canvas'));
+  if (!slots.length) return;
+  let r;
+  try { r = new T.WebGLRenderer({ antialias: false, alpha: true, powerPreference: 'low-power', preserveDrawingBuffer: true }); } catch (e) { return; }
+  const RES = 144; r.setPixelRatio(1); r.setSize(RES, RES, false); r.setClearColor(0, 0);
+  const K = klSnapKit(T); K.U.value.set(48, 48);           // coarse snap grid = vintage wobble
+  const { lam, glow, box } = K;
+  const cam = new T.PerspectiveCamera(32, 1, 0.1, 50); cam.position.set(0, 0.3, 4.6); cam.lookAt(0, 0, 0);
+  const mk = {
+    story() { const g = new T.Group();
+      const lo = new T.Mesh(new T.IcosahedronGeometry(0.8, 1), lam(0xe0303a, 0x3a0008)); lo.scale.set(1.05, 1, 0.3); lo.position.y = -0.7; g.add(lo);
+      const up = new T.Mesh(new T.IcosahedronGeometry(0.6, 1), lam(0xe0303a, 0x3a0008)); up.scale.set(1, 1, 0.3); up.position.y = 0.15; g.add(up);
+      const pg = box(0.5, 0.7, 0.06, lam(0xf4f4f4)); pg.position.set(0.15, -0.55, 0.24); g.add(pg);
+      const nk = box(0.2, 2.1, 0.12, lam(0x7a5230)); nk.position.y = 1.4; g.add(nk);
+      const hd = box(0.34, 0.5, 0.12, lam(0x2a1a10)); hd.position.y = 2.65; g.add(hd);
+      for (let i = -1; i <= 1; i++) { const st = box(0.025, 3, 0.02, glow(0xe8e8e8)); st.position.set(i * 0.06, 0.8, 0.2); g.add(st); }
+      g.rotation.z = -0.6; g.position.set(0.15, -0.5, 0); g.scale.setScalar(0.62); return g; },
+    arcade() { const g = new T.Group();
+      const band = new T.Mesh(new T.TorusGeometry(1.15, 0.14, 4, 12, Math.PI), lam(0xd8dce8, 0x1a1a24)); band.position.y = 0.1; g.add(band);
+      [-1, 1].forEach(s => { const cup = new T.Mesh(new T.CylinderGeometry(0.5, 0.5, 0.45, 8), lam(0x7c6ff7, 0x1a1050)); cup.rotation.z = Math.PI / 2; cup.position.set(s * 1.15, -0.25, 0); g.add(cup);
+        const pad = new T.Mesh(new T.CylinderGeometry(0.42, 0.42, 0.12, 8), lam(0x4ecdc4, 0x0a3a36)); pad.rotation.z = Math.PI / 2; pad.position.set(s * 0.88, -0.25, 0); g.add(pad); });
+      return g; },
+    lesson() { const g = new T.Group();
+      [-1, 1].forEach(s => { const cv = box(1.25, 1.7, 0.08, lam(0x9a3a2a, 0x200800)); cv.position.set(s * 0.6, 0, -0.05); cv.rotation.y = -s * 0.35; g.add(cv);
+        const pg = box(1.15, 1.6, 0.12, lam(0xfbf6e8)); pg.position.set(s * 0.58, 0, 0.06); pg.rotation.y = -s * 0.35; g.add(pg);
+        for (let k = 0; k < 4; k++) { const ln = box(0.75, 0.05, 0.02, glow(k === 0 ? 0xf0c040 : 0x8a90b0)); ln.position.set(s * 0.6, 0.5 - k * 0.3, 0.14 + 0.15 * (s * -0.3 + 0.35)); ln.rotation.y = -s * 0.35; g.add(ln); } });
+      const sp = box(0.12, 1.75, 0.2, lam(0x5a2018)); sp.position.z = -0.08; g.add(sp);
+      g.rotation.x = -0.35; g.scale.setScalar(0.95); return g; },
+    studio() { const g = new T.Group();
+      const base = box(1.6, 2.6, 0.4, lam(0x2a2d38, 0x08080c)); g.add(base);
+      [-0.4, 0.4].forEach((x, i) => { const sl = box(0.1, 2, 0.05, glow(0x0a0a10)); sl.position.set(x, -0.05, 0.22); g.add(sl);
+        const cap = box(0.5, 0.28, 0.3, lam(i ? 0xf0c040 : 0x4ecdc4, i ? 0x3a2a00 : 0x0a3a36)); cap.position.set(x, 0, 0.32); cap.name = 'cap' + i; g.add(cap); });
+      for (let k = 0; k < 5; k++) { const tk = box(0.18, 0.03, 0.02, glow(0x8a90b0)); tk.position.set(0, -0.9 + k * 0.45, 0.22); g.add(tk); }
+      g.scale.setScalar(0.62); return g; },
+  };
+  const items = slots.map(el => {
+    const btn = el.closest('.kl-mode'), kind = ['story', 'arcade', 'lesson', 'studio'].find(k => btn && btn.classList.contains('kl-mode-' + k));
+    if (!kind) return null;
+    const scene = new T.Scene();
+    scene.add(new T.HemisphereLight(0xeef4ff, 0x1a1040, 0.95));
+    const dl = new T.DirectionalLight(0xffffff, 0.8); dl.position.set(-2, 3, 4); scene.add(dl);
+    const model = mk[kind](); scene.add(model);
+    const c2 = document.createElement('canvas'); c2.className = 'kl-mode-icon3d'; c2.width = c2.height = RES;
+    el.textContent = ''; el.appendChild(c2);
+    return { el, btn, kind, scene, model, ctx: c2.getContext('2d'), c2, spin: 0, base: model.rotation.y };
+  }).filter(Boolean);
+  let t = 0, last = 0;
+  const loop = now => {
+    if (!items.some(it => it.c2.isConnected)) { try { r.dispose(); } catch (e) {} return; }
+    requestAnimationFrame(loop);
+    if (document.hidden || now - last < 40) return;
+    const dt = Math.min(0.1, (now - last) / 1000 || 0.04); last = now; t += dt;
+    items.forEach((it, i) => {
+      const hot = it.btn.matches(':hover');
+      it.spin += dt * (hot ? 4.5 : 1.3);
+      it.model.rotation.y = it.base + Math.sin(it.spin) * (hot ? 0.75 : 0.5);
+      if (it.kind === 'studio') { it.model.getObjectByName('cap0').position.y = Math.sin(t * 2.2) * 0.75; it.model.getObjectByName('cap1').position.y = Math.sin(t * 1.6 + 2) * 0.75; }
+      it.model.position.y = (it.kind === 'story' ? -0.35 : 0) + Math.sin(t * 2 + i) * 0.05;
+      r.render(it.scene, cam);
+      it.ctx.clearRect(0, 0, RES, RES); it.ctx.drawImage(r.domElement, 0, 0);
+    });
+  };
+  requestAnimationFrame(loop);
+}
+
 function klTitle3D(tries) {
   const wrap = document.getElementById('kl-wrap'); if (!wrap) return;
   if (!window.THREE) { if ((tries || 0) < 40) setTimeout(() => klTitle3D((tries || 0) + 1), 150); return; }
   try { wrap.querySelectorAll('.kl-scene-logo').forEach(klLogo3D); } catch (e) { console.warn(e); }
+  try { klModeIcons(wrap.querySelector('.kl-modeselect')); } catch (e) { console.warn(e); }
   const sc = wrap.querySelector('.kl-scene');
   if (sc && sc.querySelector('svg') && !sc.querySelector('canvas.kl-hero3d')) {
     const players = (typeof klLoadPlayers === 'function' ? klLoadPlayers() : []).filter(p => p.avatar).map(p => p.avatar);
@@ -23246,7 +23346,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.22s'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.22t'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
