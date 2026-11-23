@@ -6228,6 +6228,17 @@
   .build-strip-wrap, .build-scale-wrap { background: transparent !important; border-color: transparent !important; box-shadow: none !important; }
   .build-ruler { background: rgba(255,255,255,0.04) !important; border: 1px solid rgba(143,180,255,0.2) !important; border-radius: 10px !important; }
   .build-ruler-rail { background: linear-gradient(90deg, rgba(143,180,255,0.12) 0%, rgba(143,180,255,0.5) 50%, rgba(143,180,255,0.12) 100%) !important; }
+  /* builder note tags float clear above their dots (they touched once the dark panel was gone) */
+  .build-root-marker::after, .build-marker.correct::after, .build-marker.wrong::after {
+    top: auto !important; bottom: calc(100% + 6px) !important; line-height: 1 !important;
+    padding: 3px 6px 2px; border-radius: 4px; background: rgba(8,10,40,0.78); white-space: nowrap; }
+  /* rhythm-write review: the "why" box replaces the how-to legend, and the prompt never gets squashed */
+  #mixtape-session .mt-prompt { flex-shrink: 0; }
+  #mixtape-session .mt-rw-wrap:has(.mt-why-inline) .mt-rw-hint { display: none; }
+  #mixtape-session .mt-rw-wrap:has(.mt-why-inline) .mt-rw-staff { padding-bottom: 0; }
+  #mixtape-session .mt-rw-wrap:has(.mt-why-inline) { gap: 4px; }
+  #mixtape-session .mt-rw-wrap .mt-why-inline { margin-top: 2px; margin-bottom: 0; }
+  #mt-rhythm-host:has(.mt-rw-wrap .mt-why-inline) #mt-rw-clear, #mt-rhythm-host:has(.mt-rw-wrap .mt-why-inline) #mt-rw-submit { display: none; }   /* answered: NEXT takes over */
   /* 3-D town */
 
   #kt-scene canvas.kt-3d { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; display: block; }
@@ -23554,7 +23565,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.23e'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.23h'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -30835,7 +30846,7 @@ const MT_TIERS = {
   'build-chord':    { 1: ['major', 'minor'], 2: ['sus4'], 3: ['sus2', 'dom7'], 4: ['maj7', 'min7'], 5: ['dim', 'aug'] },
   'ear-scale':      { 1: ['major', 'natural_minor'], 2: ['major_pent', 'minor_pent'], 3: ['dorian', 'mixolydian', 'blues'], 4: ['lydian', 'phrygian', 'harmonic_minor'], 5: ['melodic_minor', 'locrian', 'whole_tone'] },
   'build-scale':    { 2: ['major_pent', 'minor_pent'], 3: ['major', 'natural_minor'], 4: ['dorian', 'mixolydian'], 5: ['lydian', 'phrygian'] },
-  'al-texture':     { 1: ['mono', 'homo'], 4: ['poly'], 5: ['hetero'] },
+  'al-texture':     { 3: ['mono', 'homo'], 4: ['poly'], 5: ['hetero'] },   // texture is a later concept (Matt, 11.23)
 };
 // first level each generated question type appears
 const MT_UNLOCK = { 'ear-progression': 1, 'al-tempo': 1, 'rhythm-write': 1, 'transcription': 1, 'notation-treble': 1,
@@ -30891,7 +30902,7 @@ function mtBuildPool(maxLevel) {
   // Texture only — "solo"/"ensemble" are about HOW MANY INSTRUMENTS, not texture, and
   // overlapped with monophonic (a solo melody IS monophonic), so they're out of Arcade.
   const texSets = {
-    1: MT_TIERS['al-texture'][1], 4: MT_TIERS['al-texture'][4], 5: MT_TIERS['al-texture'][5],
+    3: MT_TIERS['al-texture'][3], 4: MT_TIERS['al-texture'][4], 5: MT_TIERS['al-texture'][5],
   };
 
   const MT_INSTRUMENT_QUESTIONS_ON = false;   // off until real instrument recordings land
@@ -31157,27 +31168,27 @@ const MT_TUTORIALS = [
     what: 'A short melody plays. Write it down on the note grid.',
     how: ['Listen with HEAR MELODY.', 'Tap one cell per column — left to right, one column per note.', 'Check it with HEAR YOURS, then SUBMIT.'],
     tip: 'Find the first note, then ask: does the next one go up, down, or stay?' },
-  { kind: 'ear-chord', lvl: 2, name: 'Chord Quality', icon: '🎹',
+  { kind: 'ear-chord', lvl: 1, name: 'Chord Quality', icon: '🎹',
     what: 'A chord plays. Is it major, minor, or something else?',
     how: ['Listen to the chord.', 'Tap the chord type.'],
     tip: 'Major usually sounds bright; minor sounds darker or sadder.' },
-  { kind: 'ear-scale', lvl: 2, name: 'Name the Scale', icon: '🪜',
+  { kind: 'ear-scale', lvl: 1, name: 'Name the Scale', icon: '🪜',
     what: 'A scale plays up from its root. Name the scale.',
     how: ['Listen to the whole scale.', 'Tap the scale name.'],
     tip: 'Listen for the 3rd note: high (major) or low (minor)?' },
-  { kind: 'ear-progression', lvl: 2, name: 'Chord Progressions', icon: '🎶',
+  { kind: 'ear-progression', lvl: 1, name: 'Chord Progressions', icon: '🎶',
     what: 'A few chords play in a row. Chord 1 is always I. Name the rest.',
     how: ['Tap a chord button to fill the highlighted box — you hear that chord.', 'Tap any box to hear it or change it.', 'Fill every box, then SUBMIT.'],
     tip: 'Compare each chord to the I chord: does it sound like home, or like it wants to go somewhere?' },
-  { kind: 'build-chord', lvl: 2, name: 'Build the Chord', icon: '🧱',
+  { kind: 'build-chord', lvl: 1, name: 'Build the Chord', icon: '🧱',
     what: 'You get the root (gold). Tune the other notes of the chord by ear.',
     how: ['Each dot has its own row — drag it left or right.', 'Compare with HEAR TARGET / HEAR YOURS.', 'SUBMIT when every note sounds right.'],
     tip: 'Do one note at a time: get the 5th first, then the 3rd.' },
-  { kind: 'rhythm-write', lvl: 2, name: 'Write the Rhythm', icon: '🥁',
+  { kind: 'rhythm-write', lvl: 1, name: 'Write the Rhythm', icon: '🥁',
     what: 'A rhythm is written on the staff. Draw it on the grid. (No sound until you submit.)',
     how: ['Click an empty spot to add a note; drag to make it longer.', 'Drag a note’s right edge to change its length, drag the middle to move it.', 'Click a note to delete it. SUBMIT to see and hear your rhythm under the written one.'],
     tip: 'Count "1 & 2 & 3 & 4 &" — every grid line is one count.' },
-  { kind: 'al-tempo', lvl: 3, name: 'Tempo', icon: '⏱️',
+  { kind: 'al-tempo', lvl: 1, name: 'Tempo', icon: '⏱️',
     what: 'A beat plays. How fast is it?',
     how: ['Listen to the beat.', 'Tap the BPM (beats per minute) that matches.'],
     tip: '60 BPM is one beat per second. Higher levels put the answers closer together.' },
@@ -31185,15 +31196,15 @@ const MT_TUTORIALS = [
     what: 'Music plays. How are the musical lines put together?',
     how: ['Listen.', 'Tap Monophonic, Homophonic, Polyphonic, or Heterophonic.'],
     tip: 'Mono = one line. Homo = melody + chords. Poly = different melodies weaving together. Hetero = the SAME melody played two slightly different ways at once.' },
-  { kind: 'build-scale', lvl: 3, name: 'Build the Scale', icon: '🏗️',
+  { kind: 'build-scale', lvl: 2, name: 'Build the Scale', icon: '🏗️',
     what: 'Build the named scale on the grid. The root and octave are given (gold).',
     how: ['Click one note in each column, low to high — you hear each one.', 'Click the gold notes to hear the root.', 'HEAR TARGET to check by ear, then SUBMIT.'],
     tip: 'Major scale steps: whole, whole, half, whole, whole, whole, half.' },
-  { kind: 'ear-scaleDegree', lvl: 4, name: 'Scale Degrees', icon: '🎯',
+  { kind: 'ear-scaleDegree', lvl: 3, name: 'Scale Degrees', icon: '🎯',
     what: 'Chords set the key, then one note plays. Which note of the scale is it?',
     how: ['Listen to the chords, then the last note.', 'Tap its number (and solfège name).'],
     tip: 'Sing the note back down to "do" — count how many steps it takes.' },
-  { kind: 'theory', lvl: 5, name: 'Modes & Keys', icon: '📐',
+  { kind: 'theory', lvl: 4, name: 'Modes & Keys', icon: '📐',
     what: 'A music-theory question about modes and keys.',
     how: ['Read the question.', 'Tap the answer.'],
     tip: 'Modes in order from the 1st note: Ionian, Dorian, Phrygian, Lydian, Mixolydian, Aeolian, Locrian.' },
@@ -31684,7 +31695,10 @@ function buildMtRound(pick) {
       typeLabel: 'TEXTURE',
       prompt: 'Identify the texture',
       correctId: def.id,
-      answers: pickAnswerSet(AL_TEXTURE.filter(t => ['mono', 'homo', 'poly', 'hetero'].includes(t.id)), def, 4),   // the four textures
+      // only the textures unlocked so far (2 at L3, 4 from L4 — padded so the count stays even)
+      answers: (() => { const lv = Math.max(mtState.level || 3, mtTierOf('al-texture', def.id));
+        const ids = lv >= 4 ? ['mono', 'homo', 'poly', 'hetero'] : ['mono', 'homo'];
+        return pickAnswerSet(AL_TEXTURE.filter(t => ids.includes(t.id)), def, ids.length); })(),
       loopAudio: true,
       audio: (ctx, t0) => playTextureDemo(ctx, t0, def.id),
     };
@@ -31814,7 +31828,7 @@ function buildMtRound(pick) {
   }
 
   if (pick.kind === 'rhythm-write') {
-    const lvl = Math.max(2, Math.min(5, mtState.level || pick.lvl || 2));
+    const lvl = Math.max(1, Math.min(5, mtState.level || pick.lvl || 1));
     return {
       module: 'RHYTHM', moduleClass: 'mod-rhy',
       typeLabel: 'WRITE THE RHYTHM',
@@ -32996,7 +33010,7 @@ function renderMtRhythmWriteRound(r) {
     paint({ target, ok });
     document.getElementById('mt-rw-hint').textContent = '';
     const shown = mtRwShowAnswer(host, q, notes, allOk);
-    if (allOk) { shown.play(); mtCorrect({ why: 'Nice! Your rhythm matches the written rhythm exactly.', whyEl: shown.legend || document.getElementById('mt-rw-hint') }); return; }
+    if (allOk) { mtCorrect({ why: 'Nice! Your rhythm matches the written rhythm exactly.', whyEl: shown.legend || document.getElementById('mt-rw-hint') }); return; }
     // explain the first few problems in beat language
     const msgs = [];
     target.forEach(t => {
@@ -33010,7 +33024,7 @@ function renderMtRhythmWriteRound(r) {
     let why = msgs.slice(0, 2).join('; ') + (msgs.length > 2 ? '; and ' + (msgs.length - 2) + ' more' : '');
     why = why ? why.charAt(0).toUpperCase() + why.slice(1) + '. The dashed boxes show the real rhythm.' : 'The dashed boxes show the real rhythm.';
     const _first = msgs.length ? msgs[0].charAt(0).toUpperCase() + msgs[0].slice(1) + (msgs.length > 1 ? ' (+' + (msgs.length - 1) + ' more)' : '') + '. ' : '';
-    mtWrong({ why: _first + 'Compare the two staffs.', whyEl: shown.legend || document.getElementById('mt-rw-hint'), replay: notes.length ? shown.play : null, replayMs: shown.ms });
+    mtWrong({ why: _first + 'Compare the two staffs.', whyEl: shown.legend || document.getElementById('mt-rw-hint') });   // no audio: the two staffs ARE the explanation
   }
   document.getElementById('mt-rw-submit').onclick = () => finish(false);
   mtState.revealHook = finish;
