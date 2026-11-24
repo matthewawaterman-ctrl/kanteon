@@ -7277,7 +7277,7 @@
 <div class="screen" id="studio">
   <div class="module-header">
     <button class="back-btn" onclick="exitStudio()">←</button>
-    <div class="module-header-title">STUDIO</div>
+    <div class="module-header-title">LOOPER MODE</div>
   </div>
 
   <div class="studio-body studio-land">
@@ -14204,7 +14204,7 @@ const CAROUSEL_DATA = {
     { id: 'anatomy',  icon: '🎸', name: 'INSTRUMENT ANATOMY',sub: '9 INSTRUMENTS',      cls: 'mod-anatomy',  action: 'mod:instrument_anatomy', desc: 'Learn the parts of guitars, basses, amps, keys, organs, drums, and PA systems.' }
   ],
   tools: [
-    { id: 'studio',   icon: '🎚️', name: 'STUDIO',           sub: 'SEQUENCER · METRO',  cls: 'mod-studio',   action: 'mod:studio',             desc: 'Sandbox sequencer with built-in metronome and auto-tempo speedup for tempo training.' }
+    { id: 'studio',   icon: '🎚️', name: 'LOOPER MODE',      sub: 'SEQUENCER · METRO',  cls: 'mod-studio',   action: 'mod:studio',             desc: 'Sandbox sequencer with built-in metronome and auto-tempo speedup for tempo training.' }
   ]
 };
 
@@ -19059,7 +19059,7 @@ window.klShowModeSelect = function() {
       '</div>' +
       '<button class="kl-mode kl-mode-studio" onclick="klOpenStudio()">' +
         '<div class="kl-mode-icon">🎚️</div>' +
-        '<div class="kl-mode-txt"><div class="kl-mode-name">STUDIO</div>' +
+        '<div class="kl-mode-txt"><div class="kl-mode-name">LOOPER MODE</div>' +
         '<div class="kl-mode-sub">Make your own beats &amp; songs — drums, bass, guitar, keys, synth</div></div>' +
         (window.__studioPending ? '<span class="kl-mode-badge">🔗 SHARED LOOP WAITING</span>' : '') +
       '</button>' +
@@ -21234,7 +21234,7 @@ function klDevBarMarkup() {
   s += btn("selectModule('notation')", '📖 Notation', 'Lesson: Notation');
   s += btn("selectModule('theory')", '🎼 Mode Lab', 'Lesson: Mode Lab');
   s += btn("selectModule('instrument_anatomy')", '🎸 Instrument Anatomy', 'Lesson: Instrument Anatomy');
-  s += btn("klOpenStudio()", '🎚 Studio', 'Studio');
+  s += btn("klOpenStudio()", '🎚 Looper', 'Looper Mode');
   s += btn("klWorldToggle()", '🌐 3-D world on/off', 'Turn the low-poly 3-D background on or off on this device (reloads)');
 
   // ── STATIONS — enter the REAL module, PLUS a direct jump to every puzzle ──
@@ -23565,7 +23565,7 @@ function klSyncDelay() {
   return auto + (klAudioOffsetMs / 1000);
 }
 let klDrummerAnim = true; // DEV: toggle the drummer animation to A/B test sync impact
-const KL_BUILD_TAG = '2026.11.23h'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
+const KL_BUILD_TAG = '2026.11.23i'; // format: YYYY.MM.DD + letter (a = first build that day, then b, c…). Bump every ship.
 
 // ── GLOBAL SCALE STAGE (b31-166 prototype) ─────────────────────────────────
 // Scales the whole Story screen (#kidlab) as one fixed-design 1280x800 block to
@@ -24563,7 +24563,7 @@ function klRenderLegComplete() {
     '<div class="kl-title" style="font-size:46px;">YOU ROCK!</div>' +
     '<div style="transform:scale(2.4); margin:10px 0 4px;">' + KL_BAND_SVG + '</div>' +
     '<button class="kl-listen" onclick="klContinueFromLeg()">KEEP GOING ▶</button>' +
-    '<button class="kl-tools-link kl-remix-link" onclick="klRemixInStudio(' + klDotOf(klState.puzzleIdx) + ')">🎚️ Remix this song in Studio</button>';
+    '<button class="kl-tools-link kl-remix-link" onclick="klRemixInStudio(' + klDotOf(klState.puzzleIdx) + ')">🎚️ Remix this song in Looper</button>';
   // a triumphant little fanfare
   const ctx = getAudio();
   const t0 = ctx.currentTime + 0.05;
